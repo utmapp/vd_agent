@@ -21,10 +21,15 @@ src_spice_vdagent_LDADD =			\
 
 src_spice_vdagent_SOURCES =			\
 	src/udscs.c				\
+	src/udscs.h				\
 	src/vdagent-audio.c			\
+	src/vdagent-audio.h			\
 	src/vdagent-file-xfers.c		\
+	src/vdagent-file-xfers.h		\
+	src/vdagent-x11-priv.h			\
 	src/vdagent-x11-randr.c			\
 	src/vdagent-x11.c			\
+	src/vdagent-x11.h			\
 	src/vdagent.c				\
 	$(NULL)
 
@@ -48,10 +53,17 @@ src_spice_vdagentd_LDADD =			\
 
 src_spice_vdagentd_SOURCES =			\
 	src/vdagentd.c				\
+	src/session-info.h			\
+	src/vdagentd-proto-strings.h		\
+	src/vdagentd-proto.h			\
 	src/vdagentd-uinput.c			\
+	src/vdagentd-uinput.h			\
 	src/vdagentd-xorg-conf.c		\
+	src/vdagentd-xorg-conf.h		\
 	src/vdagent-virtio-port.c		\
+	src/vdagent-virtio-port.h		\
 	src/udscs.c				\
+	src/udscs.h				\
 	$(NULL)
 
 if HAVE_CONSOLE_KIT
@@ -63,20 +75,6 @@ else
 src_spice_vdagentd_SOURCES += src/dummy-session-info.c
 endif
 endif
-
-noinst_HEADERS =				\
-	src/session-info.h			\
-	src/udscs.h				\
-	src/vdagent-audio.h			\
-	src/vdagent-file-xfers.h		\
-	src/vdagent-virtio-port.h		\
-	src/vdagent-x11-priv.h			\
-	src/vdagent-x11.h			\
-	src/vdagentd-proto-strings.h		\
-	src/vdagentd-proto.h			\
-	src/vdagentd-uinput.h			\
-	src/vdagentd-xorg-conf.h		\
-	$(NULL)
 
 xdgautostartdir = $(sysconfdir)/xdg/autostart
 xdgautostart_DATA = $(top_srcdir)/data/spice-vdagent.desktop
