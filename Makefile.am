@@ -4,11 +4,19 @@ NULL =
 bin_PROGRAMS = src/spice-vdagent
 sbin_PROGRAMS = src/spice-vdagentd
 
+common_sources =				\
+	src/udscs.c				\
+	src/udscs.h				\
+	src/vdagentd-proto-strings.h		\
+	src/vdagentd-proto.h			\
+	$(NULL)
+
 src_spice_vdagent_CFLAGS =			\
 	$(X_CFLAGS)				\
 	$(SPICE_CFLAGS)				\
 	$(GLIB2_CFLAGS)				\
 	$(ALSA_CFLAGS)				\
+	-I$(srcdir)/src				\
 	-DUDSCS_NO_SERVER			\
 	$(NULL)
 
@@ -20,17 +28,16 @@ src_spice_vdagent_LDADD =			\
 	$(NULL)
 
 src_spice_vdagent_SOURCES =			\
-	src/udscs.c				\
-	src/udscs.h				\
-	src/vdagent-audio.c			\
-	src/vdagent-audio.h			\
-	src/vdagent-file-xfers.c		\
-	src/vdagent-file-xfers.h		\
-	src/vdagent-x11-priv.h			\
-	src/vdagent-x11-randr.c			\
-	src/vdagent-x11.c			\
-	src/vdagent-x11.h			\
-	src/vdagent.c				\
+	$(common_sources)			\
+	src/vdagent/vdagent-audio.c		\
+	src/vdagent/vdagent-audio.h		\
+	src/vdagent/vdagent-file-xfers.c	\
+	src/vdagent/vdagent-file-xfers.h	\
+	src/vdagent/vdagent-x11-priv.h		\
+	src/vdagent/vdagent-x11-randr.c		\
+	src/vdagent/vdagent-x11.c		\
+	src/vdagent/vdagent-x11.h		\
+	src/vdagent/vdagent.c			\
 	$(NULL)
 
 src_spice_vdagentd_CFLAGS =			\
@@ -40,6 +47,7 @@ src_spice_vdagentd_CFLAGS =			\
 	$(SPICE_CFLAGS)				\
 	$(GLIB2_CFLAGS)				\
 	$(PIE_CFLAGS)				\
+	-I$(srcdir)/src				\
 	$(NULL)
 
 src_spice_vdagentd_LDADD =			\
@@ -52,27 +60,24 @@ src_spice_vdagentd_LDADD =			\
 	$(NULL)
 
 src_spice_vdagentd_SOURCES =			\
-	src/vdagentd.c				\
-	src/session-info.h			\
-	src/vdagentd-proto-strings.h		\
-	src/vdagentd-proto.h			\
-	src/vdagentd-uinput.c			\
-	src/vdagentd-uinput.h			\
-	src/vdagentd-xorg-conf.c		\
-	src/vdagentd-xorg-conf.h		\
-	src/vdagent-virtio-port.c		\
-	src/vdagent-virtio-port.h		\
-	src/udscs.c				\
-	src/udscs.h				\
+	$(common_sources)			\
+	src/vdagentd/vdagentd.c			\
+	src/vdagentd/session-info.h		\
+	src/vdagentd/vdagentd-uinput.c		\
+	src/vdagentd/vdagentd-uinput.h		\
+	src/vdagentd/vdagentd-xorg-conf.c	\
+	src/vdagentd/vdagentd-xorg-conf.h	\
+	src/vdagentd/vdagent-virtio-port.c	\
+	src/vdagentd/vdagent-virtio-port.h	\
 	$(NULL)
 
 if HAVE_CONSOLE_KIT
-src_spice_vdagentd_SOURCES += src/console-kit.c
+src_spice_vdagentd_SOURCES += src/vdagentd/console-kit.c
 else
 if HAVE_LIBSYSTEMD_LOGIN
-src_spice_vdagentd_SOURCES += src/systemd-login.c
+src_spice_vdagentd_SOURCES += src/vdagentd/systemd-login.c
 else
-src_spice_vdagentd_SOURCES += src/dummy-session-info.c
+src_spice_vdagentd_SOURCES += src/vdagentd/dummy-session-info.c
 endif
 endif
 
