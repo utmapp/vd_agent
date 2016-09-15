@@ -1,6 +1,6 @@
 /*  vdagentd-uinput.c vdagentd uinput handling code
 
-    Copyright 2010-2012 Red Hat, Inc.
+    Copyright 2010-2016 Red Hat, Inc.
 
     Red Hat Authors:
     Hans de Goede <hdegoede@redhat.com>
@@ -31,7 +31,7 @@
 #include <linux/input.h>
 #include <linux/uinput.h>
 #include <spice/vd_agent.h>
-#include "vdagentd-uinput.h"
+#include "uinput.h"
 
 struct vdagentd_uinput {
     const char *devname;

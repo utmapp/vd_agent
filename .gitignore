@@ -8,6 +8,12 @@ src/stamp-h1
 src/*.o
 src/.deps
 src/.dirstamp
+src/vdagent/*.o
+src/vdagent/.deps
+src/vdagent/.dirstamp
+src/vdagentd/*.o
+src/vdagentd/.deps
+src/vdagentd/.dirstamp
 config.log
 config.status
 aclocal.m4

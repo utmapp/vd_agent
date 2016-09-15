@@ -26,7 +26,7 @@
 #include <alsa/asoundlib.h>
 #include <alsa/mixer.h>
 #include <alsa/error.h>
-#include "vdagent-audio.h"
+#include "audio.h"
 
 #define ALSA_MUTE   0
 #define ALSA_UNMUTE 1

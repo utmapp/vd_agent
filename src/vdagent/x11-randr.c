@@ -31,8 +31,8 @@
 #include <X11/extensions/Xinerama.h>
 
 #include "vdagentd-proto.h"
-#include "vdagent-x11.h"
-#include "vdagent-x11-priv.h"
+#include "x11.h"
+#include "x11-priv.h"
 
 #define MM_PER_INCH (25.4)
 

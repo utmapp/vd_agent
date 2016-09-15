@@ -39,9 +39,9 @@
 #include "udscs.h"
 #include "vdagentd-proto.h"
 #include "vdagentd-proto-strings.h"
-#include "vdagentd-uinput.h"
-#include "vdagentd-xorg-conf.h"
-#include "vdagent-virtio-port.h"
+#include "uinput.h"
+#include "xorg-conf.h"
+#include "virtio-port.h"
 #include "session-info.h"
 
 struct agent_data {

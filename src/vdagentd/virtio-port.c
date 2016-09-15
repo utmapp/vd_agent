@@ -29,7 +29,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-#include "vdagent-virtio-port.h"
+#include "virtio-port.h"
 
 
 struct vdagent_virtio_port_buf {

@@ -40,9 +40,9 @@
 #include "udscs.h"
 #include "vdagentd-proto.h"
 #include "vdagentd-proto-strings.h"
-#include "vdagent-audio.h"
-#include "vdagent-x11.h"
-#include "vdagent-file-xfers.h"
+#include "audio.h"
+#include "x11.h"
+#include "file-xfers.h"
 
 static const char *portdev = "/dev/virtio-ports/com.redhat.spice.0";
 static const char *vdagentd_socket = VDAGENTD_SOCKET;

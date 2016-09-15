@@ -29,14 +29,14 @@ src_spice_vdagent_LDADD =			\
 
 src_spice_vdagent_SOURCES =			\
 	$(common_sources)			\
-	src/vdagent/vdagent-audio.c		\
-	src/vdagent/vdagent-audio.h		\
-	src/vdagent/vdagent-file-xfers.c	\
-	src/vdagent/vdagent-file-xfers.h	\
-	src/vdagent/vdagent-x11-priv.h		\
-	src/vdagent/vdagent-x11-randr.c		\
-	src/vdagent/vdagent-x11.c		\
-	src/vdagent/vdagent-x11.h		\
+	src/vdagent/audio.c			\
+	src/vdagent/audio.h			\
+	src/vdagent/file-xfers.c		\
+	src/vdagent/file-xfers.h		\
+	src/vdagent/x11-priv.h			\
+	src/vdagent/x11-randr.c			\
+	src/vdagent/x11.c			\
+	src/vdagent/x11.h			\
 	src/vdagent/vdagent.c			\
 	$(NULL)
 
@@ -63,12 +63,12 @@ src_spice_vdagentd_SOURCES =			\
 	$(common_sources)			\
 	src/vdagentd/vdagentd.c			\
 	src/vdagentd/session-info.h		\
-	src/vdagentd/vdagentd-uinput.c		\
-	src/vdagentd/vdagentd-uinput.h		\
-	src/vdagentd/vdagentd-xorg-conf.c	\
-	src/vdagentd/vdagentd-xorg-conf.h	\
-	src/vdagentd/vdagent-virtio-port.c	\
-	src/vdagentd/vdagent-virtio-port.h	\
+	src/vdagentd/uinput.c			\
+	src/vdagentd/uinput.h			\
+	src/vdagentd/xorg-conf.c		\
+	src/vdagentd/xorg-conf.h		\
+	src/vdagentd/virtio-port.c		\
+	src/vdagentd/virtio-port.h		\
 	$(NULL)
 
 if HAVE_CONSOLE_KIT

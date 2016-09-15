@@ -1,6 +1,6 @@
 /*  vdagent file xfers code
 
-    Copyright 2013 Red Hat, Inc.
+    Copyright 2013 - 2016 Red Hat, Inc.
 
     Red Hat Authors:
     Hans de Goede <hdegoede@redhat.com>
@@ -37,7 +37,7 @@
 #include <glib.h>
 
 #include "vdagentd-proto.h"
-#include "vdagent-file-xfers.h"
+#include "file-xfers.h"
 
 struct vdagent_file_xfers {
     GHashTable *xfers;

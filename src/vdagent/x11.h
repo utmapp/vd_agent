@@ -1,6 +1,6 @@
-/*  vdagent-x11.h vdagent x11 code header file
+/*  x11.h vdagent x11 code header file
 
-    Copyright 2010 Red Hat, Inc.
+    Copyright 2010 - 2016 Red Hat, Inc.
 
     Red Hat Authors:
     Hans de Goede <hdegoede@redhat.com>

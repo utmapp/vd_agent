@@ -30,7 +30,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <syslog.h>
-#include "vdagentd-xorg-conf.h"
+#include "xorg-conf.h"
 
 #define FPRINTF(...) \
     do { \

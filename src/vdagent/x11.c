@@ -42,8 +42,8 @@
 #include <X11/Xlib.h>
 #include <X11/extensions/Xfixes.h>
 #include "vdagentd-proto.h"
-#include "vdagent-x11.h"
-#include "vdagent-x11-priv.h"
+#include "x11.h"
+#include "x11-priv.h"
 
 /* Stupid X11 API, there goes our encapsulate all data in a struct design */
 int (*vdagent_x11_prev_error_handler)(Display *, XErrorEvent *);

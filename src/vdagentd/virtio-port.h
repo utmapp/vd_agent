@@ -1,6 +1,6 @@
-/*  vdagent-virtio-port.h virtio port communication header
+/*  virtio-port.h virtio port communication header
 
-    Copyright 2010 Red Hat, Inc.
+    Copyright 2010 - 2016 Red Hat, Inc.
 
     Red Hat Authors:
     Hans de Goede <hdegoede@redhat.com>
