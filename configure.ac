@@ -73,7 +73,7 @@ AC_ARG_ENABLE([pciaccess],
               [enable_pciaccess="yes"])
 
 AC_ARG_ENABLE([static-uinput],
-              [AS_HELP_STRING([--enable-statis-uinput], [Enable use of a fixed, static uinput device for X-servers without hotplug support (default: no)])],
+              [AS_HELP_STRING([--enable-static-uinput], [Enable use of a fixed, static uinput device for X-servers without hotplug support (default: no)])],
               [enable_static_uinput="$enableval"],
               [enable_static_uinput="no"])
 
