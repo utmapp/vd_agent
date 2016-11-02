@@ -970,8 +970,13 @@ int main(int argc, char *argv[])
                                  vdagentd_messages, VDAGENTD_NO_MESSAGES,
                                  debug);
     if (!server) {
-        syslog(LOG_CRIT, "Fatal could not create server socket %s",
-               vdagentd_socket);
+        if (errno == EADDRINUSE) {
+            syslog(LOG_CRIT, "Fatal the server socket %s exists already. Delete it?",
+                   vdagentd_socket);
+        } else {
+            syslog(LOG_CRIT, "Fatal could not create the server socket %s: %m",
+                   vdagentd_socket);
+        }
         return 1;
     }
     if (chmod(vdagentd_socket, 0666)) {
