@@ -797,7 +797,7 @@ static void usage(FILE *fp)
             "  -h             print this text\n"
             "  -d             log debug messages (use twice for extra info)\n"
             "  -s <port>      set virtio serial port  [%s]\n"
-            "  -S <filename>  set udcs socket [%s]\n"
+            "  -S <filename>  set vdagent Unix domain socket [%s]\n"
             "  -u <dev>       set uinput device       [%s]\n"
             "  -f             treat uinput device as fake; no ioctls\n"
             "  -x             don't daemonize\n"
