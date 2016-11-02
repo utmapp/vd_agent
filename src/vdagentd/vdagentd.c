@@ -801,12 +801,12 @@ static void usage(FILE *fp)
             "  -u <dev>       set uinput device       [%s]\n"
             "  -f             treat uinput device as fake; no ioctls\n"
             "  -x             don't daemonize\n"
-            "  -o             Only handle one virtio serial session.\n"
+            "  -o             only handle one virtio serial session\n"
 #ifdef HAVE_CONSOLE_KIT
-            "  -X             Disable console kit integration\n"
+            "  -X             disable console kit integration\n"
 #endif
 #ifdef HAVE_LIBSYSTEMD_LOGIN
-            "  -X         Disable systemd-logind integration\n"
+            "  -X             disable systemd-logind integration\n"
 #endif
             ,VERSION, portdev, vdagentd_socket, uinput_device);
 }
