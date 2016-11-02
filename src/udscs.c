@@ -132,6 +132,7 @@ void udscs_destroy_connection(struct udscs_connection **connp)
     }
 
     free(conn->data.buf);
+    conn->data.buf = NULL;
 
     if (conn->next)
         conn->next->prev = conn->prev;
@@ -235,6 +236,7 @@ static void udscs_read_complete(struct udscs_connection **connp)
         if (!*connp) /* Was the connection disconnected by the callback ? */
             return;
     }
+    free(conn->data.buf);
 
     conn->header_read = 0;
     memset(&conn->data, 0, sizeof(conn->data));

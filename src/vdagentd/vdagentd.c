@@ -727,7 +727,6 @@ static void agent_read_complete(struct udscs_connection **connp,
         if (header->arg1 == 0 && header->arg2 == 0) {
             syslog(LOG_INFO, "got old session agent xorg resolution message, "
                              "ignoring");
-            free(data);
             return;
         }
 
@@ -735,7 +734,6 @@ static void agent_read_complete(struct udscs_connection **connp,
             syslog(LOG_ERR, "guest xorg resolution message has wrong size, "
                             "disconnecting agent");
             udscs_destroy_connection(connp);
-            free(data);
             return;
         }
 
@@ -760,7 +758,6 @@ static void agent_read_complete(struct udscs_connection **connp,
     case VDAGENTD_CLIPBOARD_RELEASE:
         if (do_agent_clipboard(*connp, header, data)) {
             udscs_destroy_connection(connp);
-            free(data);
             return;
         }
         break;
@@ -783,7 +780,6 @@ static void agent_read_complete(struct udscs_connection **connp,
         syslog(LOG_ERR, "unknown message from vdagent: %u, ignoring",
                header->type);
     }
-    free(data);
 }
 
 /* main */

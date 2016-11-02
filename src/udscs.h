@@ -39,8 +39,10 @@ struct udscs_message_header {
 };
 
 /* Callbacks with this type will be called when a complete message has been
- * received. The callback may call udscs_destroy_connection, in which case
- * *connp must be made NULL (which udscs_destroy_connection takes care of).
+ * received. The callback does not own the data buffer and should not free it.
+ * The data buffer will be freed shortly after the read callback returns.
+ * The callback may call udscs_destroy_connection, in which case *connp must be
+ * made NULL (which udscs_destroy_connection takes care of).
  */
 typedef void (*udscs_read_callback)(struct udscs_connection **connp,
     struct udscs_message_header *header, uint8_t *data);
