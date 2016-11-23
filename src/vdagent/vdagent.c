@@ -61,16 +61,13 @@ static void daemon_read_complete(struct udscs_connection **connp,
     switch (header->type) {
     case VDAGENTD_MONITORS_CONFIG:
         vdagent_x11_set_monitor_config(x11, (VDAgentMonitorsConfig *)data, 0);
-        free(data);
         break;
     case VDAGENTD_CLIPBOARD_REQUEST:
         vdagent_x11_clipboard_request(x11, header->arg1, header->arg2);
-        free(data);
         break;
     case VDAGENTD_CLIPBOARD_GRAB:
         vdagent_x11_clipboard_grab(x11, header->arg1, (uint32_t *)data,
                                    header->size / sizeof(uint32_t));
-        free(data);
         break;
     case VDAGENTD_CLIPBOARD_DATA:
         vdagent_x11_clipboard_data(x11, header->arg1, header->arg2,
@@ -80,7 +77,6 @@ static void daemon_read_complete(struct udscs_connection **connp,
         break;
     case VDAGENTD_CLIPBOARD_RELEASE:
         vdagent_x11_clipboard_release(x11, header->arg1);
-        free(data);
         break;
     case VDAGENTD_VERSION:
         if (strcmp((char *)data, VERSION) != 0) {
@@ -98,7 +94,6 @@ static void daemon_read_complete(struct udscs_connection **connp,
             vdagent_file_xfers_error(*connp,
                                      ((VDAgentFileXferStartMessage *)data)->id);
         }
-        free(data);
         break;
     case VDAGENTD_FILE_XFER_STATUS:
         if (vdagent_file_xfers != NULL) {
@@ -108,7 +103,6 @@ static void daemon_read_complete(struct udscs_connection **connp,
             vdagent_file_xfers_error(*connp,
                                      ((VDAgentFileXferStatusMessage *)data)->id);
         }
-        free(data);
         break;
     case VDAGENTD_FILE_XFER_DISABLE:
         if (debug)
@@ -126,7 +120,6 @@ static void daemon_read_complete(struct udscs_connection **connp,
         } else {
             vdagent_audio_record_sync(avs->mute, avs->nchannels, avs->volume);
         }
-        free(data);
         break;
     }
     case VDAGENTD_FILE_XFER_DATA:
@@ -137,7 +130,6 @@ static void daemon_read_complete(struct udscs_connection **connp,
             vdagent_file_xfers_error(*connp,
                                      ((VDAgentFileXferDataMessage *)data)->id);
         }
-        free(data);
         break;
     case VDAGENTD_CLIENT_DISCONNECTED:
         vdagent_x11_client_disconnected(x11);
@@ -150,7 +142,6 @@ static void daemon_read_complete(struct udscs_connection **connp,
     default:
         syslog(LOG_ERR, "Unknown message from vdagentd type: %d, ignoring",
                header->type);
-        free(data);
     }
 }
 
