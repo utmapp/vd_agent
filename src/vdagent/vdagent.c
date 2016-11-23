@@ -72,8 +72,6 @@ static void daemon_read_complete(struct udscs_connection **connp,
     case VDAGENTD_CLIPBOARD_DATA:
         vdagent_x11_clipboard_data(x11, header->arg1, header->arg2,
                                    data, header->size);
-        /* vdagent_x11_clipboard_data takes ownership of the data (or frees
-           it immediately) */
         break;
     case VDAGENTD_CLIPBOARD_RELEASE:
         vdagent_x11_clipboard_release(x11, header->arg1);

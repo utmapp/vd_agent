@@ -1216,7 +1216,6 @@ void vdagent_x11_clipboard_data(struct vdagent_x11 *x11, uint8_t selection,
             SELPRINTF("received clipboard data while still sending"
                       " data from previous request, ignoring");
         }
-        free(data);
         return;
     }
 
@@ -1225,7 +1224,6 @@ void vdagent_x11_clipboard_data(struct vdagent_x11 *x11, uint8_t selection,
             SELPRINTF("received clipboard data without an "
                       "outstanding selection request, ignoring");
         }
-        free(data);
         return;
     }
 
@@ -1244,7 +1242,6 @@ void vdagent_x11_clipboard_data(struct vdagent_x11 *x11, uint8_t selection,
                       type_from_event, type);
         }
         vdagent_x11_send_selection_notify(x11, None, NULL);
-        free(data);
 
         /* Flush output buffers and consume any pending events */
         vdagent_x11_do_read(x11);
@@ -1266,14 +1263,19 @@ void vdagent_x11_clipboard_data(struct vdagent_x11 *x11, uint8_t selection,
                         x11->incr_atom, 32, PropModeReplace,
                         (unsigned char*)&len, 1);
         if (vdagent_x11_restore_error_handler(x11) == 0) {
-            x11->selection_req_data = data;
-            x11->selection_req_data_pos = 0;
-            x11->selection_req_data_size = size;
-            x11->selection_req_atom = prop;
-            vdagent_x11_send_selection_notify(x11, prop, x11->selection_req);
+            /* duplicate data */
+            x11->selection_req_data = malloc(size);
+            if (x11->selection_req_data != NULL) {
+                memcpy(x11->selection_req_data, data, size);
+                x11->selection_req_data_pos = 0;
+                x11->selection_req_data_size = size;
+                x11->selection_req_atom = prop;
+                vdagent_x11_send_selection_notify(x11, prop, x11->selection_req);
+            } else {
+                SELPRINTF("out of memory allocating selection buffer");
+            }
         } else {
             SELPRINTF("clipboard data sent failed, requestor window gone");
-            free(data);
         }
     } else {
         vdagent_x11_set_error_handler(x11, vdagent_x11_ignore_bad_window_handler);
@@ -1284,8 +1286,6 @@ void vdagent_x11_clipboard_data(struct vdagent_x11 *x11, uint8_t selection,
             vdagent_x11_send_selection_notify(x11, prop, NULL);
         else
             SELPRINTF("clipboard data sent failed, requestor window gone");
-
-        free(data);
     }
 
     /* Flush output buffers and consume any pending events */
