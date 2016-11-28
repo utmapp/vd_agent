@@ -236,10 +236,10 @@ static void udscs_read_complete(struct udscs_connection **connp)
         if (!*connp) /* Was the connection disconnected by the callback ? */
             return;
     }
-    free(conn->data.buf);
 
+    free(conn->data.buf);
+    memset(&conn->data, 0, sizeof(conn->data)); /* data.buf = NULL */
     conn->header_read = 0;
-    memset(&conn->data, 0, sizeof(conn->data));
 }
 
 /* A helper for udscs_client_handle_fds() */
