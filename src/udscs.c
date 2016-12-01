@@ -495,11 +495,12 @@ int udscs_server_fill_fds(struct udscs_server *server, fd_set *readfds,
         fd_set *writefds)
 {
     struct udscs_connection *conn;
-    int nfds = server->fd + 1;
+    int nfds;
 
     if (!server)
         return -1;
 
+    nfds = server->fd + 1;
     FD_SET(server->fd, readfds);
 
     conn = server->connections_head.next;
