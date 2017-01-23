@@ -118,6 +118,29 @@ static void do_client_disconnect(void)
     }
 }
 
+void do_client_mouse(struct vdagentd_uinput **uinputp, VDAgentMouseState *mouse)
+{
+    vdagentd_uinput_do_mouse(uinputp, mouse);
+    if (!*uinputp) {
+        /* Try to re-open the tablet */
+        struct agent_data *agent_data =
+            udscs_get_user_data(active_session_conn);
+        if (agent_data)
+            *uinputp = vdagentd_uinput_create(uinput_device,
+                                              agent_data->width,
+                                              agent_data->height,
+                                              agent_data->screen_info,
+                                              agent_data->screen_count,
+                                              debug > 1,
+                                              uinput_fake);
+        if (!*uinputp) {
+            syslog(LOG_CRIT, "Fatal uinput error");
+            retval = 1;
+            quit = 1;
+        }
+    }
+}
+
 static void do_client_monitors(struct vdagent_virtio_port *vport, int port_nr,
     VDAgentMessage *message_header, VDAgentMonitorsConfig *new_monitors)
 {
@@ -333,25 +356,7 @@ static int virtio_port_read_complete(
     case VD_AGENT_MOUSE_STATE:
         if (message_header->size != sizeof(VDAgentMouseState))
             goto size_error;
-        vdagentd_uinput_do_mouse(&uinput, (VDAgentMouseState *)data);
-        if (!uinput) {
-            /* Try to re-open the tablet */
-            struct agent_data *agent_data =
-                udscs_get_user_data(active_session_conn);
-            if (agent_data)
-                uinput = vdagentd_uinput_create(uinput_device,
-                                                agent_data->width,
-                                                agent_data->height,
-                                                agent_data->screen_info,
-                                                agent_data->screen_count,
-                                                debug > 1,
-                                                uinput_fake);
-            if (!uinput) {
-                syslog(LOG_CRIT, "Fatal uinput error");
-                retval = 1;
-                quit = 1;
-            }
-        }
+        do_client_mouse(&uinput, (VDAgentMouseState *)data);
         break;
     case VD_AGENT_MONITORS_CONFIG:
         if (message_header->size < sizeof(VDAgentMonitorsConfig))
