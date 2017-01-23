@@ -341,34 +341,109 @@ static void do_client_file_xfer(struct vdagent_virtio_port *vport,
     udscs_write(conn, msg_type, 0, 0, data, message_header->size);
 }
 
+static gsize vdagent_message_min_size[] =
+{
+    -1, /* Does not exist */
+    sizeof(VDAgentMouseState), /* VD_AGENT_MOUSE_STATE */
+    sizeof(VDAgentMonitorsConfig), /* VD_AGENT_MONITORS_CONFIG */
+    sizeof(VDAgentReply), /* VD_AGENT_REPLY */
+    sizeof(VDAgentClipboard), /* VD_AGENT_CLIPBOARD */
+    sizeof(VDAgentDisplayConfig), /* VD_AGENT_DISPLAY_CONFIG */
+    sizeof(VDAgentAnnounceCapabilities), /* VD_AGENT_ANNOUNCE_CAPABILITIES */
+    sizeof(VDAgentClipboardGrab), /* VD_AGENT_CLIPBOARD_GRAB */
+    sizeof(VDAgentClipboardRequest), /* VD_AGENT_CLIPBOARD_REQUEST */
+    sizeof(VDAgentClipboardRelease), /* VD_AGENT_CLIPBOARD_RELEASE */
+    sizeof(VDAgentFileXferStartMessage), /* VD_AGENT_FILE_XFER_START */
+    sizeof(VDAgentFileXferStatusMessage), /* VD_AGENT_FILE_XFER_STATUS */
+    sizeof(VDAgentFileXferDataMessage), /* VD_AGENT_FILE_XFER_DATA */
+    0, /* VD_AGENT_CLIENT_DISCONNECTED */
+    sizeof(VDAgentMaxClipboard), /* VD_AGENT_MAX_CLIPBOARD */
+    sizeof(VDAgentAudioVolumeSync), /* VD_AGENT_AUDIO_VOLUME_SYNC */
+};
+
+static gboolean vdagent_message_check_size(const VDAgentMessage *message_header)
+{
+    uint32_t min_size = 0;
+
+    if (message_header->protocol != VD_AGENT_PROTOCOL) {
+        syslog(LOG_ERR, "message with wrong protocol version ignoring");
+        return FALSE;
+    }
+
+    if (!message_header->type ||
+        message_header->type >= G_N_ELEMENTS(vdagent_message_min_size)) {
+        syslog(LOG_WARNING, "unknown message type %d, ignoring",
+               message_header->type);
+        return FALSE;
+    }
+
+    min_size = vdagent_message_min_size[message_header->type];
+    if (VD_AGENT_HAS_CAPABILITY(capabilities, capabilities_size,
+                                VD_AGENT_CAP_CLIPBOARD_SELECTION)) {
+        switch (message_header->type) {
+        case VD_AGENT_CLIPBOARD_GRAB:
+        case VD_AGENT_CLIPBOARD_REQUEST:
+        case VD_AGENT_CLIPBOARD:
+        case VD_AGENT_CLIPBOARD_RELEASE:
+          min_size += 4;
+        }
+    }
+
+    switch (message_header->type) {
+    case VD_AGENT_MONITORS_CONFIG:
+    case VD_AGENT_CLIPBOARD:
+    case VD_AGENT_CLIPBOARD_GRAB:
+    case VD_AGENT_CLIPBOARD_REQUEST:
+    case VD_AGENT_CLIPBOARD_RELEASE:
+    case VD_AGENT_AUDIO_VOLUME_SYNC:
+    case VD_AGENT_ANNOUNCE_CAPABILITIES:
+        if (message_header->size < min_size) {
+            syslog(LOG_ERR, "read: invalid message size: %u for message type: %u",
+                   message_header->size, message_header->type);
+            return FALSE;
+        }
+        break;
+    case VD_AGENT_MOUSE_STATE:
+    case VD_AGENT_MAX_CLIPBOARD:
+        if (message_header->size != min_size) {
+            syslog(LOG_ERR, "read: invalid message size: %u for message type: %u",
+                   message_header->size, message_header->type);
+            return FALSE;
+        }
+        break;
+    case VD_AGENT_FILE_XFER_START:
+    case VD_AGENT_FILE_XFER_DATA:
+    case VD_AGENT_FILE_XFER_STATUS:
+    case VD_AGENT_CLIENT_DISCONNECTED:
+        /* No size checks for these at the moment */
+        break;
+    case VD_AGENT_DISPLAY_CONFIG:
+    case VD_AGENT_REPLY:
+    default:
+        g_warn_if_reached();
+        return FALSE;
+    }
+    return TRUE;
+}
+
 static int virtio_port_read_complete(
         struct vdagent_virtio_port *vport,
         int port_nr,
         VDAgentMessage *message_header,
         uint8_t *data)
 {
-    uint32_t min_size = 0;
-
-    if (message_header->protocol != VD_AGENT_PROTOCOL) {
-        syslog(LOG_ERR, "message with wrong protocol version ignoring");
+    if (!vdagent_message_check_size(message_header))
         return 0;
-    }
 
     switch (message_header->type) {
     case VD_AGENT_MOUSE_STATE:
-        if (message_header->size != sizeof(VDAgentMouseState))
-            goto size_error;
         do_client_mouse(&uinput, (VDAgentMouseState *)data);
         break;
     case VD_AGENT_MONITORS_CONFIG:
-        if (message_header->size < sizeof(VDAgentMonitorsConfig))
-            goto size_error;
         do_client_monitors(vport, port_nr, message_header,
                     (VDAgentMonitorsConfig *)data);
         break;
     case VD_AGENT_ANNOUNCE_CAPABILITIES:
-        if (message_header->size < sizeof(VDAgentAnnounceCapabilities))
-            goto size_error;
         do_client_capabilities(vport, message_header,
                         (VDAgentAnnounceCapabilities *)data);
         break;
@@ -376,21 +451,6 @@ static int virtio_port_read_complete(
     case VD_AGENT_CLIPBOARD_REQUEST:
     case VD_AGENT_CLIPBOARD:
     case VD_AGENT_CLIPBOARD_RELEASE:
-        switch (message_header->type) {
-        case VD_AGENT_CLIPBOARD_GRAB:
-            min_size = sizeof(VDAgentClipboardGrab); break;
-        case VD_AGENT_CLIPBOARD_REQUEST:
-            min_size = sizeof(VDAgentClipboardRequest); break;
-        case VD_AGENT_CLIPBOARD:
-            min_size = sizeof(VDAgentClipboard); break;
-        }
-        if (VD_AGENT_HAS_CAPABILITY(capabilities, capabilities_size,
-                                    VD_AGENT_CAP_CLIPBOARD_SELECTION)) {
-            min_size += 4;
-        }
-        if (message_header->size < min_size) {
-            goto size_error;
-        }
         do_client_clipboard(vport, message_header, data);
         break;
     case VD_AGENT_FILE_XFER_START:
@@ -402,30 +462,19 @@ static int virtio_port_read_complete(
         vdagent_virtio_port_reset(vport, VDP_CLIENT_PORT);
         do_client_disconnect();
         break;
-    case VD_AGENT_MAX_CLIPBOARD:
-        if (message_header->size != sizeof(VDAgentMaxClipboard))
-            goto size_error;
-        VDAgentMaxClipboard *msg = (VDAgentMaxClipboard *)data;
-        syslog(LOG_DEBUG, "Set max clipboard: %d", msg->max);
-        max_clipboard = msg->max;
+    case VD_AGENT_MAX_CLIPBOARD: {
+        max_clipboard = ((VDAgentMaxClipboard *)data)->max;
+        syslog(LOG_DEBUG, "Set max clipboard: %d", max_clipboard);
         break;
+    }
     case VD_AGENT_AUDIO_VOLUME_SYNC:
-        if (message_header->size < sizeof(VDAgentAudioVolumeSync))
-            goto size_error;
-
         do_client_volume_sync(vport, port_nr, message_header,
                 (VDAgentAudioVolumeSync *)data);
         break;
     default:
-        syslog(LOG_WARNING, "unknown message type %d, ignoring",
-               message_header->type);
+        g_warn_if_reached();
     }
 
-    return 0;
-
-size_error:
-    syslog(LOG_ERR, "read: invalid message size: %u for message type: %u",
-           message_header->size, message_header->type);
     return 0;
 }
 
