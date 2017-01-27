@@ -328,6 +328,8 @@ static void do_client_file_xfer(struct vdagent_virtio_port *vport,
         id = d->id;
         break;
     }
+    default:
+        g_return_if_reached(); /* quiet uninitialized variable warning */
     }
 
     conn = g_hash_table_lookup(active_xfers, GUINT_TO_POINTER(id));
