@@ -28,6 +28,7 @@
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <glib.h>
 
 #include "virtio-port.h"
 
@@ -216,16 +217,16 @@ int vdagent_virtio_port_write_start(
         return -1;
     }
 
-    chunk_header.port = port_nr;
-    chunk_header.size = sizeof(message_header) + data_size;
+    chunk_header.port = GUINT32_TO_LE(port_nr);
+    chunk_header.size = GUINT32_TO_LE(sizeof(message_header) + data_size);
     memcpy(new_wbuf->buf + new_wbuf->write_pos, &chunk_header,
            sizeof(chunk_header));
     new_wbuf->write_pos += sizeof(chunk_header);
 
-    message_header.protocol = VD_AGENT_PROTOCOL;
-    message_header.type = message_type;
-    message_header.opaque = message_opaque;
-    message_header.size = data_size;
+    message_header.protocol = GUINT32_TO_LE(VD_AGENT_PROTOCOL);
+    message_header.type = GUINT32_TO_LE(message_type);
+    message_header.opaque = GUINT64_TO_LE(message_opaque);
+    message_header.size = GUINT32_TO_LE(data_size);
     memcpy(new_wbuf->buf + new_wbuf->write_pos, &message_header,
            sizeof(message_header));
     new_wbuf->write_pos += sizeof(message_header);
@@ -309,13 +310,20 @@ static void vdagent_virtio_port_do_chunk(struct vdagent_virtio_port **vportp)
         memcpy((uint8_t *)&port->message_header + port->message_header_read,
                vport->chunk_data, read);
         port->message_header_read += read;
-        if (port->message_header_read == sizeof(port->message_header) &&
-                port->message_header.size) {
-            port->message_data = malloc(port->message_header.size);
-            if (!port->message_data) {
-                syslog(LOG_ERR, "out of memory, disconnecting virtio");
-                vdagent_virtio_port_destroy(vportp);
-                return;
+        if (port->message_header_read == sizeof(port->message_header)) {
+
+            port->message_header.protocol = GUINT32_FROM_LE(port->message_header.protocol);
+            port->message_header.type = GUINT32_FROM_LE(port->message_header.type);
+            port->message_header.opaque = GUINT64_FROM_LE(port->message_header.opaque);
+            port->message_header.size = GUINT32_FROM_LE(port->message_header.size);
+
+            if (port->message_header.size) {
+                port->message_data = malloc(port->message_header.size);
+                if (!port->message_data) {
+                    syslog(LOG_ERR, "out of memory, disconnecting virtio");
+                    vdagent_virtio_port_destroy(vportp);
+                    return;
+                }
             }
         }
         pos = read;
@@ -420,6 +428,8 @@ static void vdagent_virtio_port_do_read(struct vdagent_virtio_port **vportp)
     if (vport->chunk_header_read < sizeof(vport->chunk_header)) {
         vport->chunk_header_read += n;
         if (vport->chunk_header_read == sizeof(vport->chunk_header)) {
+            vport->chunk_header.size = GUINT32_FROM_LE(vport->chunk_header.size);
+            vport->chunk_header.port = GUINT32_FROM_LE(vport->chunk_header.port);
             if (vport->chunk_header.size > VD_AGENT_MAX_DATA_SIZE) {
                 syslog(LOG_ERR, "chunk size %u too large",
                        vport->chunk_header.size);

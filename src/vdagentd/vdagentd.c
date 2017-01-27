@@ -78,6 +78,34 @@ static int client_connected = 0;
 static int max_clipboard = -1;
 
 /* utility functions */
+static void virtio_msg_uint32_to_le(uint8_t *_msg, uint32_t size, uint32_t offset)
+{
+    uint32_t i, *msg = (uint32_t *)(_msg + offset);
+
+    /* offset - size % 4 should be 0 - extra bytes are ignored */
+    for (i = 0; i < (size - offset) / 4; i++)
+        msg[i] = GUINT32_TO_LE(msg[i]);
+}
+
+static void virtio_msg_uint32_from_le(uint8_t *_msg, uint32_t size, uint32_t offset)
+{
+    uint32_t i, *msg = (uint32_t *)(_msg + offset);
+
+    /* offset - size % 4 should be 0 - extra bytes are ignored */
+    for (i = 0; i < (size - offset) / 4; i++)
+        msg[i] = GUINT32_FROM_LE(msg[i]);
+}
+
+static void virtio_msg_uint16_from_le(uint8_t *_msg, uint32_t size, uint32_t offset)
+{
+    uint32_t i;
+    uint16_t *msg = (uint16_t *)(_msg + offset);
+
+    /* offset - size % 2 should be 0 - extra bytes are ignored */
+    for (i = 0; i < (size - offset) / 2; i++)
+        msg[i] = GUINT16_FROM_LE(msg[i]);
+}
+
 /* vdagentd <-> spice-client communication handling */
 static void send_capabilities(struct vdagent_virtio_port *vport,
     uint32_t request)
@@ -102,6 +130,7 @@ static void send_capabilities(struct vdagent_virtio_port *vport,
     VD_AGENT_SET_CAPABILITY(caps->caps, VD_AGENT_CAP_GUEST_LINEEND_LF);
     VD_AGENT_SET_CAPABILITY(caps->caps, VD_AGENT_CAP_MAX_CLIPBOARD);
     VD_AGENT_SET_CAPABILITY(caps->caps, VD_AGENT_CAP_AUDIO_VOLUME_SYNC);
+    virtio_msg_uint32_to_le((uint8_t *)caps, size, 0);
 
     vdagent_virtio_port_write(vport, VDP_CLIENT_PORT,
                               VD_AGENT_ANNOUNCE_CAPABILITIES, 0,
@@ -174,8 +203,8 @@ static void do_client_monitors(struct vdagent_virtio_port *vport, int port_nr,
                     (uint8_t *)mon_config, size);
 
     /* Acknowledge reception of monitors config to spice server / client */
-    reply.type  = VD_AGENT_MONITORS_CONFIG;
-    reply.error = VD_AGENT_SUCCESS;
+    reply.type  = GUINT32_TO_LE(VD_AGENT_MONITORS_CONFIG);
+    reply.error = GUINT32_TO_LE(VD_AGENT_SUCCESS);
     vdagent_virtio_port_write(vport, port_nr, VD_AGENT_REPLY, 0,
                               (uint8_t *)&reply, sizeof(reply));
 }
@@ -278,8 +307,8 @@ static void send_file_xfer_status(struct vdagent_virtio_port *vport,
                                   const char *msg, uint32_t id, uint32_t xfer_status)
 {
     VDAgentFileXferStatusMessage status = {
-        .id = id,
-        .result = xfer_status,
+        .id = GUINT32_TO_LE(id),
+        .result = GUINT32_TO_LE(xfer_status),
     };
     syslog(LOG_WARNING, msg, id);
     if (vport)
@@ -361,6 +390,50 @@ static gsize vdagent_message_min_size[] =
     sizeof(VDAgentAudioVolumeSync), /* VD_AGENT_AUDIO_VOLUME_SYNC */
 };
 
+static void vdagent_message_clipboard_from_le(VDAgentMessage *message_header,
+        uint8_t *data)
+{
+    gsize min_size = vdagent_message_min_size[message_header->type];
+    uint32_t *data_type = (uint32_t *) data;
+
+    if (VD_AGENT_HAS_CAPABILITY(capabilities, capabilities_size,
+                                VD_AGENT_CAP_CLIPBOARD_SELECTION)) {
+        min_size += 4;
+        data_type++;
+    }
+
+    switch (message_header->type) {
+    case VD_AGENT_CLIPBOARD_REQUEST:
+    case VD_AGENT_CLIPBOARD:
+        *data_type = GUINT32_FROM_LE(*data_type);
+        break;
+    case VD_AGENT_CLIPBOARD_GRAB:
+        virtio_msg_uint32_from_le(data, message_header->size, min_size);
+        break;
+    default:
+        g_warn_if_reached();
+    }
+}
+
+static void vdagent_message_file_xfer_from_le(VDAgentMessage *message_header,
+        uint8_t *data)
+{
+    uint32_t *id = (uint32_t *)data;
+    *id = GUINT32_FROM_LE(*id);
+    id++; /* status */
+
+    switch (message_header->type) {
+    case VD_AGENT_FILE_XFER_DATA: {
+       VDAgentFileXferDataMessage *msg = (VDAgentFileXferDataMessage *)data;
+       msg->size = GUINT64_FROM_LE(msg->size);
+       break;
+    }
+    case VD_AGENT_FILE_XFER_STATUS:
+       *id = GUINT32_FROM_LE(*id); /* status */
+       break;
+    }
+}
+
 static gboolean vdagent_message_check_size(const VDAgentMessage *message_header)
 {
     uint32_t min_size = 0;
@@ -435,13 +508,16 @@ static int virtio_port_read_complete(
 
     switch (message_header->type) {
     case VD_AGENT_MOUSE_STATE:
+        virtio_msg_uint32_from_le(data, message_header->size, 0);
         do_client_mouse(&uinput, (VDAgentMouseState *)data);
         break;
     case VD_AGENT_MONITORS_CONFIG:
+        virtio_msg_uint32_from_le(data, message_header->size, 0);
         do_client_monitors(vport, port_nr, message_header,
                     (VDAgentMonitorsConfig *)data);
         break;
     case VD_AGENT_ANNOUNCE_CAPABILITIES:
+        virtio_msg_uint32_from_le(data, message_header->size, 0);
         do_client_capabilities(vport, message_header,
                         (VDAgentAnnounceCapabilities *)data);
         break;
@@ -449,11 +525,13 @@ static int virtio_port_read_complete(
     case VD_AGENT_CLIPBOARD_REQUEST:
     case VD_AGENT_CLIPBOARD:
     case VD_AGENT_CLIPBOARD_RELEASE:
+        vdagent_message_clipboard_from_le(message_header, data);
         do_client_clipboard(vport, message_header, data);
         break;
     case VD_AGENT_FILE_XFER_START:
     case VD_AGENT_FILE_XFER_STATUS:
     case VD_AGENT_FILE_XFER_DATA:
+        vdagent_message_file_xfer_from_le(message_header, data);
         do_client_file_xfer(vport, message_header, data);
         break;
     case VD_AGENT_CLIENT_DISCONNECTED:
@@ -461,14 +539,18 @@ static int virtio_port_read_complete(
         do_client_disconnect();
         break;
     case VD_AGENT_MAX_CLIPBOARD: {
-        max_clipboard = ((VDAgentMaxClipboard *)data)->max;
+        max_clipboard = GUINT32_FROM_LE(((VDAgentMaxClipboard *)data)->max);
         syslog(LOG_DEBUG, "Set max clipboard: %d", max_clipboard);
         break;
     }
-    case VD_AGENT_AUDIO_VOLUME_SYNC:
-        do_client_volume_sync(vport, port_nr, message_header,
-                (VDAgentAudioVolumeSync *)data);
+    case VD_AGENT_AUDIO_VOLUME_SYNC: {
+        VDAgentAudioVolumeSync *vdata = (VDAgentAudioVolumeSync *)data;
+        virtio_msg_uint16_from_le((uint8_t *)vdata, message_header->size,
+            offsetof(VDAgentAudioVolumeSync, volume));
+
+        do_client_volume_sync(vport, port_nr, message_header, vdata);
         break;
+    }
     default:
         g_warn_if_reached();
     }
@@ -477,7 +559,7 @@ static int virtio_port_read_complete(
 }
 
 static void virtio_write_clipboard(uint8_t selection, uint32_t msg_type,
-    uint32_t data_type, const uint8_t *data, uint32_t data_size)
+    uint32_t data_type, uint8_t *data, uint32_t data_size)
 {
     uint32_t size = data_size;
 
@@ -498,15 +580,18 @@ static void virtio_write_clipboard(uint8_t selection, uint32_t msg_type,
         vdagent_virtio_port_write_append(virtio_port, sel, 4);
     }
     if (data_type != -1) {
+        data_type = GUINT32_TO_LE(data_type);
         vdagent_virtio_port_write_append(virtio_port, (uint8_t*)&data_type, 4);
     }
 
+    if (msg_type == VD_AGENT_CLIPBOARD_GRAB)
+        virtio_msg_uint32_to_le(data, data_size, 0);
     vdagent_virtio_port_write_append(virtio_port, data, data_size);
 }
 
 /* vdagentd <-> vdagent communication handling */
 static int do_agent_clipboard(struct udscs_connection *conn,
-        struct udscs_message_header *header, const uint8_t *data)
+        struct udscs_message_header *header, uint8_t *data)
 {
     uint8_t selection = header->arg1;
     uint32_t msg_type = 0, data_type = -1, size = header->size;
@@ -817,8 +902,8 @@ static void agent_read_complete(struct udscs_connection **connp,
         break;
     case VDAGENTD_FILE_XFER_STATUS:{
         VDAgentFileXferStatusMessage status;
-        status.id = header->arg1;
-        status.result = header->arg2;
+        status.id = GUINT32_TO_LE(header->arg1);
+        status.result = GUINT32_TO_LE(header->arg2);
         vdagent_virtio_port_write(virtio_port, VDP_CLIENT_PORT,
                                   VD_AGENT_FILE_XFER_STATUS, 0,
                                   (uint8_t *)&status, sizeof(status));
