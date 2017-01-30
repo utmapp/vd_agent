@@ -395,8 +395,6 @@ static gboolean vdagent_message_check_size(const VDAgentMessage *message_header)
     case VD_AGENT_FILE_XFER_DATA:
     case VD_AGENT_CLIPBOARD:
     case VD_AGENT_CLIPBOARD_GRAB:
-    case VD_AGENT_CLIPBOARD_REQUEST:
-    case VD_AGENT_CLIPBOARD_RELEASE:
     case VD_AGENT_AUDIO_VOLUME_SYNC:
     case VD_AGENT_ANNOUNCE_CAPABILITIES:
         if (message_header->size < min_size) {
@@ -409,6 +407,8 @@ static gboolean vdagent_message_check_size(const VDAgentMessage *message_header)
     case VD_AGENT_FILE_XFER_STATUS:
     case VD_AGENT_DISPLAY_CONFIG:
     case VD_AGENT_REPLY:
+    case VD_AGENT_CLIPBOARD_REQUEST:
+    case VD_AGENT_CLIPBOARD_RELEASE:
     case VD_AGENT_MAX_CLIPBOARD:
     case VD_AGENT_CLIENT_DISCONNECTED:
         if (message_header->size != min_size) {
