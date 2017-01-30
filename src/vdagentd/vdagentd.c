@@ -391,6 +391,8 @@ static gboolean vdagent_message_check_size(const VDAgentMessage *message_header)
 
     switch (message_header->type) {
     case VD_AGENT_MONITORS_CONFIG:
+    case VD_AGENT_FILE_XFER_START:
+    case VD_AGENT_FILE_XFER_DATA:
     case VD_AGENT_CLIPBOARD:
     case VD_AGENT_CLIPBOARD_GRAB:
     case VD_AGENT_CLIPBOARD_REQUEST:
@@ -404,21 +406,17 @@ static gboolean vdagent_message_check_size(const VDAgentMessage *message_header)
         }
         break;
     case VD_AGENT_MOUSE_STATE:
+    case VD_AGENT_FILE_XFER_STATUS:
+    case VD_AGENT_DISPLAY_CONFIG:
+    case VD_AGENT_REPLY:
     case VD_AGENT_MAX_CLIPBOARD:
+    case VD_AGENT_CLIENT_DISCONNECTED:
         if (message_header->size != min_size) {
             syslog(LOG_ERR, "read: invalid message size: %u for message type: %u",
                    message_header->size, message_header->type);
             return FALSE;
         }
         break;
-    case VD_AGENT_FILE_XFER_START:
-    case VD_AGENT_FILE_XFER_DATA:
-    case VD_AGENT_FILE_XFER_STATUS:
-    case VD_AGENT_CLIENT_DISCONNECTED:
-        /* No size checks for these at the moment */
-        break;
-    case VD_AGENT_DISPLAY_CONFIG:
-    case VD_AGENT_REPLY:
     default:
         g_warn_if_reached();
         return FALSE;
