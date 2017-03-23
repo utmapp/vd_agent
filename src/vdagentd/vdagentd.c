@@ -410,6 +410,8 @@ static void vdagent_message_clipboard_from_le(VDAgentMessage *message_header,
     case VD_AGENT_CLIPBOARD_GRAB:
         virtio_msg_uint32_from_le(data, message_header->size, min_size);
         break;
+    case VD_AGENT_CLIPBOARD_RELEASE:
+        break;
     default:
         g_warn_if_reached();
     }
