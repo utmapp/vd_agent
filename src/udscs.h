@@ -53,7 +53,7 @@ typedef void (*udscs_read_callback)(struct udscs_connection **connp,
  *    this callback has completed!
  * 2) This callback is always called, even if the disconnect is initiated
  *    by the udscs user through returning -1 from a read callback, or
- *    by explictly calling udscs_destroy_connection.
+ *    by explicitly calling udscs_destroy_connection.
  */
 typedef void (*udscs_disconnect_callback)(struct udscs_connection *conn);
 
