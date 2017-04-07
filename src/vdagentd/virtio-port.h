@@ -46,7 +46,7 @@ typedef int (*vdagent_virtio_port_read_callback)(
       this callback has completed!
    2) This callback is always called, even if the disconnect is initiated
       by the vdagent_virtio_port user through returning -1 from a read
-      callback, or by explictly calling vdagent_virtio_port_destroy */
+      callback, or by explicitly calling vdagent_virtio_port_destroy */
 typedef void (*vdagent_virtio_port_disconnect_callback)(
     struct vdagent_virtio_port *conn);
 

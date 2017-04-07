@@ -168,7 +168,7 @@ si_dbus_read_signals(struct session_info *info)
             dbus_message_iter_init(message, &iter);
             type = dbus_message_iter_get_arg_type(&iter);
             /* Session should be an object path, but there is a bug in
-               ConsoleKit where it sends a string rather then an object_path
+               ConsoleKit where it sends a string rather than an object_path
                accept object_path too in case the bug ever gets fixed */
             if (type == DBUS_TYPE_STRING || type == DBUS_TYPE_OBJECT_PATH) {
                 dbus_message_iter_get_basic(&iter, &session);

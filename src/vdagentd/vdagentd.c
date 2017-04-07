@@ -240,7 +240,7 @@ static void do_client_capabilities(struct vdagent_virtio_port *vport,
     }
     memcpy(capabilities, caps->caps, capabilities_size * sizeof(uint32_t));
     if (caps->request) {
-        /* Report the previous client has disconneced. */
+        /* Report the previous client has disconnected. */
         do_client_disconnect();
         if (debug)
             syslog(LOG_DEBUG, "New client connected");
