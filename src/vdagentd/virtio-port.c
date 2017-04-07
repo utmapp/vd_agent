@@ -334,7 +334,7 @@ static void vdagent_virtio_port_do_chunk(struct vdagent_virtio_port **vportp)
         avail = vport->chunk_header.size - pos;
 
         if (avail > read) {
-            syslog(LOG_ERR, "chunk larger then message, lost sync?");
+            syslog(LOG_ERR, "chunk larger than message, lost sync?");
             vdagent_virtio_port_destroy(vportp);
             return;
         }

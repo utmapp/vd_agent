@@ -20,7 +20,7 @@ resolution, to the number of client windows and their resolution
 Support of copy and paste (text and images) between the active X11 session
 and the client, this supports both the primary selection and the clipboard
 .P
-Support for transfering files from the client to the agent
+Support for transferring files from the client to the agent
 .SH OPTIONS
 .TP
 \fB-h\fP

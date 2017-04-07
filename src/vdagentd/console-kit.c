@@ -443,7 +443,7 @@ char *session_info_session_for_pid(struct session_info *info, uint32_t pid)
                    error.message);
             dbus_error_free(&error);
         } else
-            syslog(LOG_ERR, "GetSessionForUnixProces failed");
+            syslog(LOG_ERR, "GetSessionForUnixProcess failed");
         goto exit;
     }
 

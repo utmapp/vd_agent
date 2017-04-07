@@ -329,7 +329,7 @@ static void do_client_file_xfer(struct vdagent_virtio_port *vport,
         VDAgentFileXferStartMessage *s = (VDAgentFileXferStartMessage *)data;
         if (!active_session_conn) {
             send_file_xfer_status(vport,
-               "Could not find an agent connnection belonging to the "
+               "Could not find an agent connection belonging to the "
                "active session, cancelling client file-xfer request %u",
                s->id, VD_AGENT_FILE_XFER_STATUS_CANCELLED);
             return;
@@ -1152,7 +1152,7 @@ int main(int argc, char *argv[])
     udscs_destroy_server(server);
     if (unlink(vdagentd_socket) != 0)
         syslog(LOG_ERR, "unlink %s: %s", vdagentd_socket, strerror(errno));
-    syslog(LOG_INFO, "vdagentd quiting, returning status %d", retval);
+    syslog(LOG_INFO, "vdagentd quitting, returning status %d", retval);
 
     if (do_daemonize)
         unlink(pidfilename);
