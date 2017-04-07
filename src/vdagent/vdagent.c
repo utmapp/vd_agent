@@ -182,7 +182,7 @@ static void quit_handler(int sig)
    wait to make sure the X connection worked.  We wait up
    to 10 seconds to get an 'all clear' from the child
    before we exit.  If we don't, we're able to exit with a
-   status that indicates an error occured */
+   status that indicates an error occurred */
 static void wait_and_exit(int s)
 {
     char buf[4];

@@ -236,7 +236,7 @@ static void delete_mode(struct vdagent_x11 *x11, int output_index,
 	vdagent_x11_restore_error_handler(x11);
     }
 
-    /* silly to update everytime for more then one monitor */
+    /* silly to update every time for more than one monitor */
     update_randr_res(x11, 0);
 }
 
@@ -333,7 +333,7 @@ static XRRModeInfo *create_new_mode(struct vdagent_x11 *x11, int output_index,
     // ignore race error, if mode is created by others
     vdagent_x11_restore_error_handler(x11);
 
-    /* silly to update everytime for more then one monitor */
+    /* silly to update every time for more than one monitor */
     update_randr_res(x11, 0);
 
     return find_mode_by_name(x11, modename);
@@ -798,7 +798,7 @@ void vdagent_x11_set_monitor_config(struct vdagent_x11 *x11,
     /* ... and disable the ones that would be bigger than
      * the new RandR screen once it is resized. If they are enabled the
      * XRRSetScreenSize call will fail with BadMatch. They will be
-     * reenabled after hanging the screen size.
+     * re-enabled after hanging the screen size.
      */
     for (i = 0; i < curr->num_of_monitors; ++i) {
         int width, height;

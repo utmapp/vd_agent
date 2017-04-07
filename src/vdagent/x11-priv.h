@@ -37,7 +37,7 @@ struct vdagent_x11_selection_request {
     struct vdagent_x11_selection_request *next;
 };
 
-/* A conversion request is X11 speak for asking an other app to give its
+/* A conversion request is X11 speak for asking another app to give its
    clipboard data to us, we do these on behalf of the spice client to copy
    data from the guest to the client. Like selection requests we process
    these one at a time. */

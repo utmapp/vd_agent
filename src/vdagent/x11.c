@@ -123,7 +123,7 @@ static void vdagent_x11_get_wm_name(struct vdagent_x11 *x11)
        this is when the display-manager (ie gdm) has set, and not cleared the
        _NET_SUPPORTING_WM_CHECK property, and the window manager running in
        the user session has not yet updated it to point to its window, so its
-       pointing to a non existing window. */
+       pointing to a nonexistent window. */
     vdagent_x11_set_error_handler(x11, vdagent_x11_ignore_bad_window_handler);
 
     /* Get the window manager SUPPORTING_WM_CHECK window */
@@ -1111,7 +1111,7 @@ static void vdagent_x11_handle_property_delete_notify(struct vdagent_x11 *x11,
 
     x11->selection_req_data_pos += len;
 
-    /* Note we must explictly send a 0 sized XChangeProperty to signal the
+    /* Note we must explicitly send a 0 sized XChangeProperty to signal the
        incr transfer is done. Hence we do not check if we've send all data
        but instead check we've send the final 0 sized XChangeProperty. */
     if (len == 0) {
@@ -1333,15 +1333,15 @@ void vdagent_x11_client_disconnected(struct vdagent_x11 *x11)
 }
 
 /* Function used to determine the default location to save file-xfers,
-   xdg desktop dir or xdg download dir. We error on the save side and use a
-   whitelist approach, so any unknown desktops will end up with saving
+   xdg desktop dir or xdg download dir. We err on the safe side and use a
+   whitelist approach, so any unknown desktop will end up with saving
    file-xfers to the xdg download dir, and opening the xdg download dir with
    xdg-open when the file-xfer completes. */
 int vdagent_x11_has_icons_on_desktop(struct vdagent_x11 *x11)
 {
     const char * const wms_with_icons_on_desktop[] = {
         "Metacity", /* GNOME-2 or GNOME-3 fallback */
-        "Xfwm4",    /* XFCE */
+        "Xfwm4",    /* Xfce */
         "Marco",    /* Mate */
         NULL
     };
