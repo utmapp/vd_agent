@@ -128,7 +128,7 @@ void vdagent_x11_randr_init(struct vdagent_x11 *x11)
     int i;
 
     if (x11->screen_count > 1) {
-        syslog(LOG_WARNING, "X-server has more then 1 screen, "
+        syslog(LOG_WARNING, "X-server has more than 1 screen, "
                "disabling client -> guest resolution syncing");
         return;
     }

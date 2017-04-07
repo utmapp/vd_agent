@@ -112,7 +112,7 @@ static AgentFileXferTask *vdagent_file_xfers_get_task(
 
     task = g_hash_table_lookup(xfers->xfers, GUINT_TO_POINTER(id));
     if (task == NULL)
-        syslog(LOG_ERR, "file-xfer: error can not find task %u", id);
+        syslog(LOG_ERR, "file-xfer: error cannot find task %u", id);
 
     return task;
 }
@@ -207,7 +207,7 @@ void vdagent_file_xfers_start(struct vdagent_file_xfers *xfers,
     g_free(task->file_name);
     task->file_name = path;
     if (i == 64) {
-        syslog(LOG_ERR, "file-xfer: more then 63 copies of %s exist?",
+        syslog(LOG_ERR, "file-xfer: more than 63 copies of %s exist?",
                file_path);
         goto error;
     }
