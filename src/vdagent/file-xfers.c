@@ -202,7 +202,10 @@ void vdagent_file_xfers_start(struct vdagent_file_xfers *xfers,
     path = g_strdup(file_path);
     for (i = 0; i < 64 && (stat(path, &st) == 0 || errno != ENOENT); i++) {
         g_free(path);
-        path = g_strdup_printf("%s (%d)", file_path, i + 1);
+        char *extension = strrchr(file_path, '.');
+        int basename_len = extension != NULL ? extension - file_path : strlen(file_path);
+        path = g_strdup_printf("%.*s (%i)%s", basename_len, file_path,
+                               i + 1, extension ? extension : "");
     }
     g_free(task->file_name);
     task->file_name = path;
