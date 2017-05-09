@@ -54,7 +54,7 @@ struct agent_data {
 
 /* variables */
 static const char *pidfilename = "/var/run/spice-vdagentd/spice-vdagentd.pid";
-static const char *portdev = "/dev/virtio-ports/com.redhat.spice.0";
+static const char *portdev = DEFAULT_VIRTIO_PORT_PATH;
 static const char *vdagentd_socket = VDAGENTD_SOCKET;
 static const char *uinput_device = "/dev/uinput";
 static int debug = 0;

@@ -44,7 +44,7 @@
 #include "x11.h"
 #include "file-xfers.h"
 
-static const char *portdev = "/dev/virtio-ports/com.redhat.spice.0";
+static const char *portdev = DEFAULT_VIRTIO_PORT_PATH;
 static const char *vdagentd_socket = VDAGENTD_SOCKET;
 static int debug = 0;
 static const char *fx_dir = NULL;

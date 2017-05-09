@@ -25,6 +25,8 @@
 
 #define VDAGENTD_SOCKET "/var/run/spice-vdagentd/spice-vdagent-sock"
 
+#define DEFAULT_VIRTIO_PORT_PATH "/dev/virtio-ports/com.redhat.spice.0"
+
 enum {
     VDAGENTD_GUEST_XORG_RESOLUTION, /* client -> daemon, arg1: overall width,
                                        arg2: overall height, data: array of
