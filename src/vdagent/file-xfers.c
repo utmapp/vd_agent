@@ -32,6 +32,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/stat.h>
+#include <sys/statvfs.h>
 #include <sys/types.h>
 #include <spice/vd_agent.h>
 #include <glib.h>
@@ -168,6 +169,17 @@ error:
     return NULL;
 }
 
+static uint64_t get_free_space_available(const char *path)
+{
+    struct statvfs stat;
+    if (statvfs(path, &stat) != 0) {
+        syslog(LOG_WARNING, "file-xfer: failed to get free space, statvfs error: %s",
+               strerror(errno));
+        return G_MAXUINT64;
+    }
+    return stat.f_bsize * stat.f_bavail;
+}
+
 void vdagent_file_xfers_start(struct vdagent_file_xfers *xfers,
     VDAgentFileXferStartMessage *msg)
 {
@@ -175,6 +187,7 @@ void vdagent_file_xfers_start(struct vdagent_file_xfers *xfers,
     char *dir = NULL, *path = NULL, *file_path = NULL;
     struct stat st;
     int i;
+    uint64_t free_space;
 
     g_return_if_fail(xfers != NULL);
 
@@ -192,6 +205,33 @@ void vdagent_file_xfers_start(struct vdagent_file_xfers *xfers,
     task->debug = xfers->debug;
 
     file_path = g_build_filename(xfers->save_dir, task->file_name, NULL);
+
+    free_space = get_free_space_available(xfers->save_dir);
+    if (task->file_size > free_space) {
+        gchar *free_space_str, *file_size_str;
+#if GLIB_CHECK_VERSION(2, 30, 0)
+        free_space_str = g_format_size(free_space);
+        file_size_str = g_format_size(task->file_size);
+#else
+        free_space_str = g_format_size_for_display(free_space);
+        file_size_str = g_format_size_for_display(task->file_size);
+#endif
+        syslog(LOG_ERR, "file-xfer: not enough free space (%s to copy, %s free)",
+               file_size_str, free_space_str);
+        g_free(free_space_str);
+        g_free(file_size_str);
+
+        udscs_write(xfers->vdagentd,
+                    VDAGENTD_FILE_XFER_STATUS,
+                    msg->id,
+                    VD_AGENT_FILE_XFER_STATUS_NOT_ENOUGH_SPACE,
+                    (uint8_t *)&free_space,
+                    sizeof(free_space));
+        vdagent_file_xfer_task_free(task);
+        g_free(file_path);
+        g_free(dir);
+        return;
+    }
 
     dir = g_path_get_dirname(file_path);
     if (g_mkdir_with_parents(dir, S_IRWXU) == -1) {

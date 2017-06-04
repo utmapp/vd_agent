@@ -925,6 +925,13 @@ static void agent_read_complete(struct udscs_connection **connp,
     case VDAGENTD_FILE_XFER_STATUS:{
         /* header->arg1 = file xfer task id, header->arg2 = file xfer status */
         switch (header->arg2) {
+            case VD_AGENT_FILE_XFER_STATUS_NOT_ENOUGH_SPACE: {
+                uint64_t free_space = GUINT64_TO_LE(*((uint64_t*)data));
+                send_file_xfer_status(virtio_port, "Not enough free space. Cancelling file-xfer %u",
+                                      header->arg1, header->arg2,
+                                      (uint8_t*)&free_space, sizeof(uint64_t));
+                break;
+            }
             default:
                 send_file_xfer_status(virtio_port, NULL, header->arg1, header->arg2, NULL, 0);
         }
