@@ -37,7 +37,7 @@ void vdagent_file_xfers_status(struct vdagent_file_xfers *xfers,
     VDAgentFileXferStatusMessage *msg);
 void vdagent_file_xfers_data(struct vdagent_file_xfers *xfers,
     VDAgentFileXferDataMessage *msg);
-void vdagent_file_xfers_error(struct udscs_connection *vdagentd,
+void vdagent_file_xfers_error_disabled(struct udscs_connection *vdagentd,
     uint32_t msg_id);
 
 #endif

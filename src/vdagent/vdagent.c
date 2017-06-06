@@ -89,8 +89,8 @@ static void daemon_read_complete(struct udscs_connection **connp,
             vdagent_file_xfers_start(vdagent_file_xfers,
                                      (VDAgentFileXferStartMessage *)data);
         } else {
-            vdagent_file_xfers_error(*connp,
-                                     ((VDAgentFileXferStartMessage *)data)->id);
+            vdagent_file_xfers_error_disabled(*connp,
+                                              ((VDAgentFileXferStartMessage *)data)->id);
         }
         break;
     case VDAGENTD_FILE_XFER_STATUS:
@@ -98,8 +98,8 @@ static void daemon_read_complete(struct udscs_connection **connp,
             vdagent_file_xfers_status(vdagent_file_xfers,
                                       (VDAgentFileXferStatusMessage *)data);
         } else {
-            vdagent_file_xfers_error(*connp,
-                                     ((VDAgentFileXferStatusMessage *)data)->id);
+            vdagent_file_xfers_error_disabled(*connp,
+                                              ((VDAgentFileXferStatusMessage *)data)->id);
         }
         break;
     case VDAGENTD_FILE_XFER_DISABLE:
@@ -125,8 +125,8 @@ static void daemon_read_complete(struct udscs_connection **connp,
             vdagent_file_xfers_data(vdagent_file_xfers,
                                     (VDAgentFileXferDataMessage *)data);
         } else {
-            vdagent_file_xfers_error(*connp,
-                                     ((VDAgentFileXferDataMessage *)data)->id);
+            vdagent_file_xfers_error_disabled(*connp,
+                                              ((VDAgentFileXferDataMessage *)data)->id);
         }
         break;
     case VDAGENTD_CLIENT_DISCONNECTED:
