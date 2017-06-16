@@ -42,6 +42,7 @@ src_spice_vdagent_SOURCES =			\
 
 src_spice_vdagentd_CFLAGS =			\
 	$(DBUS_CFLAGS)				\
+	$(LIBSYSTEMD_DAEMON_CFLAGS)		\
 	$(LIBSYSTEMD_LOGIN_CFLAGS)		\
 	$(PCIACCESS_CFLAGS)			\
 	$(SPICE_CFLAGS)				\
@@ -52,6 +53,7 @@ src_spice_vdagentd_CFLAGS =			\
 
 src_spice_vdagentd_LDADD =			\
 	$(DBUS_LIBS)				\
+	$(LIBSYSTEMD_DAEMON_LIBS)		\
 	$(LIBSYSTEMD_LOGIN_LIBS)		\
 	$(PCIACCESS_LIBS)			\
 	$(SPICE_LIBS)				\
@@ -102,7 +104,7 @@ if INIT_SCRIPT_SYSTEMD
 systemdunitdir = $(SYSTEMDSYSTEMUNITDIR)
 systemdunit_DATA = \
 	$(top_srcdir)/data/spice-vdagentd.service \
-	$(top_srcdir)/data/spice-vdagentd.target
+	$(top_srcdir)/data/spice-vdagentd.socket
 
 udevrulesdir = /lib/udev/rules.d
 udevrules_DATA = $(top_srcdir)/data/70-spice-vdagentd.rules
@@ -124,7 +126,7 @@ EXTRA_DIST =					\
 	data/spice-vdagent.desktop		\
 	data/spice-vdagentd			\
 	data/spice-vdagentd.service		\
-	data/spice-vdagentd.target		\
+	data/spice-vdagentd.socket		\
 	data/tmpfiles.d/spice-vdagentd.conf	\
 	data/xorg.conf.RHEL-5			\
 	$(NULL)

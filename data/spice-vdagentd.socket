@@ -1,0 +1,10 @@
+[Unit]
+Description=Activation socket for spice guest agent daemon
+# only start the socket if the virtio port device exists
+Requisite=dev-virtio\x2dports-com.redhat.spice.0.device
+
+[Socket]
+ListenStream=/var/run/spice-vdagentd/spice-vdagent-sock
+
+[Install]
+WantedBy=sockets.target

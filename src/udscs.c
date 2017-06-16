@@ -369,15 +369,18 @@ struct udscs_server {
     udscs_disconnect_callback disconnect_callback;
 };
 
-struct udscs_server *udscs_create_server(const char *socketname,
+struct udscs_server *udscs_create_server_for_fd(int fd,
     udscs_connect_callback connect_callback,
     udscs_read_callback read_callback,
     udscs_disconnect_callback disconnect_callback,
     const char * const type_to_string[], int no_types, int debug)
 {
-    int c;
-    struct sockaddr_un address;
     struct udscs_server *server;
+
+    if (fd <= 0) {
+        syslog(LOG_ERR, "Invalid file descriptor: %i", fd);
+        return NULL;
+    }
 
     server = calloc(1, sizeof(*server));
     if (!server)
@@ -386,35 +389,47 @@ struct udscs_server *udscs_create_server(const char *socketname,
     server->type_to_string = type_to_string;
     server->no_types = no_types;
     server->debug = debug;
-
-    server->fd = socket(PF_UNIX, SOCK_STREAM, 0);
-    if (server->fd == -1) {
-        syslog(LOG_ERR, "creating unix domain socket: %m");
-        free(server);
-        return NULL;
-    }
-
-    address.sun_family = AF_UNIX;
-    snprintf(address.sun_path, sizeof(address.sun_path), "%s", socketname);
-    c = bind(server->fd, (struct sockaddr *)&address, sizeof(address));
-    if (c != 0) {
-        syslog(LOG_ERR, "bind %s: %m", socketname);
-        free(server);
-        return NULL;
-    }
-
-    c = listen(server->fd, 5);
-    if (c != 0) {
-        syslog(LOG_ERR, "listen: %m");
-        free(server);
-        return NULL;
-    }
-
+    server->fd = fd;
     server->connect_callback = connect_callback;
     server->read_callback = read_callback;
     server->disconnect_callback = disconnect_callback;
 
     return server;
+}
+
+struct udscs_server *udscs_create_server(const char *socketname,
+    udscs_connect_callback connect_callback,
+    udscs_read_callback read_callback,
+    udscs_disconnect_callback disconnect_callback,
+    const char * const type_to_string[], int no_types, int debug)
+{
+    int c;
+    int fd;
+    struct sockaddr_un address;
+
+    fd = socket(PF_UNIX, SOCK_STREAM, 0);
+    if (fd == -1) {
+        syslog(LOG_ERR, "creating unix domain socket: %m");
+        return NULL;
+    }
+
+    address.sun_family = AF_UNIX;
+    snprintf(address.sun_path, sizeof(address.sun_path), "%s", socketname);
+    c = bind(fd, (struct sockaddr *)&address, sizeof(address));
+    if (c != 0) {
+        syslog(LOG_ERR, "bind %s: %m", socketname);
+        return NULL;
+    }
+
+    c = listen(fd, 5);
+    if (c != 0) {
+        syslog(LOG_ERR, "listen: %m");
+        return NULL;
+    }
+
+    return udscs_create_server_for_fd(fd, connect_callback, read_callback,
+                                      disconnect_callback, type_to_string,
+                                      no_types, debug);
 }
 
 void udscs_destroy_server(struct udscs_server *server)

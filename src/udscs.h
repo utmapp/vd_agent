@@ -120,6 +120,17 @@ struct udscs_server;
  */
 typedef void (*udscs_connect_callback)(struct udscs_connection *conn);
 
+/* Create a server for the given file descriptor. This allows us to use
+ * pre-configured sockets for use with systemd socket activation, etc.
+ *
+ * See udscs_create_server() for more information
+ */
+struct udscs_server *udscs_create_server_for_fd(int fd,
+    udscs_connect_callback connect_callback,
+    udscs_read_callback read_callback,
+    udscs_disconnect_callback disconnect_callback,
+    const char * const type_to_string[], int no_types, int debug);
+
 /* Create the unix domain socket specified by socketname and
  * start listening on it.
  * Only sockets bound to a pathname are supported.

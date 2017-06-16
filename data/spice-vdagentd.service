@@ -1,17 +1,15 @@
 [Unit]
 Description=Agent daemon for Spice guests
 After=dbus.target
-
-# TODO we should use:
-#Requires=spice-vdagentd.socket
+Requires=spice-vdagentd.socket
 
 [Service]
 Type=forking
 EnvironmentFile=-/etc/sysconfig/spice-vdagentd
-ExecStartPre=/bin/rm -f /var/run/spice-vdagentd/spice-vdagent-sock
 ExecStart=/usr/sbin/spice-vdagentd $SPICE_VDAGENTD_EXTRA_ARGS
 PIDFile=/var/run/spice-vdagentd/spice-vdagentd.pid
 PrivateTmp=true
+Restart=on-failure
 
 [Install]
-WantedBy=spice-vdagentd.target
+Also=spice-vdagentd.socket

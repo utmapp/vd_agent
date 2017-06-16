@@ -65,6 +65,14 @@ AC_MSG_RESULT($with_init_script)
 if test "x$init_systemd" = "xyes"; then
   SYSTEMDSYSTEMUNITDIR=`${PKG_CONFIG} systemd --variable=systemdsystemunitdir`
   AC_SUBST(SYSTEMDSYSTEMUNITDIR)
+  # earlier versions of systemd require a separate libsystemd-daemon library
+  PKG_CHECK_MODULES([LIBSYSTEMD_DAEMON],
+                    [libsystemd >= 209],
+                    [have_libsystemd_daemon="yes"],
+                    [have_libsystemd_daemon="no"])
+  if test "$have_libsystemd_daemon" = "yes"; then
+      AC_DEFINE([WITH_SYSTEMD_SOCKET_ACTIVATION], [1], [If defined, vdagentd will support socket activation with systemd] )
+  fi
 fi
 
 AC_ARG_ENABLE([pciaccess],

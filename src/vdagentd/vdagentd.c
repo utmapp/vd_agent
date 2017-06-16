@@ -36,6 +36,10 @@
 #include <spice/vd_agent.h>
 #include <glib.h>
 
+#ifdef WITH_SYSTEMD_SOCKET_ACTIVATION
+#include <systemd/sd-daemon.h>
+#endif /* WITH_SYSTEMD_SOCKET_ACTIVATION */
+
 #include "udscs.h"
 #include "vdagentd-proto.h"
 #include "vdagentd-proto-strings.h"
@@ -1083,6 +1087,7 @@ int main(int argc, char *argv[])
     int do_daemonize = 1;
     int want_session_info = 1;
     struct sigaction act;
+    gboolean own_socket = TRUE;
 
     for (;;) {
         if (-1 == (c = getopt(argc, argv, "-dhxXfos:u:S:")))
@@ -1133,25 +1138,51 @@ int main(int argc, char *argv[])
     openlog("spice-vdagentd", do_daemonize ? 0 : LOG_PERROR, LOG_USER);
 
     /* Setup communication with vdagent process(es) */
-    server = udscs_create_server(vdagentd_socket, agent_connect,
-                                 agent_read_complete, agent_disconnect,
-                                 vdagentd_messages, VDAGENTD_NO_MESSAGES,
-                                 debug);
+#ifdef WITH_SYSTEMD_SOCKET_ACTIVATION
+    int n_fds;
+    /* try to retrieve pre-configured sockets from systemd */
+    n_fds = sd_listen_fds(0);
+    if (n_fds > 1) {
+        syslog(LOG_CRIT, "Received too many sockets from systemd (%i)", n_fds);
+        return 1;
+    } else if (n_fds == 1) {
+        server = udscs_create_server_for_fd(SD_LISTEN_FDS_START, agent_connect,
+                                            agent_read_complete,
+                                            agent_disconnect,
+                                            vdagentd_messages,
+                                            VDAGENTD_NO_MESSAGES, debug);
+        own_socket = FALSE;
+    } else
+    /* systemd socket activation not enabled, create our own */
+#endif /* WITH_SYSTEMD_SOCKET_ACTIVATION */
+    {
+        server = udscs_create_server(vdagentd_socket, agent_connect,
+                                     agent_read_complete, agent_disconnect,
+                                     vdagentd_messages, VDAGENTD_NO_MESSAGES,
+                                     debug);
+    }
+
     if (!server) {
         if (errno == EADDRINUSE) {
             syslog(LOG_CRIT, "Fatal the server socket %s exists already. Delete it?",
                    vdagentd_socket);
+        } else if (errno == ENOMEM) {
+            syslog(LOG_CRIT, "Fatal could not allocate memory for udscs server");
         } else {
             syslog(LOG_CRIT, "Fatal could not create the server socket %s: %m",
                    vdagentd_socket);
         }
         return 1;
     }
-    if (chmod(vdagentd_socket, 0666)) {
-        syslog(LOG_CRIT, "Fatal could not change permissions on %s: %m",
-               vdagentd_socket);
-        udscs_destroy_server(server);
-        return 1;
+
+    /* no need to set permissions on a socket that was provided by systemd */
+    if (own_socket) {
+        if (chmod(vdagentd_socket, 0666)) {
+            syslog(LOG_CRIT, "Fatal could not change permissions on %s: %m",
+                   vdagentd_socket);
+            udscs_destroy_server(server);
+            return 1;
+        }
     }
 
     if (do_daemonize)
@@ -1181,8 +1212,12 @@ int main(int argc, char *argv[])
     vdagent_virtio_port_destroy(&virtio_port);
     session_info_destroy(session_info);
     udscs_destroy_server(server);
-    if (unlink(vdagentd_socket) != 0)
-        syslog(LOG_ERR, "unlink %s: %s", vdagentd_socket, strerror(errno));
+
+    /* leave the socket around if it was provided by systemd */
+    if (own_socket) {
+        if (unlink(vdagentd_socket) != 0)
+            syslog(LOG_ERR, "unlink %s: %s", vdagentd_socket, strerror(errno));
+    }
     syslog(LOG_INFO, "vdagentd quitting, returning status %d", retval);
 
     if (do_daemonize)
