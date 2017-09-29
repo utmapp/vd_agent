@@ -109,6 +109,15 @@ static gboolean vdagent_init_file_xfer(void)
     return (vdagent_file_xfers != NULL);
 }
 
+static gboolean vdagent_finalize_file_xfer(void)
+{
+    if (vdagent_file_xfers == NULL)
+        return FALSE;
+
+    g_clear_pointer(&vdagent_file_xfers, vdagent_file_xfers_destroy);
+    return TRUE;
+}
+
 static void daemon_read_complete(struct udscs_connection **connp,
     struct udscs_message_header *header, uint8_t *data)
 {
@@ -160,10 +169,7 @@ static void daemon_read_complete(struct udscs_connection **connp,
         if (debug)
             syslog(LOG_DEBUG, "Disabling file-xfers");
 
-        if (vdagent_file_xfers != NULL) {
-            vdagent_file_xfers_destroy(vdagent_file_xfers);
-            vdagent_file_xfers = NULL;
-        }
+        vdagent_finalize_file_xfer();
         break;
     case VDAGENTD_AUDIO_VOLUME_SYNC: {
         VDAgentAudioVolumeSync *avs = (VDAgentAudioVolumeSync *)data;
@@ -185,9 +191,7 @@ static void daemon_read_complete(struct udscs_connection **connp,
         break;
     case VDAGENTD_CLIENT_DISCONNECTED:
         vdagent_x11_client_disconnected(x11);
-        if (vdagent_file_xfers != NULL) {
-            vdagent_file_xfers_destroy(vdagent_file_xfers);
-            vdagent_file_xfers = NULL;
+        if (vdagent_finalize_file_xfer()) {
             vdagent_init_file_xfer();
         }
         break;
@@ -400,9 +404,7 @@ reconnect:
         udscs_client_handle_fds(&client, &readfds, &writefds);
     }
 
-    if (vdagent_file_xfers != NULL) {
-        vdagent_file_xfers_destroy(vdagent_file_xfers);
-    }
+    vdagent_finalize_file_xfer();
     vdagent_x11_destroy(x11, client == NULL);
     udscs_destroy_connection(&client);
     if (!quit && do_daemonize)
