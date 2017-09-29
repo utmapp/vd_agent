@@ -55,6 +55,60 @@ static struct udscs_connection *client = NULL;
 static int quit = 0;
 static int version_mismatch = 0;
 
+/**
+ * xfer_get_download_directory
+ *
+ * Return path where transferred files should be stored.
+ * Returned path should not be freed or modified.
+ **/
+static const gchar *xfer_get_download_directory(void)
+{
+    if (fx_dir != NULL) {
+        if (!strcmp(fx_dir, "xdg-desktop"))
+            return g_get_user_special_dir(G_USER_DIRECTORY_DESKTOP);
+        if (!strcmp(fx_dir, "xdg-download"))
+            return g_get_user_special_dir(G_USER_DIRECTORY_DOWNLOAD);
+
+        return fx_dir;
+    }
+
+    return g_get_user_special_dir(vdagent_x11_has_icons_on_desktop(x11) ?
+                                  G_USER_DIRECTORY_DESKTOP :
+                                  G_USER_DIRECTORY_DOWNLOAD);
+}
+
+/**
+ * vdagent_init_file_xfer
+ *
+ * Initialize handler for file xfer,
+ * return TRUE on success (vdagent_file_xfers is not NULL).
+ **/
+static gboolean vdagent_init_file_xfer(void)
+{
+    const gchar *xfer_dir;
+
+    if (vdagent_file_xfers != NULL) {
+        syslog(LOG_DEBUG, "File-xfer already initialized");
+        return TRUE;
+    }
+
+    xfer_dir = xfer_get_download_directory();
+    if (xfer_dir == NULL) {
+        syslog(LOG_WARNING,
+               "warning could not get file xfer save dir, "
+               "file transfers will be disabled");
+        vdagent_file_xfers = NULL;
+        return FALSE;
+    }
+
+    if (fx_open_dir == -1)
+        fx_open_dir = !vdagent_x11_has_icons_on_desktop(x11);
+
+    vdagent_file_xfers = vdagent_file_xfers_create(client, xfer_dir,
+                                                   fx_open_dir, debug);
+    return (vdagent_file_xfers != NULL);
+}
+
 static void daemon_read_complete(struct udscs_connection **connp,
     struct udscs_message_header *header, uint8_t *data)
 {
@@ -133,8 +187,8 @@ static void daemon_read_complete(struct udscs_connection **connp,
         vdagent_x11_client_disconnected(x11);
         if (vdagent_file_xfers != NULL) {
             vdagent_file_xfers_destroy(vdagent_file_xfers);
-            vdagent_file_xfers = vdagent_file_xfers_create(client, fx_dir,
-                                                           fx_open_dir, debug);
+            vdagent_file_xfers = NULL;
+            vdagent_init_file_xfer();
         }
         break;
     default:
@@ -313,26 +367,8 @@ reconnect:
         return 1;
     }
 
-    if (!fx_dir) {
-        if (vdagent_x11_has_icons_on_desktop(x11))
-            fx_dir = "xdg-desktop";
-        else
-            fx_dir = "xdg-download";
-    }
-    if (fx_open_dir == -1)
-        fx_open_dir = !vdagent_x11_has_icons_on_desktop(x11);
-    if (!strcmp(fx_dir, "xdg-desktop"))
-        fx_dir = g_get_user_special_dir(G_USER_DIRECTORY_DESKTOP);
-    else if (!strcmp(fx_dir, "xdg-download"))
-        fx_dir = g_get_user_special_dir(G_USER_DIRECTORY_DOWNLOAD);
-    if (fx_dir) {
-        vdagent_file_xfers = vdagent_file_xfers_create(client, fx_dir,
-                                                       fx_open_dir, debug);
-    } else {
-        syslog(LOG_WARNING,
-               "warning could not get file xfer save dir, file transfers will be disabled");
-        vdagent_file_xfers = NULL;
-    }
+    if (!vdagent_init_file_xfer())
+        syslog(LOG_WARNING, "File transfer is disabled");
 
     if (parent_socket) {
         if (write(parent_socket, "OK", 2) != 2)
