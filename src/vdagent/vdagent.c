@@ -230,18 +230,20 @@ static void daemon_read_complete(struct udscs_connection **connp,
     }
 }
 
-static int client_setup(int reconnect)
+static struct udscs_connection *client_setup_sync(void)
 {
+    struct udscs_connection *conn = NULL;
+
     while (!quit) {
-        client = udscs_connect(vdagentd_socket, daemon_read_complete, NULL,
-                               vdagentd_messages, VDAGENTD_NO_MESSAGES,
-                               debug);
-        if (client || !reconnect || quit) {
+        conn = udscs_connect(vdagentd_socket, daemon_read_complete, NULL,
+                             vdagentd_messages, VDAGENTD_NO_MESSAGES,
+                             debug);
+        if (conn || !do_daemonize || quit) {
             break;
         }
         sleep(1);
     }
-    return client == NULL;
+    return conn;
 }
 
 static void quit_handler(int sig)
@@ -360,7 +362,8 @@ reconnect:
         execvp(argv[0], argv);
     }
 
-    if (client_setup(do_daemonize)) {
+    client = client_setup_sync();
+    if (client == NULL) {
         return 1;
     }
 
