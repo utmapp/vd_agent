@@ -44,16 +44,45 @@
 #include "x11.h"
 #include "file-xfers.h"
 
-static const char *portdev = DEFAULT_VIRTIO_PORT_PATH;
-static const char *vdagentd_socket = VDAGENTD_SOCKET;
-static int debug = 0;
-static const char *fx_dir = NULL;
-static int fx_open_dir = -1;
 static struct vdagent_x11 *x11 = NULL;
 static struct vdagent_file_xfers *vdagent_file_xfers = NULL;
 static struct udscs_connection *client = NULL;
 static int quit = 0;
 static int version_mismatch = 0;
+
+/* Command line options */
+static gboolean debug = FALSE;
+static gboolean x11_sync = FALSE;
+static gboolean do_daemonize = TRUE;
+static gint fx_open_dir = -1;
+static gchar *fx_dir = NULL;
+static gchar *portdev = NULL;
+static gchar *vdagentd_socket = NULL;
+
+static GOptionEntry entries[] = {
+    { "debug", 'd', 0,
+       G_OPTION_ARG_NONE, &debug,
+       "Enable debug", NULL },
+    { "virtio-serial-port-path", 's', 0,
+      G_OPTION_ARG_STRING, &portdev,
+      "Set virtio-serial path ("  DEFAULT_VIRTIO_PORT_PATH ")", NULL },
+    { "vdagentd-socket", 'S', 0, G_OPTION_ARG_STRING,
+       &vdagentd_socket,
+       "Set spice-vdagentd socket (" VDAGENTD_SOCKET ")", NULL },
+    { "foreground", 'x', G_OPTION_FLAG_REVERSE,
+       G_OPTION_ARG_NONE, &do_daemonize,
+       "Do not daemonize the agent", NULL },
+    { "file-xfer-save-dir", 'f', 0,
+      G_OPTION_ARG_STRING, &fx_dir,
+      "Set directory to file transfers files", "<dir|xdg-desktop|xdg-download>"},
+    { "file-xfer-open-dir", 'o', 0,
+       G_OPTION_ARG_INT, &fx_open_dir,
+       "Open directory after completing file transfer", "<0|1>" },
+    { "x11-abort-on-error", 'y', G_OPTION_FLAG_HIDDEN,
+      G_OPTION_ARG_NONE, &x11_sync,
+      "Aborts on errors from X11", NULL },
+    { NULL }
+};
 
 /**
  * xfer_get_download_directory
@@ -215,22 +244,6 @@ static int client_setup(int reconnect)
     return client == NULL;
 }
 
-static void usage(FILE *fp)
-{
-    fprintf(fp,
-      "Usage: spice-vdagent [OPTIONS]\n\n"
-      "Spice guest agent X11 session agent, version %s.\n\n"
-      "Options:\n"
-      "  -h                                print this text\n"
-      "  -d                                log debug messages\n"
-      "  -s <port>                         set virtio serial port\n"
-      "  -S <filename>                     set udcs socket\n"
-      "  -x                                don't daemonize\n"
-      "  -f <dir|xdg-desktop|xdg-download> file xfer save dir\n"
-      "  -o <0|1>                          open dir on file xfer completion\n",
-      VERSION);
-}
-
 static void quit_handler(int sig)
 {
     quit = 1;
@@ -294,46 +307,32 @@ static int file_test(const char *path)
 int main(int argc, char *argv[])
 {
     fd_set readfds, writefds;
-    int c, n, nfds, x11_fd;
-    int do_daemonize = 1;
+    int n, nfds, x11_fd;
     int parent_socket = 0;
-    int x11_sync = 0;
     struct sigaction act;
+    GOptionContext *context;
+    GError *error = NULL;
 
-    for (;;) {
-        if (-1 == (c = getopt(argc, argv, "-dxhys:f:o:S:")))
-            break;
-        switch (c) {
-        case 'd':
-            debug++;
-            break;
-        case 's':
-            portdev = optarg;
-            break;
-        case 'x':
-            do_daemonize = 0;
-            break;
-        case 'y':
-            x11_sync = 1;
-            break;
-        case 'h':
-            usage(stdout);
-            return 0;
-        case 'f':
-            fx_dir = optarg;
-            break;
-        case 'o':
-            fx_open_dir = atoi(optarg);
-            break;
-        case 'S':
-            vdagentd_socket = optarg;
-            break;
-        default:
-            fputs("\n", stderr);
-            usage(stderr);
-            return 1;
-        }
+    context = g_option_context_new(NULL);
+    g_option_context_add_main_entries(context, entries, NULL);
+    g_option_context_set_summary(context,
+                                 "\tSpice session guest agent: X11\n"
+                                 "\tVersion: " VERSION);
+    g_option_context_parse(context, &argc, &argv, &error);
+    g_option_context_free(context);
+
+    if (error != NULL) {
+        g_printerr("Invalid arguments, %s\n", error->message);
+        g_clear_error(&error);
+        return -1;
     }
+
+    /* Set default path value if none was set */
+    if (portdev == NULL)
+        portdev = g_strdup(DEFAULT_VIRTIO_PORT_PATH);
+
+    if (vdagentd_socket == NULL)
+        vdagentd_socket = g_strdup(VDAGENTD_SOCKET);
 
     memset(&act, 0, sizeof(act));
     act.sa_flags = SA_RESTART;
@@ -409,6 +408,10 @@ reconnect:
     udscs_destroy_connection(&client);
     if (!quit && do_daemonize)
         goto reconnect;
+
+    g_free(fx_dir);
+    g_free(portdev);
+    g_free(vdagentd_socket);
 
     return 0;
 }
