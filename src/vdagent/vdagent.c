@@ -34,8 +34,8 @@
 #include <sys/select.h>
 #include <sys/stat.h>
 #include <spice/vd_agent.h>
-#include <glib.h>
 #include <poll.h>
+#include <glib-unix.h>
 
 #include "udscs.h"
 #include "vdagentd-proto.h"
@@ -48,6 +48,9 @@ typedef struct VDAgent {
     struct vdagent_x11 *x11;
     struct vdagent_file_xfers *xfers;
     struct udscs_connection *conn;
+    GIOChannel *x11_channel;
+
+    GMainLoop *loop;
 } VDAgent;
 
 static int quit = 0;
@@ -177,7 +180,7 @@ static void daemon_read_complete(struct udscs_connection **connp,
         if (strcmp((char *)data, VERSION) != 0) {
             syslog(LOG_INFO, "vdagentd version mismatch: got %s expected %s",
                    data, VERSION);
-            udscs_destroy_connection(connp);
+            g_main_loop_quit(agent->loop);
             version_mismatch = 1;
         }
         break;
@@ -235,25 +238,12 @@ static void daemon_read_complete(struct udscs_connection **connp,
     }
 }
 
-static struct udscs_connection *client_setup_sync(void)
+static void daemon_disconnect_cb(struct udscs_connection *conn)
 {
-    struct udscs_connection *conn = NULL;
-
-    while (!quit) {
-        conn = udscs_connect(vdagentd_socket, daemon_read_complete, NULL,
-                             vdagentd_messages, VDAGENTD_NO_MESSAGES,
-                             debug);
-        if (conn || !do_daemonize || quit) {
-            break;
-        }
-        sleep(1);
-    }
-    return conn;
-}
-
-static void quit_handler(int sig)
-{
-    quit = 1;
+    VDAgent *agent = udscs_get_user_data(conn);
+    agent->conn = NULL;
+    if (agent->loop)
+        g_main_loop_quit(agent->loop);
 }
 
 /* When we daemonize, it is useful to have the main process
@@ -311,9 +301,33 @@ static int file_test(const char *path)
     return stat(path, &buffer);
 }
 
+static gboolean x11_io_channel_cb(GIOChannel *source,
+                                  GIOCondition condition,
+                                  gpointer data)
+{
+    VDAgent *agent = data;
+    vdagent_x11_do_read(agent->x11);
+
+    return G_SOURCE_CONTINUE;
+}
+
+gboolean vdagent_signal_handler(gpointer user_data)
+{
+    VDAgent *agent = user_data;
+    quit = TRUE;
+    g_main_loop_quit(agent->loop);
+    return G_SOURCE_REMOVE;
+}
+
 static VDAgent *vdagent_new(void)
 {
     VDAgent *agent = g_new0(VDAgent, 1);
+
+    agent->loop = g_main_loop_new(NULL, FALSE);
+
+    g_unix_signal_add(SIGINT, vdagent_signal_handler, agent);
+    g_unix_signal_add(SIGHUP, vdagent_signal_handler, agent);
+    g_unix_signal_add(SIGTERM, vdagent_signal_handler, agent);
 
     return agent;
 }
@@ -324,14 +338,59 @@ static void vdagent_destroy(VDAgent *agent)
     vdagent_x11_destroy(agent->x11, agent->conn == NULL);
     udscs_destroy_connection(&agent->conn);
 
+    while (g_source_remove_by_user_data(agent))
+        continue;
+
+    g_clear_pointer(&agent->x11_channel, g_io_channel_unref);
+    g_clear_pointer(&agent->loop, g_main_loop_unref);
     g_free(agent);
+}
+
+static gboolean vdagent_init_async_cb(gpointer user_data)
+{
+    VDAgent *agent = user_data;
+
+    agent->conn = udscs_connect(vdagentd_socket,
+                                daemon_read_complete, daemon_disconnect_cb,
+                                vdagentd_messages, VDAGENTD_NO_MESSAGES, debug);
+    if (agent->conn == NULL) {
+        g_timeout_add_seconds(1, vdagent_init_async_cb, agent);
+        return G_SOURCE_REMOVE;
+    }
+    udscs_set_user_data(agent->conn, agent);
+
+    agent->x11 = vdagent_x11_create(agent->conn, debug, x11_sync);
+    if (agent->x11 == NULL)
+        goto err_init;
+    agent->x11_channel = g_io_channel_unix_new(vdagent_x11_get_fd(agent->x11));
+    if (agent->x11_channel == NULL)
+        goto err_init;
+
+    g_io_add_watch(agent->x11_channel,
+                   G_IO_IN,
+                   x11_io_channel_cb,
+                   agent);
+
+    if (!vdagent_init_file_xfer(agent))
+        syslog(LOG_WARNING, "File transfer is disabled");
+
+    if (parent_socket != -1) {
+        if (write(parent_socket, "OK", 2) != 2)
+            syslog(LOG_WARNING, "Parent already gone.");
+        close(parent_socket);
+        parent_socket = -1;
+    }
+
+    return G_SOURCE_REMOVE;
+
+err_init:
+    g_main_loop_quit(agent->loop);
+    quit = TRUE;
+    return G_SOURCE_REMOVE;
 }
 
 int main(int argc, char *argv[])
 {
-    fd_set readfds, writefds;
-    int n, nfds, x11_fd;
-    struct sigaction act;
     GOptionContext *context;
     GError *error = NULL;
     VDAgent *agent;
@@ -357,14 +416,6 @@ int main(int argc, char *argv[])
     if (vdagentd_socket == NULL)
         vdagentd_socket = g_strdup(VDAGENTD_SOCKET);
 
-    memset(&act, 0, sizeof(act));
-    act.sa_flags = SA_RESTART;
-    act.sa_handler = quit_handler;
-    sigaction(SIGINT, &act, NULL);
-    sigaction(SIGHUP, &act, NULL);
-    sigaction(SIGTERM, &act, NULL);
-    sigaction(SIGQUIT, &act, NULL);
-
     openlog("spice-vdagent", do_daemonize ? LOG_PID : (LOG_PID | LOG_PERROR),
             LOG_USER);
 
@@ -385,53 +436,13 @@ reconnect:
 
     agent = vdagent_new();
 
-    agent->conn = client_setup_sync();
-    if (agent->conn == NULL) {
-        return 1;
-    }
-    udscs_set_user_data(agent->conn, agent);
+    g_timeout_add(0, vdagent_init_async_cb, agent);
 
-    agent->x11 = vdagent_x11_create(agent->conn, debug, x11_sync);
-    if (!agent->x11) {
-        udscs_destroy_connection(&agent->conn);
-        return 1;
-    }
-
-    if (!vdagent_init_file_xfer(agent))
-        syslog(LOG_WARNING, "File transfer is disabled");
-
-    if (parent_socket != -1) {
-        if (write(parent_socket, "OK", 2) != 2)
-            syslog(LOG_WARNING, "Parent already gone.");
-        close(parent_socket);
-        parent_socket = -1;
-    }
-
-    while (agent->conn && !quit) {
-        FD_ZERO(&readfds);
-        FD_ZERO(&writefds);
-
-        nfds = udscs_client_fill_fds(agent->conn, &readfds, &writefds);
-        x11_fd = vdagent_x11_get_fd(agent->x11);
-        FD_SET(x11_fd, &readfds);
-        if (x11_fd >= nfds)
-            nfds = x11_fd + 1;
-
-        n = select(nfds, &readfds, &writefds, NULL, NULL);
-        if (n == -1) {
-            if (errno == EINTR)
-                continue;
-            syslog(LOG_ERR, "Fatal error select: %s", strerror(errno));
-            break;
-        }
-
-        if (FD_ISSET(x11_fd, &readfds))
-            vdagent_x11_do_read(agent->x11);
-        udscs_client_handle_fds(&agent->conn, &readfds, &writefds);
-    }
+    g_main_loop_run(agent->loop);
 
     vdagent_destroy(agent);
     agent = NULL;
+
     if (!quit && do_daemonize)
         goto reconnect;
 

@@ -31,6 +31,8 @@
 #include <errno.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <glib.h>
+#include <glib-unix.h>
 #include "udscs.h"
 
 struct udscs_buf {
@@ -66,7 +68,15 @@ struct udscs_connection {
 
     struct udscs_connection *next;
     struct udscs_connection *prev;
+
+    GIOChannel                     *io_channel;
+    guint                           write_watch_id;
+    guint                           read_watch_id;
 };
+
+static gboolean udscs_io_channel_cb(GIOChannel *source,
+                                    GIOCondition condition,
+                                    gpointer data);
 
 struct udscs_connection *udscs_connect(const char *socketname,
     udscs_read_callback read_callback,
@@ -102,6 +112,17 @@ struct udscs_connection *udscs_connect(const char *socketname,
         free(conn);
         return NULL;
     }
+
+    conn->io_channel = g_io_channel_unix_new(conn->fd);
+    if (!conn->io_channel) {
+        udscs_destroy_connection(&conn);
+        return NULL;
+    }
+    conn->read_watch_id =
+        g_io_add_watch(conn->io_channel,
+                       G_IO_IN | G_IO_ERR | G_IO_NVAL,
+                       udscs_io_channel_cb,
+                       conn);
 
     conn->read_callback = read_callback;
     conn->disconnect_callback = disconnect_callback;
@@ -140,6 +161,12 @@ void udscs_destroy_connection(struct udscs_connection **connp)
         conn->prev->next = conn->next;
 
     close(conn->fd);
+
+    if (conn->write_watch_id != 0)
+        g_source_remove(conn->write_watch_id);
+    if (conn->read_watch_id != 0)
+        g_source_remove(conn->read_watch_id);
+    g_clear_pointer(&conn->io_channel, g_io_channel_unref);
 
     if (conn->debug)
         syslog(LOG_DEBUG, "%p disconnected", conn);
@@ -197,6 +224,13 @@ int udscs_write(struct udscs_connection *conn, uint32_t type, uint32_t arg1,
                    "%p sent invalid message %u, arg1: %u, arg2: %u, size %u",
                    conn, type, arg1, arg2, size);
     }
+
+    if (conn->io_channel && conn->write_watch_id == 0)
+        conn->write_watch_id =
+            g_io_add_watch(conn->io_channel,
+                           G_IO_OUT | G_IO_ERR | G_IO_NVAL,
+                           udscs_io_channel_cb,
+                           conn);
 
     if (!conn->write_buf) {
         conn->write_buf = new_wbuf;
@@ -351,6 +385,32 @@ int udscs_client_fill_fds(struct udscs_connection *conn, fd_set *readfds,
         FD_SET(conn->fd, writefds);
 
     return conn->fd + 1;
+}
+
+static gboolean udscs_io_channel_cb(GIOChannel *source,
+                                    GIOCondition condition,
+                                    gpointer data)
+{
+    struct udscs_connection *conn = data;
+
+    if (condition & G_IO_IN) {
+        udscs_do_read(&conn);
+        if (conn == NULL)
+            return G_SOURCE_REMOVE;
+        return G_SOURCE_CONTINUE;
+    }
+    if (condition & G_IO_OUT) {
+        udscs_do_write(&conn);
+        if (conn == NULL)
+            return G_SOURCE_REMOVE;
+        if (conn->write_buf)
+            return G_SOURCE_CONTINUE;
+        conn->write_watch_id = 0;
+        return G_SOURCE_REMOVE;
+    }
+
+    udscs_destroy_connection(&conn);
+    return G_SOURCE_REMOVE;
 }
 
 
