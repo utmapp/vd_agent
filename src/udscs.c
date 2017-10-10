@@ -276,7 +276,6 @@ static void udscs_read_complete(struct udscs_connection **connp)
     conn->header_read = 0;
 }
 
-/* A helper for udscs_client_handle_fds() */
 static void udscs_do_read(struct udscs_connection **connp)
 {
     ssize_t n;
@@ -327,7 +326,6 @@ static void udscs_do_read(struct udscs_connection **connp)
     }
 }
 
-/* A helper for udscs_client_handle_fds() */
 static void udscs_do_write(struct udscs_connection **connp)
 {
     ssize_t n;
@@ -359,32 +357,6 @@ static void udscs_do_write(struct udscs_connection **connp)
         free(wbuf->buf);
         free(wbuf);
     }
-}
-
-void udscs_client_handle_fds(struct udscs_connection **connp, fd_set *readfds,
-        fd_set *writefds)
-{
-    if (!*connp)
-        return;
-
-    if (FD_ISSET((*connp)->fd, readfds))
-        udscs_do_read(connp);
-
-    if (*connp && FD_ISSET((*connp)->fd, writefds))
-        udscs_do_write(connp);
-}
-
-int udscs_client_fill_fds(struct udscs_connection *conn, fd_set *readfds,
-        fd_set *writefds)
-{
-    if (!conn)
-        return -1;
-
-    FD_SET(conn->fd, readfds);
-    if (conn->write_buf)
-        FD_SET(conn->fd, writefds);
-
-    return conn->fd + 1;
 }
 
 static gboolean udscs_io_channel_cb(GIOChannel *source,
@@ -580,9 +552,12 @@ int udscs_server_fill_fds(struct udscs_server *server, fd_set *readfds,
 
     conn = server->connections_head.next;
     while (conn) {
-        int conn_nfds = udscs_client_fill_fds(conn, readfds, writefds);
-        if (conn_nfds > nfds)
-            nfds = conn_nfds;
+        FD_SET(conn->fd, readfds);
+        if (conn->write_buf)
+            FD_SET(conn->fd, writefds);
+
+        if (conn->fd >= nfds)
+            nfds = conn->fd + 1;
 
         conn = conn->next;
     }
@@ -603,10 +578,15 @@ void udscs_server_handle_fds(struct udscs_server *server, fd_set *readfds,
 
     conn = server->connections_head.next;
     while (conn) {
-        /* conn maybe destroyed by udscs_client_handle_fds (when disconnected),
-           so get the next connection first. */
+        /* conn may be destroyed by udscs_do_read() or udscs_do_write()
+         * (when disconnected), so get the next connection first. */
         next_conn = conn->next;
-        udscs_client_handle_fds(&conn, readfds, writefds);
+
+        if (FD_ISSET(conn->fd, readfds))
+            udscs_do_read(&conn);
+        if (conn && FD_ISSET(conn->fd, writefds))
+            udscs_do_write(&conn);
+
         conn = next_conn;
     }
 }

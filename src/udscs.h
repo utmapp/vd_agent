@@ -78,22 +78,6 @@ struct udscs_connection *udscs_connect(const char *socketname,
  */
 void udscs_destroy_connection(struct udscs_connection **connp);
 
-/* Given a udscs client, fill the fd_sets pointed to by readfds and
- * writefds for select() usage.
- * Return value: value of the highest fd + 1 or -1 if conn is NULL
- */
-int udscs_client_fill_fds(struct udscs_connection *conn, fd_set *readfds,
-    fd_set *writefds);
-
-/* Handle any events flagged by select for the given udscs client.
- * Note that upon disconnection this will call the disconnect callback
- * and then destroy the connection which will set *connp to NULL.
- *
- * Does nothing if *connp is NULL.
- */
-void udscs_client_handle_fds(struct udscs_connection **connp, fd_set *readfds,
-    fd_set *writefds);
-
 /* Queue a message for delivery to the client connected through conn.
  * Return value: 0 on success -1 on error (only happens when malloc fails).
  */
