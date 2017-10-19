@@ -85,7 +85,7 @@ AC_ARG_ENABLE([static-uinput],
               [enable_static_uinput="$enableval"],
               [enable_static_uinput="no"])
 
-PKG_CHECK_MODULES([GLIB2], [glib-2.0 >= 2.28])
+PKG_CHECK_MODULES([GLIB2], [glib-2.0 >= 2.34])
 PKG_CHECK_MODULES(X, [xfixes xrandr >= 1.3 xinerama x11])
 PKG_CHECK_MODULES(SPICE, [spice-protocol >= 0.12.13])
 PKG_CHECK_MODULES(ALSA, [alsa >= 1.0.22])
