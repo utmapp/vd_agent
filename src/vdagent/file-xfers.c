@@ -336,9 +336,16 @@ void vdagent_file_xfers_data(struct vdagent_file_xfers *xfers,
                 if (xfers->open_save_dir &&
                         task->file_xfer_nr == task->file_xfer_total &&
                         g_hash_table_size(xfers->xfers) == 1) {
-                    char buf[PATH_MAX];
-                    snprintf(buf, PATH_MAX, "xdg-open '%s'&", xfers->save_dir);
-                    status = system(buf);
+                    GError *error = NULL;
+                    gchar *argv[] = { "xdg-open", xfers->save_dir, NULL };
+                    if (!g_spawn_async(NULL, argv, NULL,
+                                           G_SPAWN_SEARCH_PATH,
+                                           NULL, NULL, NULL, &error)) {
+                        syslog(LOG_WARNING,
+                               "file-xfer: failed to open save directory: %s",
+                               error->message);
+                        g_error_free(error);
+                    }
                 }
                 status = VD_AGENT_FILE_XFER_STATUS_SUCCESS;
             } else {
