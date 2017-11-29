@@ -106,7 +106,7 @@ systemdunit_DATA = \
 	$(top_srcdir)/data/spice-vdagentd.service \
 	$(top_srcdir)/data/spice-vdagentd.socket
 
-udevrulesdir = /lib/udev/rules.d
+udevrulesdir = $(udevdir)/rules.d
 udevrules_DATA = $(top_srcdir)/data/70-spice-vdagentd.rules
 
 tmpfilesdir = $(prefix)/lib/tmpfiles.d

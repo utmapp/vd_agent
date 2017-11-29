@@ -115,6 +115,10 @@ else
 fi
 AM_CONDITIONAL(HAVE_LIBSYSTEMD_LOGIN, test x"$have_libsystemd_login" = "xyes")
 
+#udevdir
+udevdir=$($PKG_CONFIG --variable=udevdir udev)
+AC_SUBST(udevdir)
+
 if test "$with_session_info" = "auto" || test "$with_session_info" = "console-kit"; then
     AC_DEFINE([HAVE_CONSOLE_KIT], [1], [If defined, vdagentd will be compiled with ConsoleKit support])
     have_console_kit="yes"
@@ -203,6 +207,7 @@ AC_MSG_NOTICE([
 
         install RH initscript:    ${init_redhat}
         install systemd service:  ${init_systemd}
+        udevdir:                  ${udevdir}
 
         Now type 'make' to build $PACKAGE
 
