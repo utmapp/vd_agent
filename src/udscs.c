@@ -450,12 +450,14 @@ struct udscs_server *udscs_create_server(const char *socketname,
     c = bind(fd, (struct sockaddr *)&address, sizeof(address));
     if (c != 0) {
         syslog(LOG_ERR, "bind %s: %m", socketname);
+        close(fd);
         return NULL;
     }
 
     c = listen(fd, 5);
     if (c != 0) {
         syslog(LOG_ERR, "listen: %m");
+        close(fd);
         return NULL;
     }
 
