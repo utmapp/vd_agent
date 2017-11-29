@@ -438,6 +438,7 @@ struct udscs_server *udscs_create_server(const char *socketname,
     int c;
     int fd;
     struct sockaddr_un address;
+    struct udscs_server *server;
 
     fd = socket(PF_UNIX, SOCK_STREAM, 0);
     if (fd == -1) {
@@ -461,9 +462,15 @@ struct udscs_server *udscs_create_server(const char *socketname,
         return NULL;
     }
 
-    return udscs_create_server_for_fd(fd, connect_callback, read_callback,
-                                      disconnect_callback, type_to_string,
-                                      no_types, debug);
+    server = udscs_create_server_for_fd(fd, connect_callback, read_callback,
+                                        disconnect_callback, type_to_string,
+                                        no_types, debug);
+
+    if (!server) {
+        close(fd);
+    }
+
+    return server;
 }
 
 void udscs_destroy_server(struct udscs_server *server)
