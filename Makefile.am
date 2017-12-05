@@ -15,6 +15,7 @@ src_spice_vdagent_CFLAGS =			\
 	$(X_CFLAGS)				\
 	$(SPICE_CFLAGS)				\
 	$(GLIB2_CFLAGS)				\
+	$(GTK_CFLAGS)				\
 	$(ALSA_CFLAGS)				\
 	-I$(srcdir)/src				\
 	-DUDSCS_NO_SERVER			\
@@ -24,6 +25,7 @@ src_spice_vdagent_LDADD =			\
 	$(X_LIBS)				\
 	$(SPICE_LIBS)				\
 	$(GLIB2_LIBS)				\
+	$(GTK_LIBS)				\
 	$(ALSA_LIBS)				\
 	$(NULL)
 

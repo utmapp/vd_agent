@@ -36,6 +36,7 @@
 #include <spice/vd_agent.h>
 #include <poll.h>
 #include <glib-unix.h>
+#include <gtk/gtk.h>
 
 #include "udscs.h"
 #include "vdagentd-proto.h"
@@ -400,6 +401,7 @@ int main(int argc, char *argv[])
     g_option_context_set_summary(context,
                                  "\tSpice session guest agent: X11\n"
                                  "\tVersion: " VERSION);
+    g_option_context_add_group(context, gtk_get_option_group(FALSE));
     g_option_context_parse(context, &argc, &argv, &error);
     g_option_context_free(context);
 
@@ -426,6 +428,9 @@ int main(int argc, char *argv[])
 
     if (do_daemonize)
         parent_socket = daemonize();
+
+    gdk_set_allowed_backends("x11");
+    gtk_init(NULL, NULL);
 
 reconnect:
     if (version_mismatch) {
