@@ -132,6 +132,7 @@ struct vdagent_x11 *vdagent_x11_create(struct udscs_connection *vdagentd,
     struct vdagent_x11 *x11;
     XWindowAttributes attrib;
     int i, j, major, minor;
+    const gchar *net_wm_name;
 
     x11 = calloc(1, sizeof(*x11));
     if (!x11) {
@@ -228,18 +229,17 @@ struct vdagent_x11 *vdagent_x11_create(struct udscs_connection *vdagentd,
     }
     vdagent_x11_send_daemon_guest_xorg_res(x11, 1);
 
-    /* Get net_wm_name, since we are started at the same time as the wm,
-       sometimes we need to wait a bit for it to show up. */
-    i = 10;
-    x11->net_wm_name = (gchar *)vdagent_x11_get_wm_name();
-    while (!strcmp(x11->net_wm_name, "unknown") && --i > 0) {
+    /* Since we are started at the same time as the wm,
+       sometimes we need to wait a bit for the _NET_WM_NAME to show up. */
+    for (i = 0; i < 9; i++) {
+        net_wm_name = vdagent_x11_get_wm_name();
+        if (strcmp(net_wm_name, "unknown"))
+            break;
         usleep(100000);
-        x11->net_wm_name = (gchar *)vdagent_x11_get_wm_name();
     }
-    x11->net_wm_name = g_strdup(x11->net_wm_name);
     if (x11->debug)
-        syslog(LOG_DEBUG, "net_wm_name: \"%s\", has icons: %d",
-               x11->net_wm_name, vdagent_x11_has_icons_on_desktop(x11));
+        syslog(LOG_DEBUG, "%s: net_wm_name=\"%s\", has icons=%d",
+               __func__, net_wm_name, vdagent_x11_has_icons_on_desktop(x11));
 
     /* Flush output buffers and consume any pending events */
     vdagent_x11_do_read(x11);
@@ -262,7 +262,6 @@ void vdagent_x11_destroy(struct vdagent_x11 *x11, int vdagentd_disconnected)
     }
 
     XCloseDisplay(x11->display);
-    g_free(x11->net_wm_name);
     free(x11->randr.failed_conf);
     free(x11);
 }
@@ -1291,7 +1290,7 @@ void vdagent_x11_client_disconnected(struct vdagent_x11 *x11)
    whitelist approach, so any unknown desktop will end up with saving
    file-xfers to the xdg download dir, and opening the xdg download dir with
    xdg-open when the file-xfer completes. */
-int vdagent_x11_has_icons_on_desktop(struct vdagent_x11 *x11)
+int vdagent_x11_has_icons_on_desktop()
 {
     const char * const wms_with_icons_on_desktop[] = {
         "Metacity", /* GNOME-2 or GNOME-3 fallback */
@@ -1299,10 +1298,11 @@ int vdagent_x11_has_icons_on_desktop(struct vdagent_x11 *x11)
         "Marco",    /* Mate */
         NULL
     };
+    const gchar *net_wm_name = vdagent_x11_get_wm_name();
     int i;
 
     for (i = 0; wms_with_icons_on_desktop[i]; i++)
-        if (!strcmp(x11->net_wm_name, wms_with_icons_on_desktop[i]))
+        if (!strcmp(net_wm_name, wms_with_icons_on_desktop[i]))
             return 1;
 
     return 0;

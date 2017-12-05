@@ -109,7 +109,7 @@ static const gchar *xfer_get_download_directory(VDAgent *agent)
         return fx_dir;
     }
 
-    return g_get_user_special_dir(vdagent_x11_has_icons_on_desktop(agent->x11) ?
+    return g_get_user_special_dir(vdagent_x11_has_icons_on_desktop() ?
                                   G_USER_DIRECTORY_DESKTOP :
                                   G_USER_DIRECTORY_DOWNLOAD);
 }
@@ -123,6 +123,7 @@ static const gchar *xfer_get_download_directory(VDAgent *agent)
 static gboolean vdagent_init_file_xfer(VDAgent *agent)
 {
     const gchar *xfer_dir;
+    gboolean open_dir;
 
     if (agent->xfers != NULL) {
         syslog(LOG_DEBUG, "File-xfer already initialized");
@@ -137,11 +138,10 @@ static gboolean vdagent_init_file_xfer(VDAgent *agent)
         return FALSE;
     }
 
-    if (fx_open_dir == -1)
-        fx_open_dir = !vdagent_x11_has_icons_on_desktop(agent->x11);
+    open_dir = fx_open_dir == -1 ? !vdagent_x11_has_icons_on_desktop() : fx_open_dir;
 
     agent->xfers = vdagent_file_xfers_create(agent->conn, xfer_dir,
-                                             fx_open_dir, debug);
+                                             open_dir, debug);
     return (agent->xfers != NULL);
 }
 
