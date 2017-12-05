@@ -1296,6 +1296,7 @@ int vdagent_x11_has_icons_on_desktop()
         "Metacity", /* GNOME-2 or GNOME-3 fallback */
         "Xfwm4",    /* Xfce */
         "Marco",    /* Mate */
+        "Metacity (Marco)", /* Mate, newer */
         NULL
     };
     const gchar *net_wm_name = vdagent_x11_get_wm_name();
