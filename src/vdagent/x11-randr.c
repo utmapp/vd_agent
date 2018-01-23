@@ -58,6 +58,10 @@ static XRRCrtcInfo *crtc_from_id(struct vdagent_x11 *x11, int id)
 {
     int i;
 
+    if (id == 0) {
+        return NULL;
+    }
+
     for (i = 0 ; i < x11->randr.res->ncrtc ; ++i) {
         if (id == x11->randr.res->crtcs[i]) {
             return x11->randr.crtcs[i];
@@ -652,7 +656,6 @@ static VDAgentMonitorsConfig *get_current_mon_config(struct vdagent_x11 *x11)
 {
     int i, num_of_monitors = 0;
     XRRModeInfo *mode;
-    XRRCrtcInfo *crtc;
     XRRScreenResources *res = x11->randr.res;
     VDAgentMonitorsConfig *mon_config;
 
@@ -663,12 +666,17 @@ static VDAgentMonitorsConfig *get_current_mon_config(struct vdagent_x11 *x11)
     }
 
     for (i = 0 ; i < res->noutput; i++) {
+        int j;
+        XRRCrtcInfo *crtc = NULL;
+
         if (x11->randr.outputs[i]->ncrtc == 0)
             continue; /* Monitor disabled, already zero-ed by calloc */
-        if (x11->randr.outputs[i]->ncrtc != 1)
-            goto error;
+        if (x11->randr.outputs[i]->crtc == 0)
+            continue; /* Monitor disabled */
 
-        crtc = crtc_from_id(x11, x11->randr.outputs[i]->crtcs[0]);
+        for (j = 0; crtc == NULL && j < x11->randr.outputs[i]->ncrtc; j++) {
+            crtc = crtc_from_id(x11, x11->randr.outputs[i]->crtcs[j]);
+        }
         if (!crtc)
             goto error;
 
