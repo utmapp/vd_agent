@@ -33,6 +33,8 @@ src_spice_vdagent_SOURCES =			\
 	$(common_sources)			\
 	src/vdagent/audio.c			\
 	src/vdagent/audio.h			\
+	src/vdagent/clipboard.c			\
+	src/vdagent/clipboard.h			\
 	src/vdagent/file-xfers.c		\
 	src/vdagent/file-xfers.h		\
 	src/vdagent/x11-priv.h			\

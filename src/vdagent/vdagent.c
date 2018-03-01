@@ -46,8 +46,10 @@
 #include "audio.h"
 #include "x11.h"
 #include "file-xfers.h"
+#include "clipboard.h"
 
 typedef struct VDAgent {
+    VDAgentClipboards *clipboards;
     struct vdagent_x11 *x11;
     struct vdagent_file_xfers *xfers;
     struct udscs_connection *conn;
@@ -168,18 +170,18 @@ static void daemon_read_complete(struct udscs_connection **connp,
         vdagent_x11_set_monitor_config(agent->x11, (VDAgentMonitorsConfig *)data, 0);
         break;
     case VDAGENTD_CLIPBOARD_REQUEST:
-        vdagent_x11_clipboard_request(agent->x11, header->arg1, header->arg2);
+        vdagent_clipboard_request(agent->clipboards, header->arg1, header->arg2);
         break;
     case VDAGENTD_CLIPBOARD_GRAB:
-        vdagent_x11_clipboard_grab(agent->x11, header->arg1, (uint32_t *)data,
-                                   header->size / sizeof(uint32_t));
+        vdagent_clipboard_grab(agent->clipboards, header->arg1,
+                               (guint32 *)data, header->size / sizeof(guint32));
         break;
     case VDAGENTD_CLIPBOARD_DATA:
-        vdagent_x11_clipboard_data(agent->x11, header->arg1, header->arg2,
-                                   data, header->size);
+        vdagent_clipboard_data(agent->clipboards, header->arg1, header->arg2,
+                               data, header->size);
         break;
     case VDAGENTD_CLIPBOARD_RELEASE:
-        vdagent_x11_clipboard_release(agent->x11, header->arg1);
+        vdagent_clipboard_release(agent->clipboards, header->arg1);
         break;
     case VDAGENTD_VERSION:
         if (strcmp((char *)data, VERSION) != 0) {
@@ -232,7 +234,7 @@ static void daemon_read_complete(struct udscs_connection **connp,
         }
         break;
     case VDAGENTD_CLIENT_DISCONNECTED:
-        vdagent_x11_client_disconnected(agent->x11);
+        vdagent_clipboards_release_all(agent->clipboards);
         if (vdagent_finalize_file_xfer(agent)) {
             vdagent_init_file_xfer(agent);
         }
@@ -340,6 +342,7 @@ static VDAgent *vdagent_new(void)
 static void vdagent_destroy(VDAgent *agent)
 {
     vdagent_finalize_file_xfer(agent);
+    vdagent_clipboards_finalize(agent->clipboards);
     vdagent_x11_destroy(agent->x11, agent->conn == NULL);
     udscs_destroy_connection(&agent->conn);
 
@@ -378,6 +381,8 @@ static gboolean vdagent_init_async_cb(gpointer user_data)
 
     if (!vdagent_init_file_xfer(agent))
         syslog(LOG_WARNING, "File transfer is disabled");
+
+    agent->clipboards = vdagent_clipboards_init(agent->x11);
 
     if (parent_socket != -1) {
         if (write(parent_socket, "OK", 2) != 2)
