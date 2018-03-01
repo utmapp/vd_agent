@@ -75,6 +75,16 @@ if test "x$init_systemd" = "xyes"; then
   fi
 fi
 
+AC_ARG_WITH([gtk],
+            [AS_HELP_STRING([--with-gtk], [Use GTK+ instead of Xlib])],
+            [],
+            [with_gtk="auto"])
+if test "x$with_gtk" != "xno"; then
+  PKG_CHECK_MODULES([GTK], [gtk+-3.0 >= 3.10],
+                    [AC_DEFINE([WITH_GTK], [1], [If defined, vdagent will favor GTK+ over Xlib])],
+                    [AS_IF([test "x$with_gtk" = "xyes"], [AC_MSG_ERROR([GTK+ requested but not found])])])
+fi
+
 AC_ARG_ENABLE([pciaccess],
               [AS_HELP_STRING([--enable-pciaccess], [Enable libpciaccess use for auto generation of Xinerama xorg.conf (default: yes)])],
               [enable_pciaccess="$enableval"],
@@ -86,7 +96,6 @@ AC_ARG_ENABLE([static-uinput],
               [enable_static_uinput="no"])
 
 PKG_CHECK_MODULES([GLIB2], [glib-2.0 >= 2.34])
-PKG_CHECK_MODULES([GTK], [gtk+-3.0 >= 3.10])
 PKG_CHECK_MODULES(X, [xfixes xrandr >= 1.3 xinerama x11])
 PKG_CHECK_MODULES(SPICE, [spice-protocol >= 0.12.13])
 PKG_CHECK_MODULES(ALSA, [alsa >= 1.0.22])
@@ -209,6 +218,8 @@ AC_MSG_NOTICE([
         install RH initscript:    ${init_redhat}
         install systemd service:  ${init_systemd}
         udevdir:                  ${udevdir}
+
+        use GTK+:                 ${with_gtk}
 
         Now type 'make' to build $PACKAGE
 

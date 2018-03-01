@@ -31,10 +31,16 @@
    Calling XPending when-ever we return to the mainloop also ensures any
    pending writes are flushed. */
 
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
 #include <glib.h>
+#ifdef WITH_GTK
 #include <gdk/gdk.h>
 #ifdef GDK_WINDOWING_X11
 #include <gdk/gdkx.h>
+#endif
 #endif
 #include <stdlib.h>
 #include <limits.h>
