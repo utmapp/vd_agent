@@ -22,6 +22,10 @@
 #ifndef __VDAGENT_X11_H
 #define __VDAGENT_X11_H
 
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
 #include <stdio.h>
 #include <spice/vd_agent.h>
 #include "udscs.h"
@@ -38,6 +42,7 @@ void vdagent_x11_do_read(struct vdagent_x11 *x11);
 void vdagent_x11_set_monitor_config(struct vdagent_x11 *x11,
     VDAgentMonitorsConfig *mon_config, int fallback);
 
+#ifndef WITH_GTK
 void vdagent_x11_clipboard_grab(struct vdagent_x11 *x11, uint8_t selection,
     uint32_t *types, uint32_t type_count);
 void vdagent_x11_clipboard_request(struct vdagent_x11 *x11,
@@ -47,6 +52,7 @@ void vdagent_x11_clipboard_data(struct vdagent_x11 *x11, uint8_t selection,
 void vdagent_x11_clipboard_release(struct vdagent_x11 *x11, uint8_t selection);
 
 void vdagent_x11_client_disconnected(struct vdagent_x11 *x11);
+#endif
 
 int vdagent_x11_has_icons_on_desktop(struct vdagent_x11 *x11);
 

@@ -160,6 +160,17 @@ static gboolean vdagent_finalize_file_xfer(VDAgent *agent)
     return TRUE;
 }
 
+static void vdagent_quit_loop(VDAgent *agent)
+{
+    /* other GMainLoop(s) might be running, quit them before agent->loop */
+    if (agent->clipboards) {
+        vdagent_clipboards_finalize(agent->clipboards, agent->conn != NULL);
+        agent->clipboards = NULL;
+    }
+    if (agent->loop)
+        g_main_loop_quit(agent->loop);
+}
+
 static void daemon_read_complete(struct udscs_connection **connp,
     struct udscs_message_header *header, uint8_t *data)
 {
@@ -187,7 +198,7 @@ static void daemon_read_complete(struct udscs_connection **connp,
         if (strcmp((char *)data, VERSION) != 0) {
             syslog(LOG_INFO, "vdagentd version mismatch: got %s expected %s",
                    data, VERSION);
-            g_main_loop_quit(agent->loop);
+            vdagent_quit_loop(agent);
             version_mismatch = 1;
         }
         break;
@@ -249,8 +260,7 @@ static void daemon_disconnect_cb(struct udscs_connection *conn)
 {
     VDAgent *agent = udscs_get_user_data(conn);
     agent->conn = NULL;
-    if (agent->loop)
-        g_main_loop_quit(agent->loop);
+    vdagent_quit_loop(agent);
 }
 
 /* When we daemonize, it is useful to have the main process
@@ -322,7 +332,7 @@ gboolean vdagent_signal_handler(gpointer user_data)
 {
     VDAgent *agent = user_data;
     quit = TRUE;
-    g_main_loop_quit(agent->loop);
+    vdagent_quit_loop(agent);
     return G_SOURCE_REMOVE;
 }
 
@@ -342,7 +352,6 @@ static VDAgent *vdagent_new(void)
 static void vdagent_destroy(VDAgent *agent)
 {
     vdagent_finalize_file_xfer(agent);
-    vdagent_clipboards_finalize(agent->clipboards);
     vdagent_x11_destroy(agent->x11, agent->conn == NULL);
     udscs_destroy_connection(&agent->conn);
 
@@ -382,7 +391,7 @@ static gboolean vdagent_init_async_cb(gpointer user_data)
     if (!vdagent_init_file_xfer(agent))
         syslog(LOG_WARNING, "File transfer is disabled");
 
-    agent->clipboards = vdagent_clipboards_init(agent->x11);
+    agent->clipboards = vdagent_clipboards_init(agent->x11, agent->conn);
 
     if (parent_socket != -1) {
         if (write(parent_socket, "OK", 2) != 2)
@@ -394,7 +403,7 @@ static gboolean vdagent_init_async_cb(gpointer user_data)
     return G_SOURCE_REMOVE;
 
 err_init:
-    g_main_loop_quit(agent->loop);
+    vdagent_quit_loop(agent);
     quit = TRUE;
     return G_SOURCE_REMOVE;
 }

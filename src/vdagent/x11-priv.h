@@ -1,6 +1,10 @@
 #ifndef VDAGENT_X11_PRIV
 #define VDAGENT_X11_PRIV
 
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
 #include <stdint.h>
 #include <stdio.h>
 
@@ -8,6 +12,7 @@
 
 #include <X11/extensions/Xrandr.h>
 
+#ifndef WITH_GTK
 /* Macros to print a message to the logfile prefixed by the selection */
 #define SELPRINTF(format, ...) \
     syslog(LOG_ERR, "%s: " format, \
@@ -20,10 +25,6 @@
                     vdagent_x11_sel_to_str(selection), ##__VA_ARGS__); \
         } \
     } while (0)
-
-#define MAX_SCREENS 16
-/* Same as qxl_dev.h client_monitors_config.heads count */
-#define MONITOR_SIZE_COUNT 64
 
 enum { owner_none, owner_guest, owner_client };
 
@@ -58,11 +59,6 @@ struct clipboard_format_info {
     int atom_count;
 };
 
-struct monitor_size {
-    int width;
-    int height;
-};
-
 static const struct clipboard_format_tmpl clipboard_format_templates[] = {
     { VD_AGENT_CLIPBOARD_UTF8_TEXT, { "UTF8_STRING", "text/plain;charset=UTF-8",
       "text/plain;charset=utf-8", "STRING", NULL }, },
@@ -74,27 +70,30 @@ static const struct clipboard_format_tmpl clipboard_format_templates[] = {
 };
 
 #define clipboard_format_count (sizeof(clipboard_format_templates)/sizeof(clipboard_format_templates[0]))
+#endif
+
+#define MAX_SCREENS 16
+/* Same as qxl_dev.h client_monitors_config.heads count */
+#define MONITOR_SIZE_COUNT 64
+
+struct monitor_size {
+    int width;
+    int height;
+};
 
 struct vdagent_x11 {
-    struct clipboard_format_info clipboard_formats[clipboard_format_count];
     Display *display;
+#ifndef WITH_GTK
+    struct clipboard_format_info clipboard_formats[clipboard_format_count];
     Atom clipboard_atom;
     Atom clipboard_primary_atom;
     Atom targets_atom;
     Atom incr_atom;
     Atom multiple_atom;
     Atom timestamp_atom;
-    Window root_window[MAX_SCREENS];
     Window selection_window;
-    struct udscs_connection *vdagentd;
-    int debug;
-    int fd;
-    int screen_count;
-    int width[MAX_SCREENS];
-    int height[MAX_SCREENS];
     int has_xfixes;
     int xfixes_event_base;
-    int xrandr_event_base;
     int max_prop_size;
     int expected_targets_notifies[256];
     int clipboard_owner[256];
@@ -113,6 +112,15 @@ struct vdagent_x11 {
     uint32_t selection_req_data_pos;
     uint32_t selection_req_data_size;
     Atom selection_req_atom;
+#endif
+    Window root_window[MAX_SCREENS];
+    struct udscs_connection *vdagentd;
+    int debug;
+    int fd;
+    int screen_count;
+    int width[MAX_SCREENS];
+    int height[MAX_SCREENS];
+    int xrandr_event_base;
     /* resolution change state */
     struct {
         XRRScreenResources *res;

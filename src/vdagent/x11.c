@@ -59,6 +59,7 @@
 int (*vdagent_x11_prev_error_handler)(Display *, XErrorEvent *);
 int vdagent_x11_caught_error;
 
+#ifndef WITH_GTK
 static void vdagent_x11_handle_selection_notify(struct vdagent_x11 *x11,
                                                 XEvent *event, int incr);
 static void vdagent_x11_handle_selection_request(struct vdagent_x11 *x11);
@@ -83,6 +84,7 @@ static const char *vdagent_x11_sel_to_str(uint8_t selection) {
         return "unknown";
     }
 }
+#endif
 
 static int vdagent_x11_debug_error_handler(
     Display *display, XErrorEvent *error)
@@ -90,6 +92,7 @@ static int vdagent_x11_debug_error_handler(
     abort();
 }
 
+#ifndef WITH_GTK
 /* With the clipboard we're sometimes dealing with Properties on another apps
    Window. which can go away at any time. */
 static int vdagent_x11_ignore_bad_window_handler(
@@ -100,6 +103,7 @@ static int vdagent_x11_ignore_bad_window_handler(
 
     return vdagent_x11_prev_error_handler(display, error);
 }
+#endif
 
 void vdagent_x11_set_error_handler(struct vdagent_x11 *x11,
     int (*handler)(Display *, XErrorEvent *))
@@ -199,7 +203,11 @@ struct vdagent_x11 *vdagent_x11_create(struct udscs_connection *vdagentd,
 {
     struct vdagent_x11 *x11;
     XWindowAttributes attrib;
+#ifdef WITH_GTK
+    int i;
+#else
     int i, j, major, minor;
+#endif
     gchar *net_wm_name = NULL;
 
     x11 = calloc(1, sizeof(*x11));
@@ -235,6 +243,7 @@ struct vdagent_x11 *vdagent_x11_create(struct udscs_connection *vdagentd,
     for (i = 0; i < x11->screen_count; i++)
         x11->root_window[i] = RootWindow(x11->display, i);
     x11->fd = ConnectionNumber(x11->display);
+#ifndef WITH_GTK
     x11->clipboard_atom = XInternAtom(x11->display, "CLIPBOARD", False);
     x11->clipboard_primary_atom = XInternAtom(x11->display, "PRIMARY", False);
     x11->targets_atom = XInternAtom(x11->display, "TARGETS", False);
@@ -257,9 +266,11 @@ struct vdagent_x11 *vdagent_x11_create(struct udscs_connection *vdagentd,
                                                 0, 0, 1, 1, 0, 0, 0);
     if (x11->debug)
         syslog(LOG_DEBUG, "Selection window: %u", (int)x11->selection_window);
+#endif
 
     vdagent_x11_randr_init(x11);
 
+#ifndef WITH_GTK
     if (XFixesQueryExtension(x11->display, &x11->xfixes_event_base, &i) &&
         XFixesQueryVersion(x11->display, &major, &minor) && major >= 1) {
         x11->has_xfixes = 1;
@@ -285,6 +296,7 @@ struct vdagent_x11 *vdagent_x11_create(struct udscs_connection *vdagentd,
     /* Be a good X11 citizen and maximize the amount of data we send at once */
     if (x11->max_prop_size > 262144)
         x11->max_prop_size = 262144;
+#endif
 
     for (i = 0; i < x11->screen_count; i++) {
         /* Catch resolution changes */
@@ -319,17 +331,18 @@ struct vdagent_x11 *vdagent_x11_create(struct udscs_connection *vdagentd,
 
 void vdagent_x11_destroy(struct vdagent_x11 *x11, int vdagentd_disconnected)
 {
-    uint8_t sel;
-
     if (!x11)
         return;
 
+#ifndef WITH_GTK
     if (vdagentd_disconnected)
         x11->vdagentd = NULL;
 
+    uint8_t sel;
     for (sel = 0; sel < VD_AGENT_CLIPBOARD_SELECTION_SECONDARY; ++sel) {
         vdagent_x11_set_clipboard_owner(x11, sel, owner_none);
     }
+#endif
 
     XCloseDisplay(x11->display);
     free(x11->randr.failed_conf);
@@ -341,6 +354,7 @@ int vdagent_x11_get_fd(struct vdagent_x11 *x11)
     return x11->fd;
 }
 
+#ifndef WITH_GTK
 static void vdagent_x11_next_selection_request(struct vdagent_x11 *x11)
 {
     struct vdagent_x11_selection_request *selection_request;
@@ -476,10 +490,12 @@ static int vdagent_x11_get_clipboard_selection(struct vdagent_x11 *x11,
 
     return 0;
 }
+#endif
 
 static void vdagent_x11_handle_event(struct vdagent_x11 *x11, XEvent event)
 {
     int i, handled = 0;
+#ifndef WITH_GTK
     uint8_t selection;
 
     if (event.type == x11->xfixes_event_base) {
@@ -525,6 +541,7 @@ static void vdagent_x11_handle_event(struct vdagent_x11 *x11, XEvent event)
         x11->expected_targets_notifies[selection]++;
         return;
     }
+#endif
 
     if (vdagent_x11_randr_handle_event(x11, event))
         return;
@@ -545,6 +562,7 @@ static void vdagent_x11_handle_event(struct vdagent_x11 *x11, XEvent event)
         /* These are uninteresting */
         handled = 1;
         break;
+#ifndef WITH_GTK
     case SelectionNotify:
         if (event.xselection.target == x11->targets_atom)
             vdagent_x11_handle_targets_notify(x11, &event);
@@ -604,6 +622,7 @@ static void vdagent_x11_handle_event(struct vdagent_x11 *x11, XEvent event)
         req->next = new_req;
         break;
     }
+#endif
     }
     if (!handled && x11->debug)
         syslog(LOG_DEBUG, "unhandled x11 event, type %d, window %d",
@@ -620,6 +639,7 @@ void vdagent_x11_do_read(struct vdagent_x11 *x11)
     }
 }
 
+#ifndef WITH_GTK
 static const char *vdagent_x11_get_atom_name(struct vdagent_x11 *x11, Atom a)
 {
     if (a == None)
@@ -1354,6 +1374,7 @@ void vdagent_x11_client_disconnected(struct vdagent_x11 *x11)
             vdagent_x11_clipboard_release(x11, sel);
     }
 }
+#endif
 
 /* Function used to determine the default location to save file-xfers,
    xdg desktop dir or xdg download dir. We err on the safe side and use a
