@@ -36,7 +36,7 @@
 
 #define MM_PER_INCH (25.4)
 
-static int error_handler(Display *display, XErrorEvent *error)
+static int ignore_error_handler(Display *display, XErrorEvent *error)
 {
     vdagent_x11_caught_error = 1;
     return 0;
@@ -232,7 +232,7 @@ static void delete_mode(struct vdagent_x11 *x11, int output_index,
             break;
     }
     if (m < x11->randr.res->nmode) {
-        vdagent_x11_set_error_handler(x11, error_handler);
+        vdagent_x11_set_error_handler(x11, ignore_error_handler);
         XRRDeleteOutputMode (x11->display, x11->randr.res->outputs[output_index],
                              mode->id);
         XRRDestroyMode (x11->display, mode->id);
@@ -332,7 +332,7 @@ static XRRModeInfo *create_new_mode(struct vdagent_x11 *x11, int output_index,
     set_reduced_cvt_mode(&mode, width, height);
     mode.modeFlags = 0;
     mode.id = 0;
-    vdagent_x11_set_error_handler(x11, error_handler);
+    vdagent_x11_set_error_handler(x11, ignore_error_handler);
     XRRCreateMode (x11->display, x11->root_window[0], &mode);
     // ignore race error, if mode is created by others
     vdagent_x11_restore_error_handler(x11);
@@ -375,7 +375,7 @@ static int xrandr_add_and_set(struct vdagent_x11 *x11, int output, int x, int y,
     x11->randr.monitor_sizes[output].width = width;
     x11->randr.monitor_sizes[output].height = height;
     outputs[0] = xid;
-    vdagent_x11_set_error_handler(x11, error_handler);
+    vdagent_x11_set_error_handler(x11, ignore_error_handler);
     s = XRRSetCrtcConfig(x11->display, x11->randr.res, x11->randr.res->crtcs[output],
                          CurrentTime, x, y, mode->id, RR_Rotate_0, outputs,
                          1);
@@ -836,7 +836,7 @@ void vdagent_x11_set_monitor_config(struct vdagent_x11 *x11,
         if (x11->debug)
             syslog(LOG_DEBUG, "Changing screen size to %dx%d",
                    primary_w, primary_h);
-        vdagent_x11_set_error_handler(x11, error_handler);
+        vdagent_x11_set_error_handler(x11, ignore_error_handler);
         XRRSetScreenSize(x11->display, x11->root_window[0], primary_w, primary_h,
                          width_mm, height_mm);
         if (vdagent_x11_restore_error_handler(x11)) {
