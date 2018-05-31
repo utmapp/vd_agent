@@ -99,10 +99,10 @@ void vdagentd_uinput_update_size(struct vdagentd_uinput **uinputp,
     int i, rc;
 
     if (uinput->debug) {
-        syslog(LOG_DEBUG, "uinput-update-size: %dx%d", width, height);
-        for (i = 0; i < screen_count; i++)
-            syslog(LOG_DEBUG, "screen %d: +%d+%d", i, screen_info[i].x,
-                   screen_info[i].y);
+        syslog(LOG_DEBUG, "updating uinput size to %dx%d, screen positions:", width, height);
+        for (i = 0; i < screen_count; i++) {
+            syslog(LOG_DEBUG, "   screen %d: +%d+%d", i, screen_info[i].x, screen_info[i].y);
+        }
     }
 
     uinput->screen_info  = screen_info;

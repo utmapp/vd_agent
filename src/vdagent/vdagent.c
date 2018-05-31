@@ -449,6 +449,8 @@ int main(int argc, char *argv[])
     if (do_daemonize)
         parent_socket = daemonize();
 
+    syslog(LOG_INFO, "vdagent started");
+
 #ifdef WITH_GTK
     gdk_set_allowed_backends("x11");
     gtk_init(NULL, NULL);

@@ -707,14 +707,14 @@ static void dump_monitors_config(struct vdagent_x11 *x11,
     int i;
     VDAgentMonConfig *m;
 
-    syslog(LOG_DEBUG, "%s: %d, %x", prefix, mon_config->num_of_monitors,
+    syslog(LOG_DEBUG, "Monitors config %s: %d, %x", prefix, mon_config->num_of_monitors,
            mon_config->flags);
     for (i = 0 ; i < mon_config->num_of_monitors; ++i) {
         m = &mon_config->monitors[i];
         if (!monitor_enabled(m))
             continue;
-        syslog(LOG_DEBUG, "received monitor %d config %dx%d+%d+%d", i,
-               m->width, m->height, m->x, m->y);
+        syslog(LOG_DEBUG, "    monitor %d, config %dx%d+%d+%d",
+               i, m->width, m->height, m->x, m->y);
     }
 }
 
@@ -819,8 +819,7 @@ void vdagent_x11_set_monitor_config(struct vdagent_x11 *x11,
 
         if ((x + width > primary_w) || (y + height > primary_h)) {
             if (x11->debug)
-                syslog(LOG_DEBUG, "Disabling monitor %d: "
-                       "%dx%d+%d+%d > (%d,%d)",
+                syslog(LOG_DEBUG, "Disabling monitor %d: %dx%d+%d+%d > (%d,%d)",
                        i, width, height, x, y, primary_w, primary_h);
 
             xrandr_disable_output(x11, i);
@@ -872,6 +871,12 @@ void vdagent_x11_set_monitor_config(struct vdagent_x11 *x11,
         height = mon_config->monitors[i].height;
         x = mon_config->monitors[i].x;
         y = mon_config->monitors[i].y;
+
+        if (x11->debug) {
+            syslog(LOG_DEBUG, "Setting resolution for monitor %d: %dx%d+%d+%d)",
+                   i, width, height, x, y);
+        }
+
         if (!xrandr_add_and_set(x11, i, x, y, width, height) &&
                 enabled_monitors(mon_config) == 1) {
             set_screen_to_best_size(x11, width, height,
@@ -975,9 +980,11 @@ no_info:
     }
 
     if (x11->debug) {
-        for (i = 0; i < screen_count; i++)
-            syslog(LOG_DEBUG, "Screen %d %dx%d%+d%+d", i, res[i].width,
-                   res[i].height, res[i].x, res[i].y);
+        syslog(LOG_DEBUG, "Sending guest screen resolutions to vdagentd:");
+        for (i = 0; i < screen_count; i++) {
+            syslog(LOG_DEBUG, "   screen %d %dx%d%+d%+d", i,
+                   res[i].width, res[i].height, res[i].x, res[i].y);
+        }
     }
 
     udscs_write(x11->vdagentd, VDAGENTD_GUEST_XORG_RESOLUTION, width, height,
