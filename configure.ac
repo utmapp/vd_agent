@@ -1,5 +1,5 @@
 AC_PREREQ(2.59)
-AC_INIT([spice-vdagent], [0.17.0])
+AC_INIT([spice-vdagent], [0.18.0])
 AC_CONFIG_SRCDIR([configure.ac])
 
 AM_CONFIG_HEADER([src/config.h])
