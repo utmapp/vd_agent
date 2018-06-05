@@ -82,9 +82,12 @@ AC_ARG_WITH([gtk],
             [],
             [with_gtk="auto"])
 if test "x$with_gtk" != "xno"; then
-  PKG_CHECK_MODULES([GTK], [gtk+-3.0 >= 3.10],
-                    [AC_DEFINE([WITH_GTK], [1], [If defined, vdagent will favor GTK+ over Xlib])],
-                    [AS_IF([test "x$with_gtk" = "xyes"], [AC_MSG_ERROR([GTK+ requested but not found])])])
+  PKG_CHECK_MODULES([GTK], [gtk+-3.0 >= 3.10], [
+                     AC_DEFINE([WITH_GTK], [1], [If defined, vdagent will favor GTK+ over Xlib])
+                     with_gtk="yes"
+                 ], [
+                     AS_IF([test "x$with_gtk" = "xyes"], [AC_MSG_ERROR([GTK+ requested but not found])])
+                     with_gtk="no"])
 fi
 
 AC_ARG_ENABLE([pciaccess],
