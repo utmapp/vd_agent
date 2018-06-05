@@ -76,7 +76,9 @@ if test "x$init_systemd" = "xyes"; then
 fi
 
 AC_ARG_WITH([gtk],
-            [AS_HELP_STRING([--with-gtk], [Use GTK+ instead of Xlib])],
+            [AS_HELP_STRING(
+               [--with-gtk=@<:@auto/yes/no@:>@],
+               [Use GTK+ instead of Xlib @<:@default=auto@:>@])],
             [],
             [with_gtk="auto"])
 if test "x$with_gtk" != "xno"; then
