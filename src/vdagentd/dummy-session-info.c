@@ -45,11 +45,6 @@ char *session_info_session_for_pid(struct session_info *si, uint32_t pid)
     return NULL;
 }
 
-gboolean session_is_locked(struct session_info *ck)
-{
-    return FALSE;
-}
-
 gboolean session_info_is_user(struct session_info *si)
 {
     return TRUE;
