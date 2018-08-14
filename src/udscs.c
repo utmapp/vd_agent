@@ -490,9 +490,9 @@ void udscs_destroy_server(struct udscs_server *server)
     free(server);
 }
 
-struct ucred udscs_get_peer_cred(struct udscs_connection *conn)
+int udscs_get_peer_pid(struct udscs_connection *conn)
 {
-    return conn->peer_cred;
+    return (int)conn->peer_cred.pid;
 }
 
 static void udscs_server_accept(struct udscs_server *server) {
@@ -541,7 +541,7 @@ static void udscs_server_accept(struct udscs_server *server) {
 
     if (server->debug)
         syslog(LOG_DEBUG, "new client accepted: %p, pid: %d",
-               new_conn, (int)new_conn->peer_cred.pid);
+               new_conn, udscs_get_peer_pid(new_conn));
 
     if (server->connect_callback)
         server->connect_callback(new_conn);

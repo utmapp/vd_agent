@@ -852,7 +852,7 @@ static void agent_connect(struct udscs_connection *conn)
     }
 
     if (session_info) {
-        uint32_t pid = udscs_get_peer_cred(conn).pid;
+        uint32_t pid = udscs_get_peer_pid(conn);
         agent_data->session = session_info_session_for_pid(session_info, pid);
     }
 

@@ -171,8 +171,8 @@ int udscs_server_fill_fds(struct udscs_server *server, fd_set *readfds,
 void udscs_server_handle_fds(struct udscs_server *server, fd_set *readfds,
     fd_set *writefds);
 
-/* Returns the peer's user credentials. */
-struct ucred udscs_get_peer_cred(struct udscs_connection *conn);
+/* Returns the peer's PID. */
+int udscs_get_peer_pid(struct udscs_connection *conn);
 
 #endif
 
