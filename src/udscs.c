@@ -183,7 +183,7 @@ void *udscs_get_user_data(struct udscs_connection *conn)
     return conn->user_data;
 }
 
-int udscs_write(struct udscs_connection *conn, uint32_t type, uint32_t arg1,
+void udscs_write(struct udscs_connection *conn, uint32_t type, uint32_t arg1,
     uint32_t arg2, const uint8_t *data, uint32_t size)
 {
     struct udscs_buf *wbuf, *new_wbuf;
@@ -222,7 +222,7 @@ int udscs_write(struct udscs_connection *conn, uint32_t type, uint32_t arg1,
 
     if (!conn->write_buf) {
         conn->write_buf = new_wbuf;
-        return 0;
+        return;
     }
 
     /* maybe we should limit the write_buf stack depth ? */
@@ -231,8 +231,6 @@ int udscs_write(struct udscs_connection *conn, uint32_t type, uint32_t arg1,
         wbuf = wbuf->next;
 
     wbuf->next = new_wbuf;
-
-    return 0;
 }
 
 /* A helper for udscs_do_read() */
@@ -574,7 +572,7 @@ void udscs_server_handle_fds(struct udscs_server *server, fd_set *readfds,
     }
 }
 
-int udscs_server_write_all(struct udscs_server *server,
+void udscs_server_write_all(struct udscs_server *server,
         uint32_t type, uint32_t arg1, uint32_t arg2,
         const uint8_t *data, uint32_t size)
 {
@@ -582,12 +580,9 @@ int udscs_server_write_all(struct udscs_server *server,
 
     conn = server->connections_head.next;
     while (conn) {
-        if (udscs_write(conn, type, arg1, arg2, data, size))
-            return -1;
+        udscs_write(conn, type, arg1, arg2, data, size);
         conn = conn->next;
     }
-
-    return 0;
 }
 
 int udscs_server_for_all_clients(struct udscs_server *server,

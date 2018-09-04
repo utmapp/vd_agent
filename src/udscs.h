@@ -79,9 +79,8 @@ struct udscs_connection *udscs_connect(const char *socketname,
 void udscs_destroy_connection(struct udscs_connection **connp);
 
 /* Queue a message for delivery to the client connected through conn.
- * Return value: 0 on success -1 on error (only happens when malloc fails).
  */
-int udscs_write(struct udscs_connection *conn, uint32_t type, uint32_t arg1,
+void udscs_write(struct udscs_connection *conn, uint32_t type, uint32_t arg1,
         uint32_t arg2, const uint8_t *data, uint32_t size);
 
 /* Associates the specified user data with the connection. */
@@ -141,7 +140,7 @@ void udscs_destroy_server(struct udscs_server *server);
 /* Like udscs_write, but then send the message to all clients connected to
  * the server.
  */
-int udscs_server_write_all(struct udscs_server *server,
+void udscs_server_write_all(struct udscs_server *server,
     uint32_t type, uint32_t arg1, uint32_t arg2,
     const uint8_t *data, uint32_t size);
 
