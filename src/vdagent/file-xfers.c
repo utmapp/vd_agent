@@ -209,13 +209,8 @@ void vdagent_file_xfers_start(struct vdagent_file_xfers *xfers,
     free_space = get_free_space_available(xfers->save_dir);
     if (task->file_size > free_space) {
         gchar *free_space_str, *file_size_str;
-#if GLIB_CHECK_VERSION(2, 30, 0)
         free_space_str = g_format_size(free_space);
         file_size_str = g_format_size(task->file_size);
-#else
-        free_space_str = g_format_size_for_display(free_space);
-        file_size_str = g_format_size_for_display(task->file_size);
-#endif
         syslog(LOG_ERR, "file-xfer: not enough free space (%s to copy, %s free)",
                file_size_str, free_space_str);
         g_free(free_space_str);
