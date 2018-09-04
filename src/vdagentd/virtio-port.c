@@ -189,7 +189,7 @@ static struct vdagent_virtio_port_buf* vdagent_virtio_port_get_last_wbuf(
     return wbuf;
 }
 
-int vdagent_virtio_port_write_start(
+void vdagent_virtio_port_write_start(
         struct vdagent_virtio_port *vport,
         uint32_t port_nr,
         uint32_t message_type,
@@ -223,13 +223,11 @@ int vdagent_virtio_port_write_start(
 
     if (!vport->write_buf) {
         vport->write_buf = new_wbuf;
-        return 0;
+        return;
     }
 
     wbuf = vdagent_virtio_port_get_last_wbuf(vport);
     wbuf->next = new_wbuf;
-
-    return 0;
 }
 
 int vdagent_virtio_port_write_append(struct vdagent_virtio_port *vport,
@@ -253,7 +251,7 @@ int vdagent_virtio_port_write_append(struct vdagent_virtio_port *vport,
     return 0;
 }
 
-int vdagent_virtio_port_write(
+void vdagent_virtio_port_write(
         struct vdagent_virtio_port *vport,
         uint32_t port_nr,
         uint32_t message_type,
@@ -261,12 +259,9 @@ int vdagent_virtio_port_write(
         const uint8_t *data,
         uint32_t data_size)
 {
-    if (vdagent_virtio_port_write_start(vport, port_nr, message_type,
-                                        message_opaque, data_size)) {
-        return -1;
-    }
+    vdagent_virtio_port_write_start(vport, port_nr, message_type,
+                                    message_opaque, data_size);
     vdagent_virtio_port_write_append(vport, data, data_size);
-    return 0;
 }
 
 void vdagent_virtio_port_flush(struct vdagent_virtio_port **vportp)
