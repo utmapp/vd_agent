@@ -48,6 +48,8 @@
 #include "virtio-port.h"
 #include "session-info.h"
 
+#define DEFAULT_UINPUT_DEVICE "/dev/uinput"
+
 struct agent_data {
     char *session;
     int width;
@@ -58,12 +60,16 @@ struct agent_data {
 
 /* variables */
 static const char *pidfilename = "/var/run/spice-vdagentd/spice-vdagentd.pid";
-static const char *portdev = DEFAULT_VIRTIO_PORT_PATH;
-static const char *vdagentd_socket = VDAGENTD_SOCKET;
-static const char *uinput_device = "/dev/uinput";
+
+static gchar *portdev = NULL;
+static gchar *vdagentd_socket = NULL;
+static gchar *uinput_device = NULL;
 static int debug = 0;
-static int uinput_fake = 0;
-static int only_once = 0;
+static gboolean uinput_fake = FALSE;
+static gboolean only_once = FALSE;
+static gboolean do_daemonize = TRUE;
+static gboolean want_session_info = TRUE;
+
 static struct udscs_server *server = NULL;
 static struct vdagent_virtio_port *virtio_port = NULL;
 static GHashTable *active_xfers = NULL;
@@ -936,29 +942,6 @@ static void agent_read_complete(struct udscs_connection **connp,
 
 /* main */
 
-static void usage(FILE *fp)
-{
-    fprintf(fp,
-            "Usage: spice-vdagentd [OPTIONS]\n\n"
-            "Spice guest agent daemon, version %s.\n\n"
-            "Options:\n"
-            "  -h             print this text\n"
-            "  -d             log debug messages (use twice for extra info)\n"
-            "  -s <port>      set virtio serial port  [%s]\n"
-            "  -S <filename>  set vdagent Unix domain socket [%s]\n"
-            "  -u <dev>       set uinput device       [%s]\n"
-            "  -f             treat uinput device as fake; no ioctls\n"
-            "  -x             don't daemonize\n"
-            "  -o             only handle one virtio serial session\n"
-#ifdef HAVE_CONSOLE_KIT
-            "  -X             disable console kit integration\n"
-#endif
-#ifdef HAVE_LIBSYSTEMD_LOGIN
-            "  -X             disable systemd-logind integration\n"
-#endif
-            ,VERSION, portdev, vdagentd_socket, uinput_device);
-}
-
 static void daemonize(void)
 {
     int x;
@@ -1057,50 +1040,81 @@ static void quit_handler(int sig)
     quit = 1;
 }
 
+static gboolean parse_debug_level_cb(const gchar *option_name,
+                                     const gchar *value,
+                                     gpointer     data,
+                                     GError     **error)
+{
+    debug++;
+    return TRUE;
+}
+
+static GOptionEntry cmd_entries[] = {
+    { "debug", 'd', G_OPTION_FLAG_NO_ARG,
+      G_OPTION_ARG_CALLBACK, parse_debug_level_cb,
+      "Log debug messages (use twice for extra info)", NULL },
+
+    { "virtio-serial-port-path", 's', 0,
+      G_OPTION_ARG_STRING, &portdev,
+      "Set virtio-serial path (" DEFAULT_VIRTIO_PORT_PATH ")", NULL },
+
+    { "vdagentd-socket", 'S', 0,
+      G_OPTION_ARG_STRING, &vdagentd_socket,
+       "Set spice-vdagentd socket (" VDAGENTD_SOCKET ")", NULL },
+
+    { "uinput-device", 'u', 0,
+      G_OPTION_ARG_STRING, &uinput_device,
+      "Set uinput device (" DEFAULT_UINPUT_DEVICE ")", NULL },
+
+    { "fake-uinput", 'f', 0,
+      G_OPTION_ARG_NONE, &uinput_fake,
+      "Treat uinput device as fake; no ioctls", NULL },
+
+    { "foreground", 'x', G_OPTION_FLAG_REVERSE,
+      G_OPTION_ARG_NONE, &do_daemonize,
+      "Do not daemonize the agent", NULL},
+
+    { "one-session", 'o', 0,
+      G_OPTION_ARG_NONE, &only_once,
+      "Only handle one virtio serial session", NULL },
+
+#if defined(HAVE_CONSOLE_KIT) || defined (HAVE_LIBSYSTEMD_LOGIN)
+    { "disable-session-integration", 'X', G_OPTION_FLAG_REVERSE,
+      G_OPTION_ARG_NONE, &want_session_info,
+      "Disable console kit and systemd-logind integration", NULL },
+#endif
+
+    { NULL }
+};
+
 int main(int argc, char *argv[])
 {
-    int c;
-    int do_daemonize = 1;
-    int want_session_info = 1;
+    GOptionContext *context;
+    GError *err = NULL;
     struct sigaction act;
     gboolean own_socket = TRUE;
 
-    for (;;) {
-        if (-1 == (c = getopt(argc, argv, "-dhxXfos:u:S:")))
-            break;
-        switch (c) {
-        case 'd':
-            debug++;
-            break;
-        case 's':
-            portdev = optarg;
-            break;
-        case 'S':
-            vdagentd_socket = optarg;
-            break;
-        case 'u':
-            uinput_device = optarg;
-            break;
-        case 'f':
-            uinput_fake = 1;
-            break;
-        case 'o':
-            only_once = 1;
-            break;
-        case 'x':
-            do_daemonize = 0;
-            break;
-        case 'X':
-            want_session_info = 0;
-            break;
-        case 'h':
-            usage(stdout);
-            return 0;
-        default:
-            fputs("\n", stderr);
-            usage(stderr);
-            return 1;
-        }
+    context = g_option_context_new(NULL);
+    g_option_context_add_main_entries(context, cmd_entries, NULL);
+    g_option_context_set_summary(context,
+        "Spice guest agent daemon, version " VERSION);
+    g_option_context_parse(context, &argc, &argv, &err);
+    g_option_context_free(context);
+
+    if (err) {
+        g_printerr("Invalid arguments, %s\n", err->message);
+        g_error_free(err);
+        return 1;
+    }
+
+    if (portdev == NULL) {
+        portdev = g_strdup(DEFAULT_VIRTIO_PORT_PATH);
+    }
+    if (vdagentd_socket == NULL) {
+        vdagentd_socket = g_strdup(VDAGENTD_SOCKET);
+    }
+    if (uinput_device == NULL) {
+        uinput_device = g_strdup(DEFAULT_UINPUT_DEVICE);
     }
 
     memset(&act, 0, sizeof(act));
@@ -1196,6 +1210,10 @@ int main(int argc, char *argv[])
 
     if (do_daemonize)
         unlink(pidfilename);
+
+    g_free(portdev);
+    g_free(vdagentd_socket);
+    g_free(uinput_device);
 
     return retval;
 }
