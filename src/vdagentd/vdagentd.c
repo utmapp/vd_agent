@@ -847,42 +847,46 @@ static void agent_disconnect(struct udscs_connection *conn)
     g_free(agent_data);
 }
 
+static void do_agent_xorg_resolution(struct udscs_connection    **connp,
+                                     struct udscs_message_header *header,
+                                     guint8                      *data)
+{
+    struct agent_data *agent_data = udscs_get_user_data(*connp);
+    guint res_size = sizeof(struct vdagentd_guest_xorg_resolution);
+    guint n = header->size / res_size;
+
+    /* Detect older version session agent, but don't disconnect, as
+     * that stops it from getting the VDAGENTD_VERSION message, and then
+     * it will never re-exec the new version... */
+    if (header->arg1 == 0 && header->arg2 == 0) {
+        syslog(LOG_INFO, "got old session agent xorg resolution message, "
+                         "ignoring");
+        return;
+    }
+
+    if (header->size != n * res_size) {
+        syslog(LOG_ERR, "guest xorg resolution message has wrong size, "
+                        "disconnecting agent");
+        udscs_destroy_connection(connp);
+        return;
+    }
+
+    g_free(agent_data->screen_info);
+    agent_data->screen_info = g_memdup(data, header->size);
+    agent_data->width  = header->arg1;
+    agent_data->height = header->arg2;
+    agent_data->screen_count = n;
+
+    check_xorg_resolution();
+}
+
 static void agent_read_complete(struct udscs_connection **connp,
     struct udscs_message_header *header, uint8_t *data)
 {
-    struct agent_data *agent_data = udscs_get_user_data(*connp);
-
     switch (header->type) {
-    case VDAGENTD_GUEST_XORG_RESOLUTION: {
-        struct vdagentd_guest_xorg_resolution *res;
-        int n = header->size / sizeof(*res);
-
-        /* Detect older version session agent, but don't disconnect, as
-           that stops it from getting the VDAGENTD_VERSION message, and then
-           it will never re-exec the new version... */
-        if (header->arg1 == 0 && header->arg2 == 0) {
-            syslog(LOG_INFO, "got old session agent xorg resolution message, "
-                             "ignoring");
-            return;
-        }
-
-        if (header->size != n * sizeof(*res)) {
-            syslog(LOG_ERR, "guest xorg resolution message has wrong size, "
-                            "disconnecting agent");
-            udscs_destroy_connection(connp);
-            return;
-        }
-
-        g_free(agent_data->screen_info);
-        res = g_memdup(data, n * sizeof(*res));
-        agent_data->width  = header->arg1;
-        agent_data->height = header->arg2;
-        agent_data->screen_info  = res;
-        agent_data->screen_count = n;
-
-        check_xorg_resolution();
+    case VDAGENTD_GUEST_XORG_RESOLUTION:
+        do_agent_xorg_resolution(connp, header, data);
         break;
-    }
     case VDAGENTD_CLIPBOARD_GRAB:
     case VDAGENTD_CLIPBOARD_REQUEST:
     case VDAGENTD_CLIPBOARD_DATA:
