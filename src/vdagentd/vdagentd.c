@@ -880,6 +880,34 @@ static void do_agent_xorg_resolution(struct udscs_connection    **connp,
     check_xorg_resolution();
 }
 
+static void do_agent_file_xfer_status(struct udscs_connection    **connp,
+                                      struct udscs_message_header *header,
+                                      guint8                      *data)
+{
+    gpointer task_id = GUINT_TO_POINTER(GUINT32_TO_LE(header->arg1));
+    const gchar *log_msg = NULL;
+    guint data_size = 0;
+
+    /* header->arg1 = file xfer task id, header->arg2 = file xfer status */
+    switch (header->arg2) {
+        case VD_AGENT_FILE_XFER_STATUS_NOT_ENOUGH_SPACE:
+            *((guint64 *)data) = GUINT64_TO_LE(*((guint64 *)data));
+            log_msg = "Not enough free space. Cancelling file-xfer %u";
+            data_size = sizeof(guint64);
+            break;
+        case VD_AGENT_FILE_XFER_STATUS_DISABLED:
+            log_msg = "File-xfer is disabled. Cancelling file-xfer %u";
+            break;
+    }
+    send_file_xfer_status(virtio_port, log_msg, header->arg1, header->arg2,
+                          data, data_size);
+
+    if (header->arg2 == VD_AGENT_FILE_XFER_STATUS_CAN_SEND_DATA)
+        g_hash_table_insert(active_xfers, task_id, *connp);
+    else
+        g_hash_table_remove(active_xfers, task_id);
+}
+
 static void agent_read_complete(struct udscs_connection **connp,
     struct udscs_message_header *header, uint8_t *data)
 {
@@ -896,31 +924,9 @@ static void agent_read_complete(struct udscs_connection **connp,
             return;
         }
         break;
-    case VDAGENTD_FILE_XFER_STATUS:{
-        /* header->arg1 = file xfer task id, header->arg2 = file xfer status */
-        switch (header->arg2) {
-            case VD_AGENT_FILE_XFER_STATUS_NOT_ENOUGH_SPACE: {
-                uint64_t free_space = GUINT64_TO_LE(*((uint64_t*)data));
-                send_file_xfer_status(virtio_port, "Not enough free space. Cancelling file-xfer %u",
-                                      header->arg1, header->arg2,
-                                      (uint8_t*)&free_space, sizeof(uint64_t));
-                break;
-            }
-            case VD_AGENT_FILE_XFER_STATUS_DISABLED:
-                send_file_xfer_status(virtio_port, "File-xfer is disabled, cancelling",
-                                      header->arg1, header->arg2, NULL, 0);
-                break;
-            default:
-                send_file_xfer_status(virtio_port, NULL, header->arg1, header->arg2, NULL, 0);
-        }
-
-        if (header->arg2 == VD_AGENT_FILE_XFER_STATUS_CAN_SEND_DATA)
-            g_hash_table_insert(active_xfers, GUINT_TO_POINTER(GUINT32_TO_LE(header->arg1)),
-                                *connp);
-        else
-            g_hash_table_remove(active_xfers, GUINT_TO_POINTER(GUINT32_TO_LE(header->arg1)));
+    case VDAGENTD_FILE_XFER_STATUS:
+        do_agent_file_xfer_status(connp, header, data);
         break;
-    }
 
     default:
         syslog(LOG_ERR, "unknown message from vdagent: %u, ignoring",
