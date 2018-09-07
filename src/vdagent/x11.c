@@ -210,19 +210,14 @@ struct vdagent_x11 *vdagent_x11_create(struct udscs_connection *vdagentd,
 #endif
     gchar *net_wm_name = NULL;
 
-    x11 = calloc(1, sizeof(*x11));
-    if (!x11) {
-        syslog(LOG_ERR, "out of memory allocating vdagent_x11 struct");
-        return NULL;
-    }
-
+    x11 = g_new0(struct vdagent_x11, 1);
     x11->vdagentd = vdagentd;
     x11->debug = debug;
 
     x11->display = XOpenDisplay(NULL);
     if (!x11->display) {
         syslog(LOG_ERR, "could not connect to X-server");
-        free(x11);
+        g_free(x11);
         return NULL;
     }
 
@@ -231,7 +226,7 @@ struct vdagent_x11 *vdagent_x11_create(struct udscs_connection *vdagentd,
         syslog(LOG_ERR, "Error too much screens: %d > %d",
                x11->screen_count, MAX_SCREENS);
         XCloseDisplay(x11->display);
-        free(x11);
+        g_free(x11);
         return NULL;
     }
 
@@ -345,8 +340,8 @@ void vdagent_x11_destroy(struct vdagent_x11 *x11, int vdagentd_disconnected)
 #endif
 
     XCloseDisplay(x11->display);
-    free(x11->randr.failed_conf);
-    free(x11);
+    g_free(x11->randr.failed_conf);
+    g_free(x11);
 }
 
 int vdagent_x11_get_fd(struct vdagent_x11 *x11)

@@ -83,8 +83,7 @@ static void si_dbus_match_remove(struct session_info *si)
                           si->dbus.match_session_signals,
                           &error);
 
-    g_free(si->dbus.match_session_signals);
-    si->dbus.match_session_signals = NULL;
+    g_clear_pointer(&si->dbus.match_session_signals, g_free);
 }
 
 static void si_dbus_match_rule_update(struct session_info *si)
@@ -113,8 +112,7 @@ static void si_dbus_match_rule_update(struct session_info *si)
         syslog(LOG_WARNING, "Unable to add dbus rule match: %s",
                error.message);
         dbus_error_free(&error);
-        g_free(si->dbus.match_session_signals);
-        si->dbus.match_session_signals = NULL;
+        g_clear_pointer(&si->dbus.match_session_signals, g_free);
     }
 }
 
@@ -230,17 +228,14 @@ struct session_info *session_info_create(int verbose)
     struct session_info *si;
     int r;
 
-    si = calloc(1, sizeof(*si));
-    if (!si)
-        return NULL;
-
+    si = g_new0(struct session_info, 1);
     si->verbose = verbose;
     si->session_is_locked = FALSE;
 
     r = sd_login_monitor_new("session", &si->mon);
     if (r < 0) {
         syslog(LOG_ERR, "Error creating login monitor: %s", strerror(-r));
-        free(si);
+        g_free(si);
         return NULL;
     }
 
@@ -256,8 +251,8 @@ void session_info_destroy(struct session_info *si)
     si_dbus_match_remove(si);
     dbus_connection_close(si->dbus.system_connection);
     sd_login_monitor_unref(si->mon);
-    free(si->session);
-    free(si);
+    g_free(si->session);
+    g_free(si);
 }
 
 int session_info_get_fd(struct session_info *si)
@@ -282,7 +277,7 @@ const char *session_info_get_active_session(struct session_info *si)
         syslog(LOG_INFO, "Active session: %s", si->session);
 
     sd_login_monitor_flush(si->mon);
-    free(old_session);
+    g_free(old_session);
 
     si_dbus_match_rule_update(si);
     return si->session;

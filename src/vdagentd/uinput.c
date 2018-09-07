@@ -31,6 +31,7 @@
 #include <linux/input.h>
 #include <linux/uinput.h>
 #include <spice/vd_agent.h>
+#include <glib.h>
 #include "uinput.h"
 
 struct vdagentd_uinput {
@@ -52,10 +53,7 @@ struct vdagentd_uinput *vdagentd_uinput_create(const char *devname,
 {
     struct vdagentd_uinput *uinput;
 
-    uinput = calloc(1, sizeof(*uinput));
-    if (!uinput)
-        return NULL;
-
+    uinput = g_new0(struct vdagentd_uinput, 1);
     uinput->devname = devname;
     uinput->fd      = -1; /* Gets opened by vdagentd_uinput_update_size() */
     uinput->debug   = debug;
@@ -76,8 +74,7 @@ void vdagentd_uinput_destroy(struct vdagentd_uinput **uinputp)
 
     if (uinput->fd != -1)
         close(uinput->fd);
-    free(uinput);
-    *uinputp = NULL;
+    g_clear_pointer(uinputp, g_free);
 }
 
 void vdagentd_uinput_update_size(struct vdagentd_uinput **uinputp,

@@ -81,18 +81,15 @@ static void free_randr_resources(struct vdagent_x11 *x11)
         for (i = 0 ; i < x11->randr.res->noutput; ++i) {
             XRRFreeOutputInfo(x11->randr.outputs[i]);
         }
-        free(x11->randr.outputs);
+        g_clear_pointer(&x11->randr.outputs, g_free);
     }
     if (x11->randr.crtcs != NULL) {
         for (i = 0 ; i < x11->randr.res->ncrtc; ++i) {
             XRRFreeCrtcInfo(x11->randr.crtcs[i]);
         }
-        free(x11->randr.crtcs);
+        g_clear_pointer(&x11->randr.crtcs, g_free);
     }
-    XRRFreeScreenResources(x11->randr.res);
-    x11->randr.res = NULL;
-    x11->randr.outputs = NULL;
-    x11->randr.crtcs = NULL;
+    g_clear_pointer(&x11->randr.res, XRRFreeScreenResources);
     x11->randr.num_monitors = 0;
 }
 
@@ -105,8 +102,8 @@ static void update_randr_res(struct vdagent_x11 *x11, int poll)
         x11->randr.res = XRRGetScreenResources(x11->display, x11->root_window[0]);
     else
         x11->randr.res = XRRGetScreenResourcesCurrent(x11->display, x11->root_window[0]);
-    x11->randr.outputs = malloc(x11->randr.res->noutput * sizeof(*x11->randr.outputs));
-    x11->randr.crtcs = malloc(x11->randr.res->ncrtc * sizeof(*x11->randr.crtcs));
+    x11->randr.outputs = g_new(XRROutputInfo *, x11->randr.res->noutput);
+    x11->randr.crtcs = g_new(XRRCrtcInfo *, x11->randr.res->ncrtc);
     for (i = 0 ; i < x11->randr.res->noutput; ++i) {
         x11->randr.outputs[i] = XRRGetOutputInfo(x11->display, x11->randr.res,
                                                  x11->randr.res->outputs[i]);
@@ -659,11 +656,7 @@ static VDAgentMonitorsConfig *get_current_mon_config(struct vdagent_x11 *x11)
     XRRScreenResources *res = x11->randr.res;
     VDAgentMonitorsConfig *mon_config;
 
-    mon_config = calloc(1, config_size(res->noutput));
-    if (!mon_config) {
-        syslog(LOG_ERR, "out of memory allocating current monitor config");
-        return NULL;
-    }
+    mon_config = g_malloc0(config_size(res->noutput));
 
     for (i = 0 ; i < res->noutput; i++) {
         int j;
@@ -696,7 +689,7 @@ static VDAgentMonitorsConfig *get_current_mon_config(struct vdagent_x11 *x11)
 
 error:
     syslog(LOG_ERR, "error: inconsistent or stale data from X");
-    free(mon_config);
+    g_free(mon_config);
     return NULL;
 }
 
@@ -843,15 +836,12 @@ void vdagent_x11_set_monitor_config(struct vdagent_x11 *x11,
             if (!fallback) {
                 syslog(LOG_WARNING, "Restoring previous config");
                 vdagent_x11_set_monitor_config(x11, curr, 1);
-                free(curr);
+                g_free(curr);
                 /* Remember this config failed, if the client is maximized or
                    fullscreen it will keep sending the failing config. */
-                free(x11->randr.failed_conf);
+                g_free(x11->randr.failed_conf);
                 x11->randr.failed_conf =
-                    malloc(config_size(mon_config->num_of_monitors));
-                if (x11->randr.failed_conf)
-                    memcpy(x11->randr.failed_conf, mon_config,
-                           config_size(mon_config->num_of_monitors));
+                    g_memdup(mon_config, config_size(mon_config->num_of_monitors));
                 return;
             }
         }
@@ -900,7 +890,7 @@ exit:
 
     /* Flush output buffers and consume any pending events */
     vdagent_x11_do_read(x11);
-    free(curr);
+    g_free(curr);
 }
 
 void vdagent_x11_send_daemon_guest_xorg_res(struct vdagent_x11 *x11, int update)
@@ -919,11 +909,7 @@ void vdagent_x11_send_daemon_guest_xorg_res(struct vdagent_x11 *x11, int update)
             goto no_info;
 
         screen_count = curr->num_of_monitors;
-        res = malloc(screen_count * sizeof(*res));
-        if (!res) {
-            free(curr);
-            goto no_mem;
-        }
+        res = g_new(struct vdagentd_guest_xorg_resolution, screen_count);
 
         for (i = 0; i < screen_count; i++) {
             res[i].width  = curr->monitors[i].width;
@@ -931,7 +917,7 @@ void vdagent_x11_send_daemon_guest_xorg_res(struct vdagent_x11 *x11, int update)
             res[i].x = curr->monitors[i].x;
             res[i].y = curr->monitors[i].y;
         }
-        free(curr);
+        g_free(curr);
         width  = x11->width[0];
         height = x11->height[0];
     } else if (x11->has_xinerama) {
@@ -940,17 +926,13 @@ void vdagent_x11_send_daemon_guest_xorg_res(struct vdagent_x11 *x11, int update)
         screen_info = XineramaQueryScreens(x11->display, &screen_count);
         if (!screen_info)
             goto no_info;
-        res = malloc(screen_count * sizeof(*res));
-        if (!res) {
-            XFree(screen_info);
-            goto no_mem;
-        }
+        res = g_new(struct vdagentd_guest_xorg_resolution, screen_count);
         for (i = 0; i < screen_count; i++) {
             if (screen_info[i].screen_number >= screen_count) {
                 syslog(LOG_ERR, "Invalid screen number in xinerama screen info (%d >= %d)",
                        screen_info[i].screen_number, screen_count);
                 XFree(screen_info);
-                free(res);
+                g_free(res);
                 return;
             }
             res[screen_info[i].screen_number].width = screen_info[i].width;
@@ -964,9 +946,7 @@ void vdagent_x11_send_daemon_guest_xorg_res(struct vdagent_x11 *x11, int update)
     } else {
 no_info:
         screen_count = x11->screen_count;
-        res = malloc(screen_count * sizeof(*res));
-        if (!res)
-            goto no_mem;
+        res = g_new(struct vdagentd_guest_xorg_resolution, screen_count);
         for (i = 0; i < screen_count; i++) {
             res[i].width  = x11->width[i];
             res[i].height = x11->height[i];
@@ -989,8 +969,5 @@ no_info:
 
     udscs_write(x11->vdagentd, VDAGENTD_GUEST_XORG_RESOLUTION, width, height,
                 (uint8_t *)res, screen_count * sizeof(*res));
-    free(res);
-    return;
-no_mem:
-    syslog(LOG_ERR, "out of memory while trying to send resolutions, not sending resolutions.");
+    g_free(res);
 }

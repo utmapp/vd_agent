@@ -118,12 +118,7 @@ static void send_capabilities(struct vdagent_virtio_port *vport,
     uint32_t size;
 
     size = sizeof(*caps) + VD_AGENT_CAPS_BYTES;
-    caps = calloc(1, size);
-    if (!caps) {
-        syslog(LOG_ERR, "out of memory allocating capabilities array (write)");
-        return;
-    }
-
+    caps = g_malloc0(size);
     caps->request = request;
     VD_AGENT_SET_CAPABILITY(caps->caps, VD_AGENT_CAP_MOUSE_STATE);
     VD_AGENT_SET_CAPABILITY(caps->caps, VD_AGENT_CAP_MONITORS_CONFIG);
@@ -139,7 +134,7 @@ static void send_capabilities(struct vdagent_virtio_port *vport,
     vdagent_virtio_port_write(vport, VDP_CLIENT_PORT,
                               VD_AGENT_ANNOUNCE_CAPABILITIES, 0,
                               (uint8_t *)caps, size);
-    free(caps);
+    g_free(caps);
 }
 
 static void do_client_disconnect(void)
@@ -190,16 +185,8 @@ static void do_client_monitors(struct vdagent_virtio_port *vport, int port_nr,
 
     vdagentd_write_xorg_conf(new_monitors);
 
-    if (!mon_config ||
-            mon_config->num_of_monitors != new_monitors->num_of_monitors) {
-        free(mon_config);
-        mon_config = malloc(size);
-        if (!mon_config) {
-            syslog(LOG_ERR, "out of memory allocating monitors config");
-            return;
-        }
-    }
-    memcpy(mon_config, new_monitors, size);
+    g_free(mon_config);
+    mon_config = g_memdup(new_monitors, size);
 
     /* Send monitor config to currently active agent */
     if (active_session_conn)
@@ -230,19 +217,10 @@ static void do_client_capabilities(struct vdagent_virtio_port *vport,
     VDAgentMessage *message_header,
     VDAgentAnnounceCapabilities *caps)
 {
-    int new_size = VD_AGENT_CAPS_SIZE_FROM_MSG_SIZE(message_header->size);
+    capabilities_size = VD_AGENT_CAPS_SIZE_FROM_MSG_SIZE(message_header->size);
+    g_free(capabilities);
+    capabilities = g_memdup(caps->caps, capabilities_size * sizeof(uint32_t));
 
-    if (capabilities_size != new_size) {
-        capabilities_size = new_size;
-        free(capabilities);
-        capabilities = malloc(capabilities_size * sizeof(uint32_t));
-        if (!capabilities) {
-            syslog(LOG_ERR, "oom allocating capabilities array (read)");
-            capabilities_size = 0;
-            return;
-        }
-    }
-    memcpy(capabilities, caps->caps, capabilities_size * sizeof(uint32_t));
     if (caps->request) {
         /* Report the previous client has disconnected. */
         do_client_disconnect();
@@ -322,7 +300,7 @@ static void send_file_xfer_status(struct vdagent_virtio_port *vport,
         data_size = 0;
     }
 
-    status = malloc(sizeof(*status) + data_size);
+    status = g_malloc(sizeof(*status) + data_size);
     status->id = GUINT32_TO_LE(id);
     status->result = GUINT32_TO_LE(xfer_status);
     if (data)
@@ -336,7 +314,7 @@ static void send_file_xfer_status(struct vdagent_virtio_port *vport,
                                   VD_AGENT_FILE_XFER_STATUS, 0,
                                   (uint8_t *)status, sizeof(*status) + data_size);
 
-    free(status);
+    g_free(status);
 }
 
 static void do_client_file_xfer(struct vdagent_virtio_port *vport,
@@ -843,13 +821,7 @@ static gboolean remove_active_xfers(gpointer key, gpointer value, gpointer conn)
 static void agent_connect(struct udscs_connection *conn)
 {
     struct agent_data *agent_data;
-
-    agent_data = calloc(1, sizeof(*agent_data));
-    if (!agent_data) {
-        syslog(LOG_ERR, "Out of memory allocating agent data, disconnecting");
-        udscs_destroy_connection(&conn);
-        return;
-    }
+    agent_data = g_new0(struct agent_data, 1);
 
     if (session_info) {
         uint32_t pid = udscs_get_peer_pid(conn);
@@ -868,12 +840,11 @@ static void agent_disconnect(struct udscs_connection *conn)
 
     g_hash_table_foreach_remove(active_xfers, remove_active_xfers, conn);
 
-    free(agent_data->session);
-    agent_data->session = NULL;
+    g_clear_pointer(&agent_data->session, g_free);
     update_active_session_connection(NULL);
 
-    free(agent_data->screen_info);
-    free(agent_data);
+    g_free(agent_data->screen_info);
+    g_free(agent_data);
 }
 
 static void agent_read_complete(struct udscs_connection **connp,
@@ -902,13 +873,8 @@ static void agent_read_complete(struct udscs_connection **connp,
             return;
         }
 
-        free(agent_data->screen_info);
-        res = malloc(n * sizeof(*res));
-        if (!res) {
-            syslog(LOG_ERR, "out of memory allocating screen info");
-            n = 0;
-        }
-        memcpy(res, data, n * sizeof(*res));
+        g_free(agent_data->screen_info);
+        res = g_memdup(data, n * sizeof(*res));
         agent_data->width  = header->arg1;
         agent_data->height = header->arg2;
         agent_data->screen_info  = res;
@@ -1166,8 +1132,6 @@ int main(int argc, char *argv[])
         if (errno == EADDRINUSE) {
             syslog(LOG_CRIT, "Fatal the server socket %s exists already. Delete it?",
                    vdagentd_socket);
-        } else if (errno == ENOMEM) {
-            syslog(LOG_CRIT, "Fatal could not allocate memory for udscs server");
         } else {
             syslog(LOG_CRIT, "Fatal could not create the server socket %s: %m",
                    vdagentd_socket);

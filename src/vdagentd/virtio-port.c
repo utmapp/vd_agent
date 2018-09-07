@@ -85,9 +85,7 @@ struct vdagent_virtio_port *vdagent_virtio_port_create(const char *portname,
     struct sockaddr_un address;
     int c;
 
-    vport = calloc(1, sizeof(*vport));
-    if (!vport)
-        return 0;
+    vport = g_new0(struct vdagent_virtio_port, 1);
 
     vport->fd = open(portname, O_RDWR);
     if (vport->fd == -1) {
@@ -118,7 +116,7 @@ error:
     if (vport->fd != -1) {
         close(vport->fd);
     }
-    free(vport);
+    g_free(vport);
     return NULL;
 }
 
@@ -137,18 +135,17 @@ void vdagent_virtio_port_destroy(struct vdagent_virtio_port **vportp)
     wbuf = vport->write_buf;
     while (wbuf) {
         next_wbuf = wbuf->next;
-        free(wbuf->buf);
-        free(wbuf);
+        g_free(wbuf->buf);
+        g_free(wbuf);
         wbuf = next_wbuf;
     }
 
     for (i = 0; i < VDP_END_PORT; i++) {
-        free(vport->port_data[i].message_data);
+        g_free(vport->port_data[i].message_data);
     }
 
     close(vport->fd);
-    free(vport);
-    *vportp = NULL;
+    g_clear_pointer(vportp, g_free);
 }
 
 int vdagent_virtio_port_fill_fds(struct vdagent_virtio_port *vport,
@@ -203,19 +200,12 @@ int vdagent_virtio_port_write_start(
     VDIChunkHeader chunk_header;
     VDAgentMessage message_header;
 
-    new_wbuf = malloc(sizeof(*new_wbuf));
-    if (!new_wbuf)
-        return -1;
-
+    new_wbuf = g_new(struct vdagent_virtio_port_buf, 1);
     new_wbuf->pos = 0;
     new_wbuf->write_pos = 0;
     new_wbuf->size = sizeof(chunk_header) + sizeof(message_header) + data_size;
     new_wbuf->next = NULL;
-    new_wbuf->buf = malloc(new_wbuf->size);
-    if (!new_wbuf->buf) {
-        free(new_wbuf);
-        return -1;
-    }
+    new_wbuf->buf = g_malloc(new_wbuf->size);
 
     chunk_header.port = GUINT32_TO_LE(port_nr);
     chunk_header.size = GUINT32_TO_LE(sizeof(message_header) + data_size);
@@ -291,7 +281,7 @@ void vdagent_virtio_port_reset(struct vdagent_virtio_port *vport, int port)
         syslog(LOG_ERR, "vdagent_virtio_port_reset port out of range");
         return;
     }
-    free(vport->port_data[port].message_data);
+    g_free(vport->port_data[port].message_data);
     memset(&vport->port_data[port], 0, sizeof(vport->port_data[0]));
 }
 
@@ -318,12 +308,7 @@ static void vdagent_virtio_port_do_chunk(struct vdagent_virtio_port **vportp)
             port->message_header.size = GUINT32_FROM_LE(port->message_header.size);
 
             if (port->message_header.size) {
-                port->message_data = malloc(port->message_header.size);
-                if (!port->message_data) {
-                    syslog(LOG_ERR, "out of memory, disconnecting virtio");
-                    vdagent_virtio_port_destroy(vportp);
-                    return;
-                }
+                port->message_data = g_malloc(port->message_header.size);
             }
         }
         pos = read;
@@ -359,8 +344,7 @@ static void vdagent_virtio_port_do_chunk(struct vdagent_virtio_port **vportp)
             }
             port->message_header_read = 0;
             port->message_data_pos = 0;
-            free(port->message_data);
-            port->message_data = NULL;
+            g_clear_pointer(&port->message_data, g_free);
         }
     }
 }
@@ -496,7 +480,7 @@ static void vdagent_virtio_port_do_write(struct vdagent_virtio_port **vportp)
     wbuf->pos += n;
     if (wbuf->pos == wbuf->size) {
         vport->write_buf = wbuf->next;
-        free(wbuf->buf);
-        free(wbuf);
+        g_free(wbuf->buf);
+        g_free(wbuf);
     }
 }

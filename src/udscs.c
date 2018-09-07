@@ -87,10 +87,7 @@ struct udscs_connection *udscs_connect(const char *socketname,
     struct sockaddr_un address;
     struct udscs_connection *conn;
 
-    conn = calloc(1, sizeof(*conn));
-    if (!conn)
-        return NULL;
-
+    conn = g_new0(struct udscs_connection, 1);
     conn->type_to_string = type_to_string;
     conn->no_types = no_types;
     conn->debug = debug;
@@ -98,7 +95,7 @@ struct udscs_connection *udscs_connect(const char *socketname,
     conn->fd = socket(PF_UNIX, SOCK_STREAM, 0);
     if (conn->fd == -1) {
         syslog(LOG_ERR, "creating unix domain socket: %m");
-        free(conn);
+        g_free(conn);
         return NULL;
     }
 
@@ -109,7 +106,7 @@ struct udscs_connection *udscs_connect(const char *socketname,
         if (conn->debug) {
             syslog(LOG_DEBUG, "connect %s: %m", socketname);
         }
-        free(conn);
+        g_free(conn);
         return NULL;
     }
 
@@ -147,13 +144,12 @@ void udscs_destroy_connection(struct udscs_connection **connp)
     wbuf = conn->write_buf;
     while (wbuf) {
         next_wbuf = wbuf->next;
-        free(wbuf->buf);
-        free(wbuf);
+        g_free(wbuf->buf);
+        g_free(wbuf);
         wbuf = next_wbuf;
     }
 
-    free(conn->data.buf);
-    conn->data.buf = NULL;
+    g_clear_pointer(&conn->data.buf, g_free);
 
     if (conn->next)
         conn->next->prev = conn->prev;
@@ -171,8 +167,7 @@ void udscs_destroy_connection(struct udscs_connection **connp)
     if (conn->debug)
         syslog(LOG_DEBUG, "%p disconnected", conn);
 
-    free(conn);
-    *connp = NULL;
+    g_clear_pointer(connp, g_free);
 }
 
 void udscs_set_user_data(struct udscs_connection *conn, void *data)
@@ -194,18 +189,11 @@ int udscs_write(struct udscs_connection *conn, uint32_t type, uint32_t arg1,
     struct udscs_buf *wbuf, *new_wbuf;
     struct udscs_message_header header;
 
-    new_wbuf = malloc(sizeof(*new_wbuf));
-    if (!new_wbuf)
-        return -1;
-
+    new_wbuf = g_new(struct udscs_buf, 1);
     new_wbuf->pos = 0;
     new_wbuf->size = sizeof(header) + size;
     new_wbuf->next = NULL;
-    new_wbuf->buf = malloc(new_wbuf->size);
-    if (!new_wbuf->buf) {
-        free(new_wbuf);
-        return -1;
-    }
+    new_wbuf->buf = g_malloc(new_wbuf->size);
 
     header.type = type;
     header.arg1 = arg1;
@@ -271,7 +259,7 @@ static void udscs_read_complete(struct udscs_connection **connp)
             return;
     }
 
-    free(conn->data.buf);
+    g_free(conn->data.buf);
     memset(&conn->data, 0, sizeof(conn->data)); /* data.buf = NULL */
     conn->header_read = 0;
 }
@@ -312,12 +300,7 @@ static void udscs_do_read(struct udscs_connection **connp)
             }
             conn->data.pos = 0;
             conn->data.size = conn->header.size;
-            conn->data.buf = malloc(conn->data.size);
-            if (!conn->data.buf) {
-                syslog(LOG_ERR, "out of memory, disconnecting %p", conn);
-                udscs_destroy_connection(connp);
-                return;
-            }
+            conn->data.buf = g_malloc(conn->data.size);
         }
     } else {
         conn->data.pos += n;
@@ -354,8 +337,8 @@ static void udscs_do_write(struct udscs_connection **connp)
     wbuf->pos += n;
     if (wbuf->pos == wbuf->size) {
         conn->write_buf = wbuf->next;
-        free(wbuf->buf);
-        free(wbuf);
+        g_free(wbuf->buf);
+        g_free(wbuf);
     }
 }
 
@@ -414,10 +397,7 @@ struct udscs_server *udscs_create_server_for_fd(int fd,
         return NULL;
     }
 
-    server = calloc(1, sizeof(*server));
-    if (!server)
-        return NULL;
-
+    server = g_new0(struct udscs_server, 1);
     server->type_to_string = type_to_string;
     server->no_types = no_types;
     server->debug = debug;
@@ -487,7 +467,7 @@ void udscs_destroy_server(struct udscs_server *server)
         conn = next_conn;
     }
     close(server->fd);
-    free(server);
+    g_free(server);
 }
 
 int udscs_get_peer_pid(struct udscs_connection *conn)
@@ -509,13 +489,7 @@ static void udscs_server_accept(struct udscs_server *server) {
         return;
     }
 
-    new_conn = calloc(1, sizeof(*conn));
-    if (!new_conn) {
-        syslog(LOG_ERR, "out of memory, disconnecting new client");
-        close(fd);
-        return;
-    }
-
+    new_conn = g_new0(struct udscs_connection, 1);
     new_conn->fd = fd;
     new_conn->type_to_string = server->type_to_string;
     new_conn->no_types = server->no_types;
@@ -528,7 +502,7 @@ static void udscs_server_accept(struct udscs_server *server) {
     if (r != 0) {
         syslog(LOG_ERR, "Could not get peercred, disconnecting new client");
         close(fd);
-        free(new_conn);
+        g_free(new_conn);
         return;
     }
 

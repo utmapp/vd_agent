@@ -71,8 +71,7 @@ static void si_dbus_match_remove(struct session_info *info)
         if (info->verbose)
             syslog(LOG_DEBUG, "(console-kit) seat match removed: %s",
                    info->match_seat_signals);
-        g_free(info->match_seat_signals);
-        info->match_seat_signals = NULL;
+        g_clear_pointer(&info->match_seat_signals, g_free);
     }
 
     if (info->match_session_signals != NULL) {
@@ -84,8 +83,7 @@ static void si_dbus_match_remove(struct session_info *info)
         if (info->verbose)
             syslog(LOG_DEBUG, "(console-kit) session match removed: %s",
                    info->match_session_signals);
-        g_free(info->match_session_signals);
-        info->match_session_signals = NULL;
+        g_clear_pointer(&info->match_session_signals, g_free);
     }
 }
 
@@ -117,8 +115,7 @@ static void si_dbus_match_rule_update(struct session_info *info)
             syslog(LOG_WARNING, "Unable to add dbus rule match: %s",
                    error.message);
             dbus_error_free(&error);
-            g_free(info->match_seat_signals);
-            info->match_seat_signals = NULL;
+            g_clear_pointer(&info->match_seat_signals, g_free);
         }
     }
 
@@ -140,8 +137,7 @@ static void si_dbus_match_rule_update(struct session_info *info)
             syslog(LOG_WARNING, "Unable to add dbus rule match: %s",
                    error.message);
             dbus_error_free(&error);
-            g_free(info->match_session_signals);
-            info->match_session_signals = NULL;
+            g_clear_pointer(&info->match_session_signals, g_free);
         }
     }
 }
@@ -162,8 +158,7 @@ si_dbus_read_signals(struct session_info *info)
             gint type;
             gchar *session;
 
-            free(info->active_session);
-            info->active_session = NULL;
+            g_clear_pointer(&info->active_session, g_free);
 
             dbus_message_iter_init(message, &iter);
             type = dbus_message_iter_get_arg_type(&iter);
@@ -222,10 +217,7 @@ struct session_info *session_info_create(int verbose)
     struct session_info *info;
     DBusError error;
 
-    info = calloc(1, sizeof(*info));
-    if (!info)
-        return NULL;
-
+    info = g_new0(struct session_info, 1);
     info->verbose = verbose;
     info->session_is_locked = FALSE;
     info->session_idle_hint = FALSE;
@@ -239,7 +231,7 @@ struct session_info *session_info_create(int verbose)
              dbus_error_free(&error);
         } else
              syslog(LOG_ERR, "Unable to connect to system bus");
-        free(info);
+        g_free(info);
         return NULL;
     }
 
@@ -265,9 +257,9 @@ void session_info_destroy(struct session_info *info)
 
     si_dbus_match_remove(info);
     dbus_connection_close(info->connection);
-    free(info->seat);
-    free(info->active_session);
-    free(info);
+    g_free(info->seat);
+    g_free(info->active_session);
+    g_free(info);
 }
 
 int session_info_get_fd(struct session_info *info)
