@@ -42,7 +42,6 @@
 
 #include "udscs.h"
 #include "vdagentd-proto.h"
-#include "vdagentd-proto-strings.h"
 #include "audio.h"
 #include "x11.h"
 #include "file-xfers.h"
@@ -369,7 +368,7 @@ static gboolean vdagent_init_async_cb(gpointer user_data)
 
     agent->conn = udscs_connect(vdagentd_socket,
                                 daemon_read_complete, daemon_disconnect_cb,
-                                vdagentd_messages, VDAGENTD_NO_MESSAGES, debug);
+                                debug);
     if (agent->conn == NULL) {
         g_timeout_add_seconds(1, vdagent_init_async_cb, agent);
         return G_SOURCE_REMOVE;

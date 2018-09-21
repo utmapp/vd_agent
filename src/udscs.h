@@ -61,15 +61,12 @@ typedef void (*udscs_disconnect_callback)(struct udscs_connection *conn);
  * Only sockets bound to a pathname are supported.
  *
  * If debug is true then the events on this connection will be traced.
- * This includes the incoming and outgoing message names. So when debug is true
- * no_types must be set to the value of the highest valid message id + 1,
- * and type_to_string must point to a string array of size no_types for
- * converting the message ids to their names.
+ * This includes the incoming and outgoing message names.
  */
 struct udscs_connection *udscs_connect(const char *socketname,
     udscs_read_callback read_callback,
     udscs_disconnect_callback disconnect_callback,
-    const char * const type_to_string[], int no_types, int debug);
+    int debug);
 
 /* Close the connection, releases the corresponding resources and
  * sets *connp to NULL.
@@ -112,7 +109,7 @@ struct udscs_server *udscs_create_server_for_fd(int fd,
     udscs_connect_callback connect_callback,
     udscs_read_callback read_callback,
     udscs_disconnect_callback disconnect_callback,
-    const char * const type_to_string[], int no_types, int debug);
+    int debug);
 
 /* Create the unix domain socket specified by socketname and
  * start listening on it.
@@ -120,16 +117,13 @@ struct udscs_server *udscs_create_server_for_fd(int fd,
  *
  * If debug is true then the events on this socket and related individual
  * connections will be traced.
- * This includes the incoming and outgoing message names. So when debug is true
- * no_types must be set to the value of the highest valid message id + 1,
- * and type_to_string must point to a string array of size no_types for
- * converting the message ids to their names.
+ * This includes the incoming and outgoing message names.
  */
 struct udscs_server *udscs_create_server(const char *socketname,
     udscs_connect_callback connect_callback,
     udscs_read_callback read_callback,
     udscs_disconnect_callback disconnect_callback,
-    const char * const type_to_string[], int no_types, int debug);
+    int debug);
 
 /* Close all the server's connections and releases the corresponding
  * resources.

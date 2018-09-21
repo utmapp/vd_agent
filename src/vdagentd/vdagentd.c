@@ -42,7 +42,6 @@
 
 #include "udscs.h"
 #include "vdagentd-proto.h"
-#include "vdagentd-proto-strings.h"
 #include "uinput.h"
 #include "xorg-conf.h"
 #include "virtio-port.h"
@@ -1139,8 +1138,7 @@ int main(int argc, char *argv[])
         server = udscs_create_server_for_fd(SD_LISTEN_FDS_START, agent_connect,
                                             agent_read_complete,
                                             agent_disconnect,
-                                            vdagentd_messages,
-                                            VDAGENTD_NO_MESSAGES, debug);
+                                            debug);
         own_socket = FALSE;
     } else
     /* systemd socket activation not enabled, create our own */
@@ -1148,7 +1146,6 @@ int main(int argc, char *argv[])
     {
         server = udscs_create_server(vdagentd_socket, agent_connect,
                                      agent_read_complete, agent_disconnect,
-                                     vdagentd_messages, VDAGENTD_NO_MESSAGES,
                                      debug);
     }
 

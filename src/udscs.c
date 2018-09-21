@@ -34,6 +34,7 @@
 #include <glib.h>
 #include <glib-unix.h>
 #include "udscs.h"
+#include "vdagentd-proto-strings.h"
 
 struct udscs_buf {
     uint8_t *buf;
@@ -45,8 +46,6 @@ struct udscs_buf {
 
 struct udscs_connection {
     int fd;
-    const char * const *type_to_string;
-    int no_types;
     int debug;
     void *user_data;
 #ifndef UDSCS_NO_SERVER
@@ -78,18 +77,32 @@ static gboolean udscs_io_channel_cb(GIOChannel *source,
                                     GIOCondition condition,
                                     gpointer data);
 
+static void debug_print_message_header(struct udscs_connection     *conn,
+                                       struct udscs_message_header *header,
+                                       const gchar                 *direction)
+{
+    const gchar *type = "invalid message";
+
+    if (conn == NULL || conn->debug == FALSE)
+        return;
+
+    if (header->type < G_N_ELEMENTS(vdagentd_messages))
+        type = vdagentd_messages[header->type];
+
+    syslog(LOG_DEBUG, "%p %s %s, arg1: %u, arg2: %u, size %u",
+        conn, direction, type, header->arg1, header->arg2, header->size);
+}
+
 struct udscs_connection *udscs_connect(const char *socketname,
     udscs_read_callback read_callback,
     udscs_disconnect_callback disconnect_callback,
-    const char * const type_to_string[], int no_types, int debug)
+    int debug)
 {
     int c;
     struct sockaddr_un address;
     struct udscs_connection *conn;
 
     conn = g_new0(struct udscs_connection, 1);
-    conn->type_to_string = type_to_string;
-    conn->no_types = no_types;
     conn->debug = debug;
 
     conn->fd = socket(PF_UNIX, SOCK_STREAM, 0);
@@ -203,15 +216,7 @@ void udscs_write(struct udscs_connection *conn, uint32_t type, uint32_t arg1,
     memcpy(new_wbuf->buf, &header, sizeof(header));
     memcpy(new_wbuf->buf + sizeof(header), data, size);
 
-    if (conn->debug) {
-        if (type < conn->no_types)
-            syslog(LOG_DEBUG, "%p sent %s, arg1: %u, arg2: %u, size %u",
-                   conn, conn->type_to_string[type], arg1, arg2, size);
-        else
-            syslog(LOG_DEBUG,
-                   "%p sent invalid message %u, arg1: %u, arg2: %u, size %u",
-                   conn, type, arg1, arg2, size);
-    }
+    debug_print_message_header(conn, &header, "sent");
 
     if (conn->io_channel && conn->write_watch_id == 0)
         conn->write_watch_id =
@@ -238,18 +243,7 @@ static void udscs_read_complete(struct udscs_connection **connp)
 {
     struct udscs_connection *conn = *connp;
 
-    if (conn->debug) {
-        if (conn->header.type < conn->no_types)
-            syslog(LOG_DEBUG,
-                   "%p received %s, arg1: %u, arg2: %u, size %u",
-                   conn, conn->type_to_string[conn->header.type],
-                   conn->header.arg1, conn->header.arg2, conn->header.size);
-        else
-            syslog(LOG_DEBUG,
-               "%p received invalid message %u, arg1: %u, arg2: %u, size %u",
-               conn, conn->header.type, conn->header.arg1, conn->header.arg2,
-               conn->header.size);
-    }
+    debug_print_message_header(conn, &conn->header, "received");
 
     if (conn->read_callback) {
         conn->read_callback(connp, &conn->header, conn->data.buf);
@@ -373,8 +367,6 @@ static gboolean udscs_io_channel_cb(GIOChannel *source,
 
 struct udscs_server {
     int fd;
-    const char * const *type_to_string;
-    int no_types;
     int debug;
     struct udscs_connection connections_head;
     udscs_connect_callback connect_callback;
@@ -386,7 +378,7 @@ struct udscs_server *udscs_create_server_for_fd(int fd,
     udscs_connect_callback connect_callback,
     udscs_read_callback read_callback,
     udscs_disconnect_callback disconnect_callback,
-    const char * const type_to_string[], int no_types, int debug)
+    int debug)
 {
     struct udscs_server *server;
 
@@ -396,8 +388,6 @@ struct udscs_server *udscs_create_server_for_fd(int fd,
     }
 
     server = g_new0(struct udscs_server, 1);
-    server->type_to_string = type_to_string;
-    server->no_types = no_types;
     server->debug = debug;
     server->fd = fd;
     server->connect_callback = connect_callback;
@@ -411,7 +401,7 @@ struct udscs_server *udscs_create_server(const char *socketname,
     udscs_connect_callback connect_callback,
     udscs_read_callback read_callback,
     udscs_disconnect_callback disconnect_callback,
-    const char * const type_to_string[], int no_types, int debug)
+    int debug)
 {
     int c;
     int fd;
@@ -441,8 +431,7 @@ struct udscs_server *udscs_create_server(const char *socketname,
     }
 
     server = udscs_create_server_for_fd(fd, connect_callback, read_callback,
-                                        disconnect_callback, type_to_string,
-                                        no_types, debug);
+                                        disconnect_callback, debug);
 
     if (!server) {
         close(fd);
@@ -489,8 +478,6 @@ static void udscs_server_accept(struct udscs_server *server) {
 
     new_conn = g_new0(struct udscs_connection, 1);
     new_conn->fd = fd;
-    new_conn->type_to_string = server->type_to_string;
-    new_conn->no_types = server->no_types;
     new_conn->debug = server->debug;
     new_conn->read_callback = server->read_callback;
     new_conn->disconnect_callback = server->disconnect_callback;
