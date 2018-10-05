@@ -14,6 +14,7 @@ common_sources =				\
 	$(NULL)
 
 src_spice_vdagent_CFLAGS =			\
+	$(DRM_CFLAGS)				\
 	$(X_CFLAGS)				\
 	$(SPICE_CFLAGS)				\
 	$(GLIB2_CFLAGS)				\
@@ -24,6 +25,7 @@ src_spice_vdagent_CFLAGS =			\
 	$(NULL)
 
 src_spice_vdagent_LDADD =			\
+	$(DRM_LIBS)				\
 	$(X_LIBS)				\
 	$(SPICE_LIBS)				\
 	$(GLIB2_LIBS)				\
@@ -37,6 +39,8 @@ src_spice_vdagent_SOURCES =			\
 	src/vdagent/audio.h			\
 	src/vdagent/clipboard.c			\
 	src/vdagent/clipboard.h			\
+	src/vdagent/device-info.c		\
+	src/vdagent/device-info.h		\
 	src/vdagent/file-xfers.c		\
 	src/vdagent/file-xfers.h		\
 	src/vdagent/x11-priv.h			\
@@ -159,3 +163,13 @@ EXTRA_DIST =					\
 DISTCHECK_CONFIGURE_FLAGS =			\
 	--with-init-script=redhat		\
 	$(NULL)
+
+tests_test_device_info_LDADD = $(src_spice_vdagent_LDADD)
+tests_test_device_info_CFLAGS = $(src_spice_vdagent_CFLAGS)
+
+check_PROGRAMS = 					\
+	tests/test-device-info			\
+	$(NULL)
+
+TESTS = $(check_PROGRAMS)
+

@@ -105,6 +105,7 @@ PKG_CHECK_MODULES(X, [xfixes xrandr >= 1.3 xinerama x11])
 PKG_CHECK_MODULES(SPICE, [spice-protocol >= 0.12.16])
 PKG_CHECK_MODULES(ALSA, [alsa >= 1.0.22])
 PKG_CHECK_MODULES([DBUS], [dbus-1])
+PKG_CHECK_MODULES([DRM], [libdrm])
 
 if test "$with_session_info" = "auto" || test "$with_session_info" = "systemd"; then
     PKG_CHECK_MODULES([LIBSYSTEMD_LOGIN],
