@@ -373,6 +373,16 @@ static void do_client_file_xfer(struct vdagent_virtio_port *vport,
     udscs_write(conn, msg_type, 0, 0, data, message_header->size);
 }
 
+static void forward_data_to_session_agent(uint32_t type, uint8_t *data, size_t size)
+{
+    if (active_session_conn == NULL) {
+        syslog(LOG_DEBUG, "No active session, can't forward message (type %u)", type);
+        return;
+    }
+
+    udscs_write(active_session_conn, type, 0, 0, data, size);
+}
+
 static gsize vdagent_message_min_size[] =
 {
     -1, /* Does not exist */
@@ -391,6 +401,7 @@ static gsize vdagent_message_min_size[] =
     0, /* VD_AGENT_CLIENT_DISCONNECTED */
     sizeof(VDAgentMaxClipboard), /* VD_AGENT_MAX_CLIPBOARD */
     sizeof(VDAgentAudioVolumeSync), /* VD_AGENT_AUDIO_VOLUME_SYNC */
+    sizeof(VDAgentGraphicsDeviceInfo), /* VD_AGENT_GRAPHICS_DEVICE_INFO */
 };
 
 static void vdagent_message_clipboard_from_le(VDAgentMessage *message_header,
@@ -475,6 +486,7 @@ static gboolean vdagent_message_check_size(const VDAgentMessage *message_header)
     case VD_AGENT_CLIPBOARD_GRAB:
     case VD_AGENT_AUDIO_VOLUME_SYNC:
     case VD_AGENT_ANNOUNCE_CAPABILITIES:
+    case VD_AGENT_GRAPHICS_DEVICE_INFO:
         if (message_header->size < min_size) {
             syslog(LOG_ERR, "read: invalid message size: %u for message type: %u",
                    message_header->size, message_header->type);
@@ -546,6 +558,10 @@ static int virtio_port_read_complete(
     case VD_AGENT_MAX_CLIPBOARD: {
         max_clipboard = GUINT32_FROM_LE(((VDAgentMaxClipboard *)data)->max);
         syslog(LOG_DEBUG, "Set max clipboard: %d", max_clipboard);
+        break;
+    }
+    case VD_AGENT_GRAPHICS_DEVICE_INFO: {
+        forward_data_to_session_agent(VDAGENTD_GRAPHICS_DEVICE_INFO, data, message_header->size);
         break;
     }
     case VD_AGENT_AUDIO_VOLUME_SYNC: {

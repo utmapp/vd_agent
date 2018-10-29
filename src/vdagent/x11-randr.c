@@ -727,6 +727,71 @@ static void dump_monitors_config(struct vdagent_x11 *x11,
     }
 }
 
+typedef struct GraphicsDisplayInfo {
+    char device_address[256];
+    uint32_t device_display_id;
+} GraphicsDisplayInfo;
+
+// handle the device info message from the server. This will allow us to
+// maintain a mapping from spice display id to xrandr output
+void vdagent_x11_handle_graphics_device_info(struct vdagent_x11 *x11, uint8_t *data, size_t size)
+{
+    VDAgentGraphicsDeviceInfo *graphics_device_info = (VDAgentGraphicsDeviceInfo *)data;
+    VDAgentDeviceDisplayInfo *device_display_info = graphics_device_info->display_info;
+
+    void *buffer_end = data + size;
+
+    syslog(LOG_INFO, "Received Graphics Device Info:");
+
+    for (size_t i = 0; i < graphics_device_info->count; ++i) {
+        if ((void*) device_display_info > buffer_end ||
+                (void*) (&device_display_info->device_address +
+                    device_display_info->device_address_len) > buffer_end) {
+            syslog(LOG_ERR, "Malformed graphics_display_info message, "
+                   "extends beyond the end of the buffer");
+            break;
+        }
+
+        GraphicsDisplayInfo *value = g_malloc(sizeof(GraphicsDisplayInfo));
+        value->device_address[0] = '\0';
+
+        size_t device_address_len = device_display_info->device_address_len;
+        if (device_address_len > sizeof(value->device_address)) {
+            syslog(LOG_ERR, "Received a device address longer than %lu, "
+                   "will be truncated!", device_address_len);
+            device_address_len = sizeof(value->device_address);
+        }
+
+        strncpy(value->device_address,
+                (char*) device_display_info->device_address,
+                device_address_len);
+
+        if (device_address_len > 0) {
+            value->device_address[device_address_len - 1] = '\0';  // make sure the string is terminated
+        } else {
+            syslog(LOG_WARNING, "Zero length device_address received for channel_id: %u, monitor_id: %u",
+                   device_display_info->channel_id, device_display_info->monitor_id);
+        }
+
+        value->device_display_id = device_display_info->device_display_id;
+
+        syslog(LOG_INFO, "   channel_id: %u monitor_id: %u device_address: %s, "
+               "device_display_id: %u",
+               device_display_info->channel_id,
+               device_display_info->monitor_id,
+               value->device_address,
+               value->device_display_id);
+
+        g_hash_table_insert(x11->graphics_display_infos,
+                GUINT_TO_POINTER(device_display_info->channel_id + device_display_info->monitor_id),
+                value);
+
+        device_display_info = (VDAgentDeviceDisplayInfo*) ((char*) device_display_info +
+            sizeof(VDAgentDeviceDisplayInfo) + device_display_info->device_address_len);
+    }
+}
+
+
 /*
  * Set monitor configuration according to client request.
  *

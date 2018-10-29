@@ -44,6 +44,7 @@ enum {
     VDAGENTD_FILE_XFER_DATA,
     VDAGENTD_FILE_XFER_DISABLE,
     VDAGENTD_CLIENT_DISCONNECTED,  /* daemon -> client */
+    VDAGENTD_GRAPHICS_DEVICE_INFO,  /* daemon -> client */
     VDAGENTD_NO_MESSAGES /* Must always be last */
 };
 

@@ -196,6 +196,12 @@ static gchar *vdagent_x11_get_wm_name(struct vdagent_x11 *x11)
 #endif
 }
 
+static void graphics_display_info_destroy(gpointer gdi)
+{
+    g_free(gdi);
+}
+
+
 struct vdagent_x11 *vdagent_x11_create(struct udscs_connection *vdagentd,
     int debug, int sync)
 {
@@ -316,6 +322,12 @@ struct vdagent_x11 *vdagent_x11_create(struct udscs_connection *vdagentd,
                __func__, net_wm_name, vdagent_x11_has_icons_on_desktop(x11));
     g_free(net_wm_name);
 
+    x11->graphics_display_infos = g_hash_table_new_full(&g_direct_hash,
+                                                  &g_direct_equal,
+                                                  NULL,
+                                                  &graphics_display_info_destroy);
+
+
     /* Flush output buffers and consume any pending events */
     vdagent_x11_do_read(x11);
 
@@ -337,6 +349,7 @@ void vdagent_x11_destroy(struct vdagent_x11 *x11, int vdagentd_disconnected)
     }
 #endif
 
+    g_hash_table_destroy(x11->graphics_display_infos);
     XCloseDisplay(x11->display);
     g_free(x11->randr.failed_conf);
     g_free(x11);

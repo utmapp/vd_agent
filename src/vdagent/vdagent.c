@@ -240,6 +240,9 @@ static void daemon_read_complete(struct udscs_connection **connp,
                                               ((VDAgentFileXferDataMessage *)data)->id);
         }
         break;
+    case VDAGENTD_GRAPHICS_DEVICE_INFO:
+        vdagent_x11_handle_graphics_device_info(agent->x11, data, header->size);
+        break;
     case VDAGENTD_CLIENT_DISCONNECTED:
         vdagent_clipboards_release_all(agent->clipboards);
         if (vdagent_finalize_file_xfer(agent)) {
