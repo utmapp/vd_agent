@@ -31,6 +31,7 @@
 
 #include <X11/extensions/Xinerama.h>
 
+#include "device-info.h"
 #include "vdagentd-proto.h"
 #include "x11.h"
 #include "x11-priv.h"
@@ -727,11 +728,6 @@ static void dump_monitors_config(struct vdagent_x11 *x11,
     }
 }
 
-typedef struct GraphicsDisplayInfo {
-    char device_address[256];
-    uint32_t device_display_id;
-} GraphicsDisplayInfo;
-
 // handle the device info message from the server. This will allow us to
 // maintain a mapping from spice display id to xrandr output
 void vdagent_x11_handle_graphics_device_info(struct vdagent_x11 *x11, uint8_t *data, size_t size)
@@ -752,39 +748,39 @@ void vdagent_x11_handle_graphics_device_info(struct vdagent_x11 *x11, uint8_t *d
             break;
         }
 
-        GraphicsDisplayInfo *value = g_malloc(sizeof(GraphicsDisplayInfo));
-        value->device_address[0] = '\0';
-
-        size_t device_address_len = device_display_info->device_address_len;
-        if (device_address_len > sizeof(value->device_address)) {
-            syslog(LOG_ERR, "Received a device address longer than %lu, "
-                   "will be truncated!", device_address_len);
-            device_address_len = sizeof(value->device_address);
-        }
-
-        strncpy(value->device_address,
-                (char*) device_display_info->device_address,
-                device_address_len);
-
-        if (device_address_len > 0) {
-            value->device_address[device_address_len - 1] = '\0';  // make sure the string is terminated
+        // make sure the string is terminated:
+        if (device_display_info->device_address_len > 0) {
+            device_display_info->device_address[device_display_info->device_address_len - 1] = '\0';
         } else {
             syslog(LOG_WARNING, "Zero length device_address received for channel_id: %u, monitor_id: %u",
                    device_display_info->channel_id, device_display_info->monitor_id);
         }
 
-        value->device_display_id = device_display_info->device_display_id;
+        RROutput x_output;
+        if (lookup_xrandr_output_for_device_info(device_display_info, x11->display,
+                                                 x11->randr.res, &x_output)) {
+            gint64 *value = g_new(gint64, 1);
+            *value = x_output;
 
-        syslog(LOG_INFO, "   channel_id: %u monitor_id: %u device_address: %s, "
-               "device_display_id: %u",
-               device_display_info->channel_id,
-               device_display_info->monitor_id,
-               value->device_address,
-               value->device_display_id);
+            syslog(LOG_INFO, "Adding graphics device info: channel_id: %u monitor_id: "
+                   "%u device_address: %s, device_display_id: %u xrandr output ID: %lu",
+                   device_display_info->channel_id,
+                   device_display_info->monitor_id,
+                   device_display_info->device_address,
+                   device_display_info->device_display_id,
+                   x_output);
 
-        g_hash_table_insert(x11->graphics_display_infos,
+            g_hash_table_insert(x11->guest_output_map,
                 GUINT_TO_POINTER(device_display_info->channel_id + device_display_info->monitor_id),
                 value);
+        } else {
+            syslog(LOG_INFO, "channel_id: %u monitor_id: %u device_address: %s, "
+                   "device_display_id: %u xrandr output ID NOT FOUND",
+                   device_display_info->channel_id,
+                   device_display_info->monitor_id,
+                   device_display_info->device_address,
+                   device_display_info->device_display_id);
+        }
 
         device_display_info = (VDAgentDeviceDisplayInfo*) ((char*) device_display_info +
             sizeof(VDAgentDeviceDisplayInfo) + device_display_info->device_address_len);

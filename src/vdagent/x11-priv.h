@@ -139,7 +139,7 @@ struct vdagent_x11 {
     int xrandr_minor;
     int has_xinerama;
     int dont_send_guest_xorg_res;
-    GHashTable *graphics_display_infos;
+    GHashTable *guest_output_map;
 };
 
 extern int (*vdagent_x11_prev_error_handler)(Display *, XErrorEvent *);
