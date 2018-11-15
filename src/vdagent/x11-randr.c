@@ -959,6 +959,12 @@ no_info:
         }
     }
 
+    if (screen_count == 0) {
+        syslog(LOG_DEBUG, "Screen count is zero, are we on wayland?");
+        g_free(res);
+        return;
+    }
+
     if (x11->debug) {
         syslog(LOG_DEBUG, "Sending guest screen resolutions to vdagentd:");
         for (i = 0; i < screen_count; i++) {
