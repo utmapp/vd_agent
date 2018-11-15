@@ -407,8 +407,15 @@ static void xrandr_disable_output(struct vdagent_x11 *x11, int output)
         return;
     }
 
+    XRROutputInfo *oinfo = x11->randr.outputs[output];
+    if (oinfo->ncrtc == 0) {
+        syslog(LOG_WARNING, "Output index %i doesn't have any associated CRTCs", output);
+        return;
+    }
+
+    // assume output only has a single crtc
     s = XRRSetCrtcConfig(x11->display, x11->randr.res,
-                         x11->randr.res->crtcs[output],
+                         oinfo->crtcs[0],
                          CurrentTime, 0, 0, None, RR_Rotate_0,
                          NULL, 0);
 
