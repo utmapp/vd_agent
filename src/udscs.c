@@ -119,6 +119,7 @@ struct udscs_connection *udscs_connect(const char *socketname,
         if (conn->debug) {
             syslog(LOG_DEBUG, "connect %s: %m", socketname);
         }
+        close(conn->fd);
         g_free(conn);
         return NULL;
     }
