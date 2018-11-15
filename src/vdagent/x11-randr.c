@@ -120,7 +120,7 @@ static void update_randr_res(struct vdagent_x11 *x11, int poll)
                               &x11->randr.min_height,
                               &x11->randr.max_width,
                               &x11->randr.max_height) != 1) {
-        syslog(LOG_ERR, "update_randr_res: RRGetScreenSizeRange failed");
+        syslog(LOG_ERR, "update_randr_res: XRRGetScreenSizeRange failed");
     }
 }
 
