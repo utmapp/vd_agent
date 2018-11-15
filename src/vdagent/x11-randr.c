@@ -188,14 +188,14 @@ find_mode_by_name (struct vdagent_x11 *x11, char *name)
 }
 
 static XRRModeInfo *
-find_mode_by_size (struct vdagent_x11 *x11, int output, int width, int height)
+find_mode_by_size (struct vdagent_x11 *x11, int output_index, int width, int height)
 {
     int        	m;
     XRRModeInfo        *ret = NULL;
 
-    for (m = 0; m < x11->randr.outputs[output]->nmode; m++) {
+    for (m = 0; m < x11->randr.outputs[output_index]->nmode; m++) {
         XRRModeInfo *mode = mode_from_id(x11,
-                                         x11->randr.outputs[output]->modes[m]);
+                                         x11->randr.outputs[output_index]->modes[m]);
         if (mode && mode->width == width && mode->height == height) {
             ret = mode;
             break;
@@ -342,7 +342,7 @@ static XRRModeInfo *create_new_mode(struct vdagent_x11 *x11, int output_index,
     return find_mode_by_name(x11, modename);
 }
 
-static int xrandr_add_and_set(struct vdagent_x11 *x11, int output, int x, int y,
+static int xrandr_add_and_set(struct vdagent_x11 *x11, int output_index, int x, int y,
                               int width, int height)
 {
     XRRModeInfo *mode;
@@ -357,33 +357,33 @@ static int xrandr_add_and_set(struct vdagent_x11 *x11, int output, int x, int y,
         return 0;
     }
 
-    if (output < 0 || output >= x11->randr.res->noutput) {
+    if (output_index < 0 || output_index >= x11->randr.res->noutput) {
         syslog(LOG_ERR, "%s: program error: bad output", __FUNCTION__);
         return 0;
     }
 
-    old_width  = x11->randr.monitor_sizes[output].width;
-    old_height = x11->randr.monitor_sizes[output].height;
+    old_width  = x11->randr.monitor_sizes[output_index].width;
+    old_height = x11->randr.monitor_sizes[output_index].height;
 
     if (x11->set_crtc_config_not_functional) {
         /* fail, set_best_mode will find something close. */
         return 0;
     }
-    xid = x11->randr.res->outputs[output];
-    mode = find_mode_by_size(x11, output, width, height);
+    xid = x11->randr.res->outputs[output_index];
+    mode = find_mode_by_size(x11, output_index, width, height);
     if (!mode) {
-        mode = create_new_mode(x11, output, width, height);
+        mode = create_new_mode(x11, output_index, width, height);
     }
     if (!mode) {
         syslog(LOG_ERR, "failed to add a new mode");
         return 0;
     }
     XRRAddOutputMode(x11->display, xid, mode->id);
-    x11->randr.monitor_sizes[output].width = width;
-    x11->randr.monitor_sizes[output].height = height;
+    x11->randr.monitor_sizes[output_index].width = width;
+    x11->randr.monitor_sizes[output_index].height = height;
     outputs[0] = xid;
     vdagent_x11_set_error_handler(x11, ignore_error_handler);
-    s = XRRSetCrtcConfig(x11->display, x11->randr.res, x11->randr.res->crtcs[output],
+    s = XRRSetCrtcConfig(x11->display, x11->randr.res, x11->randr.res->crtcs[output_index],
                          CurrentTime, x, y, mode->id, RR_Rotate_0, outputs,
                          1);
     if (vdagent_x11_restore_error_handler(x11) || (s != RRSetConfigSuccess)) {
@@ -394,24 +394,24 @@ static int xrandr_add_and_set(struct vdagent_x11 *x11, int output, int x, int y,
 
     /* clean the previous name, if any */
     if (width != old_width || height != old_height)
-        delete_mode(x11, output, old_width, old_height);
+        delete_mode(x11, output_index, old_width, old_height);
 
     return 1;
 }
 
-static void xrandr_disable_output(struct vdagent_x11 *x11, int output)
+static void xrandr_disable_nth_output(struct vdagent_x11 *x11, int output_index)
 {
     Status s;
 
-    if (!x11->randr.res || output >= x11->randr.res->noutput || output < 0) {
+    if (!x11->randr.res || output_index >= x11->randr.res->noutput || output_index < 0) {
         syslog(LOG_ERR, "%s: program error: missing RANDR or bad output",
                __FUNCTION__);
         return;
     }
 
-    XRROutputInfo *oinfo = x11->randr.outputs[output];
+    XRROutputInfo *oinfo = x11->randr.outputs[output_index];
     if (oinfo->ncrtc == 0) {
-        syslog(LOG_WARNING, "Output index %i doesn't have any associated CRTCs", output);
+        syslog(LOG_WARNING, "Output index %i doesn't have any associated CRTCs", output_index);
         return;
     }
 
@@ -424,10 +424,10 @@ static void xrandr_disable_output(struct vdagent_x11 *x11, int output)
     if (s != RRSetConfigSuccess)
         syslog(LOG_ERR, "failed to disable monitor");
 
-    delete_mode(x11, output, x11->randr.monitor_sizes[output].width,
-                             x11->randr.monitor_sizes[output].height);
-    x11->randr.monitor_sizes[output].width  = 0;
-    x11->randr.monitor_sizes[output].height = 0;
+    delete_mode(x11, output_index, x11->randr.monitor_sizes[output_index].width,
+                             x11->randr.monitor_sizes[output_index].height);
+    x11->randr.monitor_sizes[output_index].width  = 0;
+    x11->randr.monitor_sizes[output_index].height = 0;
 }
 
 static int set_screen_to_best_size(struct vdagent_x11 *x11, int width, int height,
@@ -864,12 +864,12 @@ void vdagent_x11_set_monitor_config(struct vdagent_x11 *x11,
     g_free(config);
 
     for (i = mon_config->num_of_monitors; i < x11->randr.res->noutput; i++)
-        xrandr_disable_output(x11, i);
+        xrandr_disable_nth_output(x11, i);
 
     /* First, disable disabled CRTCs... */
     for (i = 0; i < mon_config->num_of_monitors; ++i) {
         if (!monitor_enabled(&mon_config->monitors[i])) {
-            xrandr_disable_output(x11, i);
+            xrandr_disable_nth_output(x11, i);
         }
     }
 
@@ -892,7 +892,7 @@ void vdagent_x11_set_monitor_config(struct vdagent_x11 *x11,
                 syslog(LOG_DEBUG, "Disabling monitor %d: %dx%d+%d+%d > (%d,%d)",
                        i, width, height, x, y, primary_w, primary_h);
 
-            xrandr_disable_output(x11, i);
+            xrandr_disable_nth_output(x11, i);
         }
     }
 
