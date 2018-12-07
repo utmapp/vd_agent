@@ -399,6 +399,29 @@ static int xrandr_add_and_set(struct vdagent_x11 *x11, int output_index, int x, 
     return 1;
 }
 
+// Looks up the xrandr output id associated with the given spice display id
+static RROutput get_xrandr_output_for_display_id(struct vdagent_x11 *x11, int display_id)
+{
+    guint map_size = g_hash_table_size(x11->guest_output_map);
+    if (map_size == 0) {
+        // we never got a device info message from the server, so just use old
+        // assumptions that the spice display id is equal to the index into the
+        // array of xrandr outputs
+        if (display_id < x11->randr.res->noutput) {
+            return x11->randr.res->outputs[display_id];
+        }
+    } else {
+        gpointer value;
+        if (g_hash_table_lookup_extended(x11->guest_output_map, GINT_TO_POINTER(display_id),
+                                         NULL, &value)) {
+            return *(gint64*)value;
+        }
+    }
+
+    // unable to find a valid output id
+    return -1;
+}
+
 static void xrandr_disable_nth_output(struct vdagent_x11 *x11, int output_index)
 {
     Status s;
@@ -787,6 +810,16 @@ void vdagent_x11_handle_graphics_device_info(struct vdagent_x11 *x11, uint8_t *d
     }
 }
 
+static int get_output_index_for_display_id(struct vdagent_x11 *x11, int display_id)
+{
+    RROutput oid = get_xrandr_output_for_display_id(x11, display_id);
+    for (int i = 0; i < x11->randr.res->noutput; i++) {
+        if (oid == x11->randr.res->outputs[i]) {
+            return i;
+        }
+    }
+    return -1;
+}
 
 /*
  * Set monitor configuration according to client request.
@@ -863,13 +896,33 @@ void vdagent_x11_set_monitor_config(struct vdagent_x11 *x11,
     g_unlink(config);
     g_free(config);
 
-    for (i = mon_config->num_of_monitors; i < x11->randr.res->noutput; i++)
-        xrandr_disable_nth_output(x11, i);
+    // disable all outputs that don't have associated entries in the MonitorConfig
+    for (i = 0; i < x11->randr.res->noutput; i++) {
+        bool disable = true;
+        // check if this xrandr output is represented by an item in mon_config
+        for (int j = 0; j < mon_config->num_of_monitors; j++) {
+            // j represents the display id of an enabled monitor. Check whether
+            // an enabled xrandr output is represented by this id.
+            RROutput oid = get_xrandr_output_for_display_id(x11, j);
+            if (oid == x11->randr.res->outputs[i]) {
+                disable = false;
+            }
+        }
+        if (disable) {
+            xrandr_disable_nth_output(x11, i);
+        }
+    }
 
-    /* First, disable disabled CRTCs... */
+    /* disable CRTCs that are present but explicitly disabled in the
+     * MonitorConfig */
     for (i = 0; i < mon_config->num_of_monitors; ++i) {
         if (!monitor_enabled(&mon_config->monitors[i])) {
-            xrandr_disable_nth_output(x11, i);
+            int output_index = get_output_index_for_display_id(x11, i);
+            if (output_index != -1) {
+                xrandr_disable_nth_output(x11, output_index);
+            } else {
+                syslog(LOG_WARNING, "Unable to find a guest output index for spice display %i", i);
+            }
         }
     }
 
@@ -892,7 +945,12 @@ void vdagent_x11_set_monitor_config(struct vdagent_x11 *x11,
                 syslog(LOG_DEBUG, "Disabling monitor %d: %dx%d+%d+%d > (%d,%d)",
                        i, width, height, x, y, primary_w, primary_h);
 
-            xrandr_disable_nth_output(x11, i);
+            int output_index = get_output_index_for_display_id(x11, i);
+            if (output_index != -1) {
+                xrandr_disable_nth_output(x11, output_index);
+            } else {
+                syslog(LOG_WARNING, "Unable to find a guest output index for spice display %i", i);
+            }
         }
     }
 
@@ -944,11 +1002,16 @@ void vdagent_x11_set_monitor_config(struct vdagent_x11 *x11,
                    i, width, height, x, y);
         }
 
-        if (!xrandr_add_and_set(x11, i, x, y, width, height) &&
+        int output_index = get_output_index_for_display_id(x11, i);
+        if (output_index != -1) {
+            if (!xrandr_add_and_set(x11, output_index, x, y, width, height) &&
                 enabled_monitors(mon_config) == 1) {
-            set_screen_to_best_size(x11, width, height,
-                                    &primary_w, &primary_h);
-            break;
+                set_screen_to_best_size(x11, width, height,
+                                        &primary_w, &primary_h);
+                break;
+            }
+        } else {
+            syslog(LOG_WARNING, "Unable to find a guest output index for spice display %i", i);
         }
     }
 
