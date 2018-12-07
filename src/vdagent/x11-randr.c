@@ -689,38 +689,70 @@ static int config_size(int num_of_monitors)
                            num_of_monitors * sizeof(VDAgentMonConfig);
 }
 
+
+// gets monitor information about the specified output index and returns true if there was no error
+static bool get_monitor_info_for_output_index(struct vdagent_x11 *x11, int output_index,
+                                              int *x, int *y, int *width, int *height)
+{
+    g_return_val_if_fail (output_index < x11->randr.res->noutput, false);
+    g_return_val_if_fail (x != NULL, false);
+    g_return_val_if_fail (y != NULL, false);
+    g_return_val_if_fail (width != NULL, false);
+    g_return_val_if_fail (height != NULL, false);
+
+    int j;
+    XRRCrtcInfo *crtc = NULL;
+    XRRModeInfo *mode;
+
+    if (x11->randr.outputs[output_index]->ncrtc == 0)
+        goto zeroed; /* Monitor disabled */
+
+    for (j = 0; crtc == NULL && j < x11->randr.outputs[output_index]->ncrtc; j++) {
+        crtc = crtc_from_id(x11, x11->randr.outputs[output_index]->crtcs[j]);
+    }
+    if (!crtc) {
+        // error. stale xrandr info?
+        return false;
+    }
+
+    mode = mode_from_id(x11, crtc->mode);
+    if (!mode)
+        goto zeroed; /* monitor disabled */
+
+    *x = crtc->x;
+    *y = crtc->y;
+    *width = mode->width;
+    *height = mode->height;
+    return true;
+
+zeroed:
+    *x = 0;
+    *y = 0;
+    *width = 0;
+    *height = 0;
+    return true;
+}
+
 static VDAgentMonitorsConfig *get_current_mon_config(struct vdagent_x11 *x11)
 {
     int i, num_of_monitors = 0;
-    XRRModeInfo *mode;
     XRRScreenResources *res = x11->randr.res;
     VDAgentMonitorsConfig *mon_config;
 
     mon_config = g_malloc0(config_size(res->noutput));
 
     for (i = 0 ; i < res->noutput; i++) {
-        int j;
-        XRRCrtcInfo *crtc = NULL;
-
-        if (x11->randr.outputs[i]->ncrtc == 0)
-            continue; /* Monitor disabled, already zero-ed by calloc */
-        if (x11->randr.outputs[i]->crtc == 0)
-            continue; /* Monitor disabled */
-
-        for (j = 0; crtc == NULL && j < x11->randr.outputs[i]->ncrtc; j++) {
-            crtc = crtc_from_id(x11, x11->randr.outputs[i]->crtcs[j]);
-        }
-        if (!crtc)
+        int x, y, width, height;
+        if (!get_monitor_info_for_output_index(x11, i, &x, &y, &width, &height)) {
+            syslog(LOG_WARNING, "Unable to get monitor info for output id %d", i);
             goto error;
+        }
 
-        mode = mode_from_id(x11, crtc->mode);
-        if (!mode)
-            continue; /* Monitor disabled, already zero-ed by calloc */
-
-        mon_config->monitors[i].x      = crtc->x;
-        mon_config->monitors[i].y      = crtc->y;
-        mon_config->monitors[i].width  = mode->width;
-        mon_config->monitors[i].height = mode->height;
+        VDAgentMonConfig *mon = &mon_config->monitors[i];
+        mon->x = x;
+        mon->y = y;
+        mon->width = width;
+        mon->height = height;
         num_of_monitors = i + 1;
     }
     mon_config->num_of_monitors = num_of_monitors;
