@@ -1071,25 +1071,20 @@ void vdagent_x11_send_daemon_guest_xorg_res(struct vdagent_x11 *x11, int update)
     int i, width = 0, height = 0, screen_count = 0;
 
     if (x11->has_xrandr) {
-        VDAgentMonitorsConfig *curr;
-
         if (update)
             update_randr_res(x11, 0);
 
-        curr = get_current_mon_config(x11);
-        if (!curr)
-            goto no_info;
-
-        screen_count = curr->num_of_monitors;
+        screen_count = x11->randr.res->noutput;
         res = g_new(struct vdagentd_guest_xorg_resolution, screen_count);
 
         for (i = 0; i < screen_count; i++) {
-            res[i].width  = curr->monitors[i].width;
-            res[i].height = curr->monitors[i].height;
-            res[i].x = curr->monitors[i].x;
-            res[i].y = curr->monitors[i].y;
+            struct vdagentd_guest_xorg_resolution *curr = &res[i];
+            if (!get_monitor_info_for_output_index(x11, i, &curr->x, &curr->y,
+                                                   &curr->width, &curr->height)) {
+                g_free(res);
+                goto no_info;
+            }
         }
-        g_free(curr);
         width  = x11->width[0];
         height = x11->height[0];
     } else if (x11->has_xinerama) {
