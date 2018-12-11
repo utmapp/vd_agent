@@ -175,6 +175,18 @@ static void uinput_send_event(struct vdagentd_uinput **uinputp,
     }
 }
 
+static struct vdagentd_guest_xorg_resolution* lookup_screen_info(struct vdagentd_uinput *uinput, int display_id)
+{
+    int i;
+    for (i = 0; i < uinput->screen_count; i++) {
+        if (uinput->screen_info[i].display_id == display_id) {
+            return &uinput->screen_info[i];
+        }
+    }
+    syslog(LOG_WARNING, "Unable to find output index for display id %d", display_id);
+    return NULL;
+}
+
 void vdagentd_uinput_do_mouse(struct vdagentd_uinput **uinputp,
         VDAgentMouseState *mouse)
 {
@@ -196,16 +208,17 @@ void vdagentd_uinput_do_mouse(struct vdagentd_uinput **uinputp,
     int i, down;
 
     if (*uinputp) {
-        if (mouse->display_id >= uinput->screen_count) {
-            syslog(LOG_WARNING, "mouse event for unknown monitor (%d >= %d)",
-                   mouse->display_id, uinput->screen_count);
+        struct vdagentd_guest_xorg_resolution *screen_info = lookup_screen_info(uinput, mouse->display_id);
+        if (screen_info == NULL) {
+            syslog(LOG_WARNING, "mouse event for unknown monitor %d",
+                   mouse->display_id);
             return;
         }
         if (uinput->debug)
             syslog(LOG_DEBUG, "mouse-event: mon %d %dx%d", mouse->display_id,
                    mouse->x, mouse->y);
-        mouse->x += uinput->screen_info[mouse->display_id].x;
-        mouse->y += uinput->screen_info[mouse->display_id].y;
+        mouse->x += screen_info->x;
+        mouse->y += screen_info->y;
 #ifdef WITH_STATIC_UINPUT
         mouse->x = mouse->x * 32767 / (uinput->width - 1);
         mouse->y = mouse->y * 32767 / (uinput->height - 1);

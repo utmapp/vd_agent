@@ -53,6 +53,7 @@ struct vdagentd_guest_xorg_resolution {
     int height;
     int x;
     int y;
+    int display_id;
 };
 
 #endif
