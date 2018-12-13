@@ -799,7 +799,7 @@ void vdagent_x11_set_monitor_config(struct vdagent_x11 *x11,
     /* ... and disable the ones that would be bigger than
      * the new RandR screen once it is resized. If they are enabled the
      * XRRSetScreenSize call will fail with BadMatch. They will be
-     * re-enabled after hanging the screen size.
+     * re-enabled after changing the screen size.
      */
     for (i = 0; i < curr->num_of_monitors; ++i) {
         int width, height;
