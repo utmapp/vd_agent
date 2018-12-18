@@ -949,9 +949,13 @@ static void daemonize(void)
     /* detach from terminal */
     switch (fork()) {
     case 0:
-        close(0); close(1); close(2);
+        close(STDIN_FILENO);
+        close(STDOUT_FILENO);
+        close(STDERR_FILENO);
         setsid();
-        x = open("/dev/null", O_RDWR); x = dup(x); x = dup(x);
+        x = open("/dev/null", O_RDWR);
+        x = dup(x);
+        x = dup(x);
         pidfile = fopen(pidfilename, "w");
         if (pidfile) {
             fprintf(pidfile, "%d\n", (int)getpid());

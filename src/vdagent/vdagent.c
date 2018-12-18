@@ -294,9 +294,13 @@ static int daemonize(void)
     /* detach from terminal */
     switch (fork()) {
     case 0:
-        close(0); close(1); close(2);
+        close(STDIN_FILENO);
+        close(STDOUT_FILENO);
+        close(STDERR_FILENO);
         setsid();
-        x = open("/dev/null", O_RDWR); x = dup(x); x = dup(x);
+        x = open("/dev/null", O_RDWR);
+        x = dup(x);
+        x = dup(x);
         close(fd[0]);
         return fd[1];
     case -1:
