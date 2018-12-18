@@ -347,14 +347,22 @@ static int xrandr_add_and_set(struct vdagent_x11 *x11, int output, int x, int y,
     int xid;
     Status s;
     RROutput outputs[1];
-    int old_width  = x11->randr.monitor_sizes[output].width;
-    int old_height = x11->randr.monitor_sizes[output].height;
+    int old_width;
+    int old_height;
 
-    if (!x11->randr.res || output >= x11->randr.res->noutput || output < 0) {
-        syslog(LOG_ERR, "%s: program error: missing RANDR or bad output",
-               __FUNCTION__);
+    if (!x11->randr.res) {
+        syslog(LOG_ERR, "%s: program error: missing RANDR", __FUNCTION__);
         return 0;
     }
+
+    if (output < 0 || output >= x11->randr.res->noutput) {
+        syslog(LOG_ERR, "%s: program error: bad output", __FUNCTION__);
+        return 0;
+    }
+
+    old_width  = x11->randr.monitor_sizes[output].width;
+    old_height = x11->randr.monitor_sizes[output].height;
+
     if (x11->set_crtc_config_not_functional) {
         /* fail, set_best_mode will find something close. */
         return 0;
