@@ -393,6 +393,7 @@ static void vdagent_x11_set_clipboard_owner(struct vdagent_x11 *x11,
                 x11->selection_req_data_size = 0;
                 x11->selection_req_atom = None;
             } else {
+                // coverity[var_deref_op] if it is not the first there's a previous
                 prev_sel->next = next_sel;
             }
             free(curr_sel);
@@ -421,6 +422,7 @@ static void vdagent_x11_set_clipboard_owner(struct vdagent_x11 *x11,
                 x11->clipboard_data_size = 0;
                 x11->expect_property_notify = 0;
             } else {
+                // coverity[var_deref_op] if it is not the first there's a previous
                 prev_conv->next = next_conv;
             }
             free(curr_conv);

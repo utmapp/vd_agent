@@ -341,12 +341,14 @@ static gboolean udscs_io_channel_cb(GIOChannel *source,
 
     if (condition & G_IO_IN) {
         udscs_do_read(&conn);
+        // coverity[check_after_deref] previous function can change conn
         if (conn == NULL)
             return G_SOURCE_REMOVE;
         return G_SOURCE_CONTINUE;
     }
     if (condition & G_IO_OUT) {
         udscs_do_write(&conn);
+        // coverity[check_after_deref] previous function can change conn
         if (conn == NULL)
             return G_SOURCE_REMOVE;
         if (conn->write_buf)
