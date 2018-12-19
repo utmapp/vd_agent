@@ -514,6 +514,8 @@ static gboolean vdagent_message_check_size(const VDAgentMessage *message_header)
     return TRUE;
 }
 
+static VDAgentGraphicsDeviceInfo *device_info = NULL;
+static size_t device_info_size = 0;
 static int virtio_port_read_complete(
         struct vdagent_virtio_port *vport,
         int port_nr,
@@ -561,6 +563,14 @@ static int virtio_port_read_complete(
         break;
     }
     case VD_AGENT_GRAPHICS_DEVICE_INFO: {
+        if (device_info) {
+            g_free(device_info);
+            device_info = NULL;
+            device_info_size = 0;
+        }
+        // store device info for re-sending when a session agent reconnects
+        device_info = g_memdup(data, message_header->size);
+        device_info_size = message_header->size;
         forward_data_to_session_agent(VDAGENTD_GRAPHICS_DEVICE_INFO, data, message_header->size);
         break;
     }
@@ -851,6 +861,11 @@ static void agent_connect(struct udscs_connection *conn)
     udscs_write(conn, VDAGENTD_VERSION, 0, 0,
                 (uint8_t *)VERSION, strlen(VERSION) + 1);
     update_active_session_connection(conn);
+
+    if (device_info) {
+        forward_data_to_session_agent(VDAGENTD_GRAPHICS_DEVICE_INFO,
+                                      (uint8_t *) device_info, device_info_size);
+    }
 }
 
 static void agent_disconnect(struct udscs_connection *conn)
