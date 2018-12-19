@@ -941,7 +941,6 @@ static void agent_read_complete(struct udscs_connection **connp,
 
 static void daemonize(void)
 {
-    int x;
     FILE *pidfile;
 
     /* detach from terminal */
@@ -951,9 +950,18 @@ static void daemonize(void)
         close(STDOUT_FILENO);
         close(STDERR_FILENO);
         setsid();
-        x = open("/dev/null", O_RDWR);
-        x = dup(x);
-        x = dup(x);
+        // coverity[leaked_handle] just opening standard file descriptors
+        if (open("/dev/null", O_RDWR) != STDIN_FILENO) {
+            exit(1);
+        }
+        // coverity[leaked_handle] just opening standard file descriptors
+        if (dup(STDIN_FILENO) != STDOUT_FILENO) {
+            exit(1);
+        }
+        // coverity[leaked_handle] just opening standard file descriptors
+        if (dup(STDOUT_FILENO) != STDERR_FILENO) {
+            exit(1);
+        }
         pidfile = fopen(pidfilename, "w");
         if (pidfile) {
             fprintf(pidfile, "%d\n", (int)getpid());

@@ -280,7 +280,6 @@ static void wait_and_exit(int s)
 
 static int daemonize(void)
 {
-    int x;
     int fd[2];
 
     if (socketpair(PF_LOCAL, SOCK_STREAM, 0, fd)) {
@@ -295,9 +294,18 @@ static int daemonize(void)
         close(STDOUT_FILENO);
         close(STDERR_FILENO);
         setsid();
-        x = open("/dev/null", O_RDWR);
-        x = dup(x);
-        x = dup(x);
+        // coverity[leaked_handle] just opening standard file descriptors
+        if (open("/dev/null", O_RDWR) != STDIN_FILENO) {
+            exit(1);
+        }
+        // coverity[leaked_handle] just opening standard file descriptors
+        if (dup(STDIN_FILENO) != STDOUT_FILENO) {
+            exit(1);
+        }
+        // coverity[leaked_handle] just opening standard file descriptors
+        if (dup(STDOUT_FILENO) != STDERR_FILENO) {
+            exit(1);
+        }
         close(fd[0]);
         return fd[1];
     case -1:
