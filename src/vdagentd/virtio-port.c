@@ -197,29 +197,27 @@ void vdagent_virtio_port_write_start(
         uint32_t data_size)
 {
     struct vdagent_virtio_port_buf *wbuf, *new_wbuf;
-    VDIChunkHeader chunk_header;
-    VDAgentMessage message_header;
+    VDIChunkHeader *chunk_header;
+    VDAgentMessage *message_header;
 
     new_wbuf = g_new(struct vdagent_virtio_port_buf, 1);
     new_wbuf->pos = 0;
     new_wbuf->write_pos = 0;
-    new_wbuf->size = sizeof(chunk_header) + sizeof(message_header) + data_size;
+    new_wbuf->size = sizeof(*chunk_header) + sizeof(*message_header) + data_size;
     new_wbuf->next = NULL;
     new_wbuf->buf = g_malloc(new_wbuf->size);
 
-    chunk_header.port = GUINT32_TO_LE(port_nr);
-    chunk_header.size = GUINT32_TO_LE(sizeof(message_header) + data_size);
-    memcpy(new_wbuf->buf + new_wbuf->write_pos, &chunk_header,
-           sizeof(chunk_header));
-    new_wbuf->write_pos += sizeof(chunk_header);
+    chunk_header = (VDIChunkHeader *) (new_wbuf->buf + new_wbuf->write_pos);
+    chunk_header->port = GUINT32_TO_LE(port_nr);
+    chunk_header->size = GUINT32_TO_LE(sizeof(*message_header) + data_size);
+    new_wbuf->write_pos += sizeof(*chunk_header);
 
-    message_header.protocol = GUINT32_TO_LE(VD_AGENT_PROTOCOL);
-    message_header.type = GUINT32_TO_LE(message_type);
-    message_header.opaque = GUINT64_TO_LE(message_opaque);
-    message_header.size = GUINT32_TO_LE(data_size);
-    memcpy(new_wbuf->buf + new_wbuf->write_pos, &message_header,
-           sizeof(message_header));
-    new_wbuf->write_pos += sizeof(message_header);
+    message_header = (VDAgentMessage *) (new_wbuf->buf + new_wbuf->write_pos);
+    message_header->protocol = GUINT32_TO_LE(VD_AGENT_PROTOCOL);
+    message_header->type = GUINT32_TO_LE(message_type);
+    message_header->opaque = GUINT64_TO_LE(message_opaque);
+    message_header->size = GUINT32_TO_LE(data_size);
+    new_wbuf->write_pos += sizeof(*message_header);
 
     if (!vport->write_buf) {
         vport->write_buf = new_wbuf;
