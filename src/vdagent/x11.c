@@ -725,6 +725,7 @@ static int vdagent_x11_get_selection(struct vdagent_x11 *x11, XEvent *event,
         len *= sizeof(short);
         break;
     case 32:
+        // on X11, a format of 32 is always a long
         len *= sizeof(long);
         break;
     }
