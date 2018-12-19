@@ -416,6 +416,7 @@ int main(int argc, char *argv[])
     GOptionContext *context;
     GError *error = NULL;
     VDAgent *agent;
+    char **orig_argv = g_memdup(argv, sizeof(char*) * (argc+1));
 
     context = g_option_context_new(NULL);
     g_option_context_add_main_entries(context, entries, NULL);
@@ -463,7 +464,7 @@ reconnect:
     if (version_mismatch) {
         syslog(LOG_INFO, "Version mismatch, restarting");
         sleep(1);
-        execvp(argv[0], argv);
+        execvp(orig_argv[0], orig_argv);
     }
 
     agent = vdagent_new();
@@ -481,6 +482,7 @@ reconnect:
     g_free(fx_dir);
     g_free(portdev);
     g_free(vdagentd_socket);
+    g_free(orig_argv);
 
     return 0;
 }
