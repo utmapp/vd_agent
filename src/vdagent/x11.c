@@ -545,7 +545,7 @@ static void vdagent_x11_handle_event(struct vdagent_x11 *x11, XEvent event)
     }
 #endif
 
-    if (vdagent_x11_randr_handle_event(x11, event))
+    if (vdagent_x11_randr_handle_event(x11, &event))
         return;
 
     switch (event.type) {

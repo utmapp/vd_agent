@@ -529,14 +529,14 @@ void vdagent_x11_randr_handle_root_size_change(struct vdagent_x11 *x11,
 }
 
 int vdagent_x11_randr_handle_event(struct vdagent_x11 *x11,
-    XEvent event)
+    const XEvent *event)
 {
     int handled = TRUE;
 
-    switch (event.type - x11->xrandr_event_base) {
+    switch (event->type - x11->xrandr_event_base) {
         case RRScreenChangeNotify: {
-            XRRScreenChangeNotifyEvent *sce =
-                (XRRScreenChangeNotifyEvent *) &event;
+            const XRRScreenChangeNotifyEvent *sce =
+                (const XRRScreenChangeNotifyEvent *) event;
             vdagent_x11_randr_handle_root_size_change(x11, 0,
                 sce->width, sce->height);
             break;
