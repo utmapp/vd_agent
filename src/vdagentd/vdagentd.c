@@ -965,6 +965,7 @@ static void daemonize(void)
     case -1:
         syslog(LOG_ERR, "fork: %m");
         retval = 1;
+        // fall through
     default:
         udscs_destroy_server(server);
         exit(retval);
