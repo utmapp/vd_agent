@@ -3,6 +3,3 @@ Description=Activation socket for spice guest agent daemon
 
 [Socket]
 ListenStream=/var/run/spice-vdagentd/spice-vdagent-sock
-
-[Install]
-WantedBy=sockets.target
