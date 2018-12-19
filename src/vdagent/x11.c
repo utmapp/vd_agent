@@ -494,23 +494,23 @@ static int vdagent_x11_get_clipboard_selection(struct vdagent_x11 *x11,
 }
 #endif
 
-static void vdagent_x11_handle_event(struct vdagent_x11 *x11, XEvent event)
+static void vdagent_x11_handle_event(struct vdagent_x11 *x11, XEvent *event)
 {
     int i, handled = 0;
 #ifndef WITH_GTK
     uint8_t selection;
 
-    if (event.type == x11->xfixes_event_base) {
+    if (event->type == x11->xfixes_event_base) {
         union {
             XEvent ev;
             XFixesSelectionNotifyEvent xfev;
         } ev;
 
-        if (vdagent_x11_get_clipboard_selection(x11, &event, &selection)) {
+        if (vdagent_x11_get_clipboard_selection(x11, event, &selection)) {
             return;
         }
 
-        ev.ev = event;
+        ev.ev = *event;
         switch (ev.xfev.subtype) {
         case XFixesSetSelectionOwnerNotify:
             break;
@@ -521,7 +521,7 @@ static void vdagent_x11_handle_event(struct vdagent_x11 *x11, XEvent event)
             break;
         default:
             VSELPRINTF("unexpected xfix event subtype %d window %d",
-                       (int)ev.xfev.subtype, (int)event.xany.window);
+                       (int)ev.xfev.subtype, (int)event->xany.window);
             return;
         }
         VSELPRINTF("New selection owner: %u", (unsigned int)ev.xfev.owner);
@@ -545,20 +545,20 @@ static void vdagent_x11_handle_event(struct vdagent_x11 *x11, XEvent event)
     }
 #endif
 
-    if (vdagent_x11_randr_handle_event(x11, &event))
+    if (vdagent_x11_randr_handle_event(x11, event))
         return;
 
-    switch (event.type) {
+    switch (event->type) {
     case ConfigureNotify:
         for (i = 0; i < x11->screen_count; i++)
-            if (event.xconfigure.window == x11->root_window[i])
+            if (event->xconfigure.window == x11->root_window[i])
                 break;
         if (i == x11->screen_count)
             break;
 
         handled = 1;
         vdagent_x11_randr_handle_root_size_change(x11, i,
-                event.xconfigure.width, event.xconfigure.height);
+                event->xconfigure.width, event->xconfigure.height);
         break;
     case MappingNotify:
         /* These are uninteresting */
@@ -566,21 +566,21 @@ static void vdagent_x11_handle_event(struct vdagent_x11 *x11, XEvent event)
         break;
 #ifndef WITH_GTK
     case SelectionNotify:
-        if (event.xselection.target == x11->targets_atom)
-            vdagent_x11_handle_targets_notify(x11, &event);
+        if (event->xselection.target == x11->targets_atom)
+            vdagent_x11_handle_targets_notify(x11, event);
         else
-            vdagent_x11_handle_selection_notify(x11, &event, 0);
+            vdagent_x11_handle_selection_notify(x11, event, 0);
 
         handled = 1;
         break;
     case PropertyNotify:
         if (x11->expect_property_notify &&
-                                event.xproperty.state == PropertyNewValue) {
-            vdagent_x11_handle_selection_notify(x11, &event, 1);
+                                event->xproperty.state == PropertyNewValue) {
+            vdagent_x11_handle_selection_notify(x11, event, 1);
         }
         if (x11->selection_req_data &&
-                                 event.xproperty.state == PropertyDelete) {
-            vdagent_x11_handle_property_delete_notify(x11, &event);
+                                 event->xproperty.state == PropertyDelete) {
+            vdagent_x11_handle_property_delete_notify(x11, event);
         }
         /* Always mark as handled, since we cannot unselect input for property
            notifications once we are done with handling the incr transfer. */
@@ -594,7 +594,7 @@ static void vdagent_x11_handle_event(struct vdagent_x11 *x11, XEvent event)
     case SelectionRequest: {
         struct vdagent_x11_selection_request *req, *new_req;
 
-        if (vdagent_x11_get_clipboard_selection(x11, &event, &selection)) {
+        if (vdagent_x11_get_clipboard_selection(x11, event, &selection)) {
             return;
         }
 
@@ -606,7 +606,7 @@ static void vdagent_x11_handle_event(struct vdagent_x11 *x11, XEvent event)
 
         handled = 1;
 
-        new_req->event = event;
+        new_req->event = *event;
         new_req->selection = selection;
         new_req->next = NULL;
 
@@ -628,7 +628,7 @@ static void vdagent_x11_handle_event(struct vdagent_x11 *x11, XEvent event)
     }
     if (!handled && x11->debug)
         syslog(LOG_DEBUG, "unhandled x11 event, type %d, window %d",
-               (int)event.type, (int)event.xany.window);
+               (int)event->type, (int)event->xany.window);
 }
 
 void vdagent_x11_do_read(struct vdagent_x11 *x11)
@@ -637,7 +637,7 @@ void vdagent_x11_do_read(struct vdagent_x11 *x11)
 
     while (XPending(x11->display)) {
         XNextEvent(x11->display, &event);
-        vdagent_x11_handle_event(x11, event);
+        vdagent_x11_handle_event(x11, &event);
     }
 }
 
@@ -1370,7 +1370,7 @@ void vdagent_x11_clipboard_release(struct vdagent_x11 *x11, uint8_t selection)
     XSync(x11->display, False);
     while (XCheckTypedEvent(x11->display, x11->xfixes_event_base,
                             &event))
-        vdagent_x11_handle_event(x11, event);
+        vdagent_x11_handle_event(x11, &event);
 
     /* Note no need to do a set_clipboard_owner(owner_none) here, as that is
        already done by processing the XFixesSetSelectionOwnerNotify event. */
