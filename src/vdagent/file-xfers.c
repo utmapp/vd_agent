@@ -186,7 +186,6 @@ vdagent_file_xfers_create_file(const char *save_dir, char **file_name_p)
     char *path = NULL;
     int file_fd = -1;
     int i;
-    struct stat st;
 
     file_path = g_build_filename(save_dir, *file_name_p, NULL);
     dir = g_path_get_dirname(file_path);
@@ -196,28 +195,29 @@ vdagent_file_xfers_create_file(const char *save_dir, char **file_name_p)
     }
 
     path = g_strdup(file_path);
-    for (i = 0; i < 64 && (stat(path, &st) == 0 || errno != ENOENT); i++) {
+    for (i = 0; i < 64; i++) {
+        file_fd = open(path, O_CREAT | O_WRONLY | O_EXCL, 0644);
+        if (file_fd >= 0) {
+            break;
+        }
+        if (errno != EEXIST) {
+            syslog(LOG_ERR, "file-xfer: failed to create file %s: %s",
+                   path, strerror(errno));
+            goto error;
+        }
         g_free(path);
         char *extension = strrchr(file_path, '.');
         int basename_len = extension != NULL ? extension - file_path : strlen(file_path);
         path = g_strdup_printf("%.*s (%i)%s", basename_len, file_path,
                                i + 1, extension ? extension : "");
     }
+    if (file_fd < 0) {
+        syslog(LOG_ERR, "file-xfer: more than 63 copies of %s exist?", file_path);
+        goto error;
+    }
     g_free(*file_name_p);
     *file_name_p = path;
     path = NULL;
-    if (i == 64) {
-        syslog(LOG_ERR, "file-xfer: more than 63 copies of %s exist?",
-               file_path);
-        goto error;
-    }
-
-    file_fd = open(*file_name_p, O_CREAT | O_WRONLY, 0644);
-    if (file_fd == -1) {
-        syslog(LOG_ERR, "file-xfer: failed to create file %s: %s",
-               path, strerror(errno));
-        goto error;
-    }
 
 error:
     g_free(path);
