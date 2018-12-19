@@ -1,10 +1,6 @@
 #ifndef VDAGENT_X11_PRIV
 #define VDAGENT_X11_PRIV
 
-#ifdef HAVE_CONFIG_H
-# include <config.h>
-#endif
-
 #include <stdint.h>
 #include <stdio.h>
 

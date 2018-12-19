@@ -22,10 +22,6 @@
 #ifndef __VDAGENT_X11_H
 #define __VDAGENT_X11_H
 
-#ifdef HAVE_CONFIG_H
-# include <config.h>
-#endif
-
 #include <stdio.h>
 #include <spice/vd_agent.h>
 #include "udscs.h"
