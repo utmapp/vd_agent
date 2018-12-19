@@ -59,12 +59,12 @@ int vdagent_x11_caught_error;
 
 #ifndef WITH_GTK
 static void vdagent_x11_handle_selection_notify(struct vdagent_x11 *x11,
-                                                XEvent *event, int incr);
+                                                const XEvent *event, int incr);
 static void vdagent_x11_handle_selection_request(struct vdagent_x11 *x11);
 static void vdagent_x11_handle_targets_notify(struct vdagent_x11 *x11,
-                                              XEvent *event);
+                                              const XEvent *event);
 static void vdagent_x11_handle_property_delete_notify(struct vdagent_x11 *x11,
-                                                      XEvent *del_event);
+                                                      const XEvent *del_event);
 static void vdagent_x11_send_selection_notify(struct vdagent_x11 *x11,
                 Atom prop, struct vdagent_x11_selection_request *request);
 static void vdagent_x11_set_clipboard_owner(struct vdagent_x11 *x11,
@@ -465,12 +465,13 @@ static int vdagent_x11_get_clipboard_atom(struct vdagent_x11 *x11, uint8_t selec
 }
 
 static int vdagent_x11_get_clipboard_selection(struct vdagent_x11 *x11,
-    XEvent *event, uint8_t *selection)
+    const XEvent *event, uint8_t *selection)
 {
     Atom atom;
 
     if (event->type == x11->xfixes_event_base) {
-        XFixesSelectionNotifyEvent *xfev = (XFixesSelectionNotifyEvent *)event;
+        const XFixesSelectionNotifyEvent *xfev =
+            (const XFixesSelectionNotifyEvent *)event;
         atom = xfev->selection;
     } else if (event->type == SelectionNotify) {
         atom = event->xselection.selection;
@@ -494,7 +495,7 @@ static int vdagent_x11_get_clipboard_selection(struct vdagent_x11 *x11,
 }
 #endif
 
-static void vdagent_x11_handle_event(struct vdagent_x11 *x11, XEvent *event)
+static void vdagent_x11_handle_event(struct vdagent_x11 *x11, const XEvent *event)
 {
     int i, handled = 0;
 #ifndef WITH_GTK
@@ -650,7 +651,7 @@ static const char *vdagent_x11_get_atom_name(struct vdagent_x11 *x11, Atom a)
     return XGetAtomName(x11->display, a);
 }
 
-static int vdagent_x11_get_selection(struct vdagent_x11 *x11, XEvent *event,
+static int vdagent_x11_get_selection(struct vdagent_x11 *x11, const XEvent *event,
     uint8_t selection, Atom type, Atom prop, int format,
     unsigned char **data_ret, int incr)
 {
@@ -842,7 +843,7 @@ static void vdagent_x11_handle_conversion_request(struct vdagent_x11 *x11)
 }
 
 static void vdagent_x11_handle_selection_notify(struct vdagent_x11 *x11,
-                                                XEvent *event, int incr)
+                                                const XEvent *event, int incr)
 {
     int len = 0;
     unsigned char *data = NULL;
@@ -927,7 +928,7 @@ static void vdagent_x11_print_targets(struct vdagent_x11 *x11,
 }
 
 static void vdagent_x11_handle_targets_notify(struct vdagent_x11 *x11,
-                                              XEvent *event)
+                                              const XEvent *event)
 {
     int i, len;
     Atom atom, *atoms = NULL;
@@ -1026,7 +1027,7 @@ static void vdagent_x11_send_selection_notify(struct vdagent_x11 *x11,
 }
 
 static void vdagent_x11_send_targets(struct vdagent_x11 *x11,
-    uint8_t selection, XEvent *event)
+    uint8_t selection, const XEvent *event)
 {
     Atom prop, targets[256] = { x11->targets_atom, };
     int i, j, k, target_count = 1;
@@ -1123,7 +1124,7 @@ static void vdagent_x11_handle_selection_request(struct vdagent_x11 *x11)
 }
 
 static void vdagent_x11_handle_property_delete_notify(struct vdagent_x11 *x11,
-                                                      XEvent *del_event)
+                                                      const XEvent *del_event)
 {
     XEvent *sel_event;
     int len;
