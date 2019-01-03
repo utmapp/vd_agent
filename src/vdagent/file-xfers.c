@@ -133,6 +133,7 @@ static AgentFileXferTask *vdagent_parse_start_msg(
         goto error;
     }
     task = g_new0(AgentFileXferTask, 1);
+    task->file_fd = -1;
     task->id = msg->id;
     task->file_name = g_key_file_get_string(
         keyfile, "vdagent-file-xfer", "name", &error);
