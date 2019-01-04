@@ -178,13 +178,58 @@ static uint64_t get_free_space_available(const char *path)
     return stat.f_bsize * stat.f_bavail;
 }
 
+int
+vdagent_file_xfers_create_file(const char *save_dir, char **file_name_p)
+{
+    char *file_path = NULL;
+    char *dir = NULL;
+    char *path = NULL;
+    int file_fd = -1;
+    int i;
+    struct stat st;
+
+    file_path = g_build_filename(save_dir, *file_name_p, NULL);
+    dir = g_path_get_dirname(file_path);
+    if (g_mkdir_with_parents(dir, S_IRWXU) == -1) {
+        syslog(LOG_ERR, "file-xfer: Failed to create dir %s", dir);
+        goto error;
+    }
+
+    path = g_strdup(file_path);
+    for (i = 0; i < 64 && (stat(path, &st) == 0 || errno != ENOENT); i++) {
+        g_free(path);
+        char *extension = strrchr(file_path, '.');
+        int basename_len = extension != NULL ? extension - file_path : strlen(file_path);
+        path = g_strdup_printf("%.*s (%i)%s", basename_len, file_path,
+                               i + 1, extension ? extension : "");
+    }
+    g_free(*file_name_p);
+    *file_name_p = path;
+    path = NULL;
+    if (i == 64) {
+        syslog(LOG_ERR, "file-xfer: more than 63 copies of %s exist?",
+               file_path);
+        goto error;
+    }
+
+    file_fd = open(*file_name_p, O_CREAT | O_WRONLY, 0644);
+    if (file_fd == -1) {
+        syslog(LOG_ERR, "file-xfer: failed to create file %s: %s",
+               path, strerror(errno));
+        goto error;
+    }
+
+error:
+    g_free(path);
+    g_free(file_path);
+    g_free(dir);
+    return file_fd;
+}
+
 void vdagent_file_xfers_start(struct vdagent_file_xfers *xfers,
     VDAgentFileXferStartMessage *msg)
 {
     AgentFileXferTask *task;
-    char *dir = NULL, *path = NULL, *file_path = NULL;
-    struct stat st;
-    int i;
     uint64_t free_space;
 
     g_return_if_fail(xfers != NULL);
@@ -221,39 +266,14 @@ void vdagent_file_xfers_start(struct vdagent_file_xfers *xfers,
         goto cleanup;
     }
 
-    file_path = g_build_filename(xfers->save_dir, task->file_name, NULL);
-    dir = g_path_get_dirname(file_path);
-    if (g_mkdir_with_parents(dir, S_IRWXU) == -1) {
-        syslog(LOG_ERR, "file-xfer: Failed to create dir %s", dir);
-        goto error;
-    }
-
-    path = g_strdup(file_path);
-    for (i = 0; i < 64 && (stat(path, &st) == 0 || errno != ENOENT); i++) {
-        g_free(path);
-        char *extension = strrchr(file_path, '.');
-        int basename_len = extension != NULL ? extension - file_path : strlen(file_path);
-        path = g_strdup_printf("%.*s (%i)%s", basename_len, file_path,
-                               i + 1, extension ? extension : "");
-    }
-    g_free(task->file_name);
-    task->file_name = path;
-    if (i == 64) {
-        syslog(LOG_ERR, "file-xfer: more than 63 copies of %s exist?",
-               file_path);
-        goto error;
-    }
-
-    task->file_fd = open(path, O_CREAT | O_WRONLY, 0644);
-    if (task->file_fd == -1) {
-        syslog(LOG_ERR, "file-xfer: failed to create file %s: %s",
-               path, strerror(errno));
+    task->file_fd = vdagent_file_xfers_create_file(xfers->save_dir, &task->file_name);
+    if (task->file_fd < 0) {
         goto error;
     }
 
     if (ftruncate(task->file_fd, task->file_size) < 0) {
         syslog(LOG_ERR, "file-xfer: err reserving %"PRIu64" bytes for %s: %s",
-               task->file_size, path, strerror(errno));
+               task->file_size, task->file_name, strerror(errno));
         goto error;
     }
 
@@ -261,12 +281,10 @@ void vdagent_file_xfers_start(struct vdagent_file_xfers *xfers,
 
     if (xfers->debug)
         syslog(LOG_DEBUG, "file-xfer: Adding task %u %s %"PRIu64" bytes",
-               task->id, path, task->file_size);
+               task->id, task->file_name, task->file_size);
 
     udscs_write(xfers->vdagentd, VDAGENTD_FILE_XFER_STATUS,
                 msg->id, VD_AGENT_FILE_XFER_STATUS_CAN_SEND_DATA, NULL, 0);
-    g_free(file_path);
-    g_free(dir);
     return ;
 
 error:
@@ -275,8 +293,6 @@ error:
 cleanup:
     if (task)
         vdagent_file_xfer_task_free(task);
-    g_free(file_path);
-    g_free(dir);
 }
 
 void vdagent_file_xfers_status(struct vdagent_file_xfers *xfers,
