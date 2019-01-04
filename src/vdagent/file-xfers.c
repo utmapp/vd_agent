@@ -202,8 +202,6 @@ void vdagent_file_xfers_start(struct vdagent_file_xfers *xfers,
 
     task->debug = xfers->debug;
 
-    file_path = g_build_filename(xfers->save_dir, task->file_name, NULL);
-
     free_space = get_free_space_available(xfers->save_dir);
     if (task->file_size > free_space) {
         gchar *free_space_str, *file_size_str;
@@ -223,6 +221,7 @@ void vdagent_file_xfers_start(struct vdagent_file_xfers *xfers,
         goto cleanup;
     }
 
+    file_path = g_build_filename(xfers->save_dir, task->file_name, NULL);
     dir = g_path_get_dirname(file_path);
     if (g_mkdir_with_parents(dir, S_IRWXU) == -1) {
         syslog(LOG_ERR, "file-xfer: Failed to create dir %s", dir);
