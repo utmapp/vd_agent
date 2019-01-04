@@ -3,6 +3,8 @@ NULL =
 
 bin_PROGRAMS = src/spice-vdagent
 sbin_PROGRAMS = src/spice-vdagentd
+check_PROGRAMS = tests/test-file-xfers
+TESTS = $(check_PROGRAMS)
 
 common_sources =				\
 	src/udscs.c				\
@@ -42,6 +44,26 @@ src_spice_vdagent_SOURCES =			\
 	src/vdagent/x11.c			\
 	src/vdagent/x11.h			\
 	src/vdagent/vdagent.c			\
+	$(NULL)
+
+tests_test_file_xfers_CFLAGS =			\
+	$(SPICE_CFLAGS)				\
+	$(GLIB2_CFLAGS)				\
+	-I$(srcdir)/src				\
+	-I$(srcdir)/src/vdagent			\
+	-DUDSCS_NO_SERVER			\
+	$(NULL)
+
+tests_test_file_xfers_LDADD =			\
+	$(SPICE_LIBS)				\
+	$(GLIB2_LIBS)				\
+	$(NULL)
+
+tests_test_file_xfers_SOURCES =			\
+	$(common_sources)			\
+	src/vdagent/file-xfers.c		\
+	src/vdagent/file-xfers.h		\
+	tests/test-file-xfers.c			\
 	$(NULL)
 
 src_spice_vdagentd_CFLAGS =			\
