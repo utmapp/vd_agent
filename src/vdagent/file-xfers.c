@@ -220,10 +220,7 @@ void vdagent_file_xfers_start(struct vdagent_file_xfers *xfers,
                     VD_AGENT_FILE_XFER_STATUS_NOT_ENOUGH_SPACE,
                     (uint8_t *)&free_space,
                     sizeof(free_space));
-        vdagent_file_xfer_task_free(task);
-        g_free(file_path);
-        g_free(dir);
-        return;
+        goto cleanup;
     }
 
     dir = g_path_get_dirname(file_path);
@@ -276,6 +273,7 @@ void vdagent_file_xfers_start(struct vdagent_file_xfers *xfers,
 error:
     udscs_write(xfers->vdagentd, VDAGENTD_FILE_XFER_STATUS,
                 msg->id, VD_AGENT_FILE_XFER_STATUS_ERROR, NULL, 0);
+cleanup:
     if (task)
         vdagent_file_xfer_task_free(task);
     g_free(file_path);
