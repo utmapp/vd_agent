@@ -7,7 +7,7 @@ Requires=spice-vdagentd.socket
 Type=forking
 EnvironmentFile=-/etc/sysconfig/spice-vdagentd
 ExecStart=/usr/sbin/spice-vdagentd $SPICE_VDAGENTD_EXTRA_ARGS
-PIDFile=/var/run/spice-vdagentd/spice-vdagentd.pid
+PIDFile=/run/spice-vdagentd/spice-vdagentd.pid
 PrivateTmp=true
 Restart=on-failure
 
