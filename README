@@ -52,18 +52,7 @@ Under Linux this virtio serial port has the following name:
 To enable the virtio serial port you need to pass the following params on
 the qemu cmdline:
 
-For qemu < 0.14.0:
--device spicevmc
-
-For qemu >= 0.14.0:
 -device virtio-serial-pci,id=virtio-serial0,max_ports=16,bus=pci.0,addr=0x5 \
 -chardev spicevmc,name=vdagent,id=vdagent \
 -device \
 virtserialport,nr=1,bus=virtio-serial0.0,chardev=vdagent,name=com.redhat.spice.0
-
-Enjoy,
-  Gerd & Hans
-
---
-Gerd Hoffmann <kraxel@redhat.com>
-Hans de Goede <hdegoede@redhat.com>
