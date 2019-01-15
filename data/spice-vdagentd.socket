@@ -2,4 +2,4 @@
 Description=Activation socket for spice guest agent daemon
 
 [Socket]
-ListenStream=/var/run/spice-vdagentd/spice-vdagent-sock
+ListenStream=/run/spice-vdagentd/spice-vdagent-sock

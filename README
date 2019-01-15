@@ -31,7 +31,7 @@ Features:
   Then connect to the vm with the multiple monitor client which you want to
   use it with using: "spicec --full-screen=auto-config" (or the user portal
   equivalent). At this point the agent will write out a:
-  /var/run/spice-vdagentd/xorg.conf.spice file. With all the necessary magic
+  /run/spice-vdagentd/xorg.conf.spice file. With all the necessary magic
   to get Xinerama working. Move this file to /etc/X11/xorg.conf, then kill
   Xorg so that it will get restarted and you should be good to go.
 * Limited support for setups with multiple Screens (multiple qxl devices each

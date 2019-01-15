@@ -56,7 +56,7 @@ struct agent_data {
 };
 
 /* variables */
-static const char *pidfilename = "/var/run/spice-vdagentd/spice-vdagentd.pid";
+static const char *pidfilename = "/run/spice-vdagentd/spice-vdagentd.pid";
 
 static gchar *portdev = NULL;
 static gchar *vdagentd_socket = NULL;

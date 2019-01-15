@@ -27,7 +27,7 @@
 exec="/usr/sbin/spice-vdagentd"
 prog="spice-vdagentd"
 port="/dev/virtio-ports/com.redhat.spice.0"
-pid="/var/run/spice-vdagentd/spice-vdagentd.pid"
+pid="/run/spice-vdagentd/spice-vdagentd.pid"
 
 [ -e /etc/sysconfig/$prog ] && . /etc/sysconfig/$prog
 
@@ -38,7 +38,7 @@ start() {
     [ -c $port ] || exit 0
     modprobe uinput > /dev/null 2>&1
     # In case the previous running vdagentd crashed
-    rm -f /var/run/spice-vdagentd/spice-vdagent-sock
+    rm -f /run/spice-vdagentd/spice-vdagent-sock
     echo -n $"Starting $prog: "
     daemon --pidfile $pid $exec $SPICE_VDAGENTD_EXTRA_ARGS
     retval=$?
