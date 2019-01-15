@@ -206,7 +206,8 @@ vdagent_file_xfers_create_file(const char *save_dir, char **file_name_p)
             goto error;
         }
         g_free(path);
-        char *extension = strrchr(file_path, '.');
+        char *extension = strrchr(file_path, '/');
+        extension = strrchr(extension != NULL ? extension + 1 : file_path, '.');
         int basename_len = extension != NULL ? extension - file_path : strlen(file_path);
         path = g_strdup_printf("%.*s (%i)%s", basename_len, file_path,
                                i + 1, extension ? extension : "");

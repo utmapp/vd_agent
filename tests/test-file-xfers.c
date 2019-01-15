@@ -71,6 +71,12 @@ int main(int argc, char *argv[])
     // try to create a file with a path where there's a file (should fail)
     test_file("test.txt/out", NULL);
 
+    // create a file without extension in a directory with extension
+    test_file("sub.dir/test", "./test-dir/sub.dir/test");
+
+    // create a file with same name above, should not strip the filename
+    test_file("sub.dir/test", "./test-dir/sub.dir/test (1)");
+
     assert(system("chmod 755 test-dir/subdir && rm -rf test-dir") == 0);
 
     return 0;
