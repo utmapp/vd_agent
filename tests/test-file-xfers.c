@@ -65,8 +65,8 @@ int main(int argc, char *argv[])
     test_file("subdir/test.txt", "./test-dir/subdir/test.txt");
 
     // create a file in a directory with no permissions
-    assert(system("chmod 555 test-dir/subdir") == 0);
-    test_file("subdir/test2.txt", NULL);
+    assert(system("ln -s /proc/1 test-dir/baddir") == 0);
+    test_file("baddir/test2.txt", NULL);
 
     // try to create a file with a path where there's a file (should fail)
     test_file("test.txt/out", NULL);
@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
     // create a file with same name above, should not strip the filename
     test_file("sub.dir/test", "./test-dir/sub.dir/test (1)");
 
-    assert(system("chmod 755 test-dir/subdir && rm -rf test-dir") == 0);
+    assert(system("rm -rf test-dir") == 0);
 
     return 0;
 }
