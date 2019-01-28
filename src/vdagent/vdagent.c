@@ -454,8 +454,8 @@ int main(int argc, char *argv[])
             LOG_USER);
 
     if (file_test(portdev) != 0) {
-        syslog(LOG_ERR, "Cannot access vdagent virtio channel %s", portdev);
-        return 1;
+        g_debug("vdagent virtio channel %s does not exist, exiting", portdev);
+        return 0;
     }
 
     if (do_daemonize)
