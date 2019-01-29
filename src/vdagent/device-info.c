@@ -84,8 +84,9 @@ static int read_next_hex_number(const char *input, char delim, char **endptr)
     n = strtol(input, &endpos, 16);
 
     // check if we read all characters until the delimiter
-    if (endpos != pos)
+    if (endpos != pos) {
         endpos = NULL;
+    }
 
     *endptr = endpos;
     return n;
@@ -95,15 +96,19 @@ static int read_next_hex_number(const char *input, char delim, char **endptr)
 // see https://wiki.xen.org/wiki/Bus:Device.Function_(BDF)_Notation
 static bool parse_pci_device(const char *bdf, const char *end, PciDevice *device)
 {
-    if (!end) end = strchr(bdf, 0);
+    if (!end) {
+        end = strchr(bdf, 0);
+    }
 
     int endpos = -1;
     int domain, bus, slot, function;
     sscanf(bdf, "%x:%x:%x.%x%n", &domain, &bus, &slot, &function, &endpos);
-    if (!device || endpos < 0 || bdf + endpos != end)
+    if (!device || endpos < 0 || bdf + endpos != end) {
         return false;
-    if (domain < 0 || bus < 0 || slot < 0 || function < 0)
+    }
+    if (domain < 0 || bus < 0 || slot < 0 || function < 0) {
         return false;
+    }
 
     device->domain = domain;
     device->bus = bus;
@@ -121,8 +126,9 @@ static bool parse_pci_device(const char *bdf, const char *end, PciDevice *device
 static PciAddress* parse_pci_address_from_sysfs_path(const char* addr)
 {
     char *pos = strstr(addr, "/pci");
-    if (!pos)
+    if (!pos) {
         return NULL;
+    }
 
     // advance to the numbers in pci0000:00
     pos += 4;
@@ -157,8 +163,9 @@ static PciAddress* parse_pci_address_from_sysfs_path(const char* addr)
 static PciAddress* parse_pci_address_from_spice(char *input)
 {
     static const char prefix[] = "pci/";
-    if (strncmp(input, prefix, strlen(prefix)) != 0)
+    if (strncmp(input, prefix, strlen(prefix)) != 0) {
         return NULL;
+    }
 
     char *pos = input + strlen(prefix);
     int domain = read_next_hex_number(pos, '/', &pos);
@@ -187,8 +194,9 @@ static PciAddress* parse_pci_address_from_spice(char *input)
 
         address->devices = g_list_append(address->devices, dev);
         pos = next;
-        if (!pos)
+        if (!pos) {
             break;
+        }
     }
     return address;
 }
@@ -298,12 +306,14 @@ static void drm_conn_name_modesetting(drmModeConnector *conn, char *dest, size_t
 
 static bool read_hex_value_from_file(const char *path, int* value)
 {
-    if (value == NULL || path == NULL)
+    if (value == NULL || path == NULL) {
         return false;
+    }
 
     FILE *f = fopen(path, "r");
-    if (f == NULL)
+    if (f == NULL) {
         return false;
+    }
 
     int endpos = -1;
     bool result = (fscanf(f, "%x\n%n", value, &endpos) > 0 && endpos >= 0);
