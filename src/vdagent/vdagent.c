@@ -28,8 +28,6 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <signal.h>
-#include <sys/select.h>
-#include <sys/stat.h>
 #include <spice/vd_agent.h>
 #include <poll.h>
 #include <glib-unix.h>
@@ -322,13 +320,6 @@ static int daemonize(void)
     return 0;
 }
 
-static int file_test(const char *path)
-{
-    struct stat buffer;
-
-    return stat(path, &buffer);
-}
-
 static gboolean x11_io_channel_cb(GIOChannel *source,
                                   GIOCondition condition,
                                   gpointer data)
@@ -453,7 +444,7 @@ int main(int argc, char *argv[])
     openlog("spice-vdagent", do_daemonize ? LOG_PID : (LOG_PID | LOG_PERROR),
             LOG_USER);
 
-    if (file_test(portdev) != 0) {
+    if (!g_file_test(portdev, G_FILE_TEST_EXISTS)) {
         g_debug("vdagent virtio channel %s does not exist, exiting", portdev);
         return 0;
     }
