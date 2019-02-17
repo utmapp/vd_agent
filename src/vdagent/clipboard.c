@@ -304,6 +304,7 @@ void vdagent_clipboard_grab(VDAgentClipboards *c, guint sel_id,
     vdagent_x11_clipboard_grab(c->x11, sel_id, types, n_types);
 #else
     GtkTargetEntry targets[G_N_ELEMENTS(atom2agent)];
+    Selection *sel;
     guint n_targets, i, t;
 
     g_return_if_fail(sel_id < SELECTION_COUNT);
@@ -322,7 +323,13 @@ void vdagent_clipboard_grab(VDAgentClipboards *c, guint sel_id,
         return;
     }
 
-    if (gtk_clipboard_set_with_data(c->selections[sel_id].clipboard,
+    sel = &c->selections[sel_id];
+
+    if (sel->last_targets_req) {
+        g_clear_pointer(&sel->last_targets_req, request_ref_cancel);
+    }
+
+    if (gtk_clipboard_set_with_data(sel->clipboard,
                                     targets, n_targets,
                                     clipboard_get_cb, clipboard_clear_cb, c))
         clipboard_new_owner(c, sel_id, OWNER_CLIENT);
