@@ -167,9 +167,4 @@ DISTCHECK_CONFIGURE_FLAGS =			\
 tests_test_device_info_LDADD = $(src_spice_vdagent_LDADD)
 tests_test_device_info_CFLAGS = $(src_spice_vdagent_CFLAGS)
 
-check_PROGRAMS = 					\
-	tests/test-device-info			\
-	$(NULL)
-
-TESTS = $(check_PROGRAMS)
-
+check_PROGRAMS += tests/test-device-info
