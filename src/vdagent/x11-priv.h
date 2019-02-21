@@ -92,6 +92,7 @@ struct vdagent_x11 {
     int xfixes_event_base;
     int max_prop_size;
     int expected_targets_notifies[256];
+    int ignore_targets_notifies[256];
     int clipboard_owner[256];
     int clipboard_type_count[256];
     uint32_t clipboard_agent_types[256][256];
