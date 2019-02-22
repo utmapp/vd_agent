@@ -23,36 +23,28 @@ Features:
 * Support for transferring files from the client to the agent
 * Full support for multiple displays using Xrandr, this requires a new
   enough xorg-x11-drv-qxl driver, as well as a new enough host.
-* Limited support for multiple displays using Xinerama, prerequisites:
-  * A new enough Xorg server: Fedora 17 or greater, for RHEL 6
-    xorg-x11-server-1.10.4-6.el6_2.3 or greater.
-  * A vm configured with multiple qxl devices
-  * A guest running the latest spice-vdagent
-  Then connect to the vm with the multiple monitor client which you want to
-  use it with using: "spicec --full-screen=auto-config" (or the user portal
-  equivalent). At this point the agent will write out a:
-  /run/spice-vdagentd/xorg.conf.spice file. With all the necessary magic
-  to get Xinerama working. Move this file to /etc/X11/xorg.conf, then kill
-  Xorg so that it will get restarted and you should be good to go.
+* Limited support for multiple displays using Xinerama.
 * Limited support for setups with multiple Screens (multiple qxl devices each
-  mapped to their own screen), limitations:
- -Max one monitor per Screen / qxl device
- -All monitors / Screens must have the same resolution
- -No client -> guest resolution syncing
+  mapped to their own screen)
 
 All vdagent communications on the guest side run over a single pipe which
 gets presented to the guest os as a virtio serial port.
 
 Under windows this virtio serial port has the following name:
-\\\\.\\Global\\com.redhat.spice.0
+>>>
+    \\\\.\\Global\\com.redhat.spice.0
+>>>
 
 Under Linux this virtio serial port has the following name:
-/dev/virtio-ports/com.redhat.spice.0
+>>>
+    /dev/virtio-ports/com.redhat.spice.0
+>>>
 
 To enable the virtio serial port you need to pass the following params on
 the qemu cmdline:
 
--device virtio-serial-pci,id=virtio-serial0,max_ports=16,bus=pci.0,addr=0x5 \
--chardev spicevmc,name=vdagent,id=vdagent \
--device \
-virtserialport,nr=1,bus=virtio-serial0.0,chardev=vdagent,name=com.redhat.spice.0
+>>>
+    -device virtio-serial-pci,id=virtio-serial0,max_ports=16,bus=pci.0,addr=0x5 \
+    -chardev spicevmc,name=vdagent,id=vdagent \
+    -device virtserialport,nr=1,bus=virtio-serial0.0,chardev=vdagent,name=com.redhat.spice.0
+>>>
