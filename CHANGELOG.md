@@ -1,59 +1,67 @@
-spice-vdagent-0.15.0
---------------------
+News in spice-vdagent 0.15.0
+============================
+
 * Xspice support
 * Release clipboard on client disconnect if owned by client (rhbz#1003977)
 * Turn some error messages into debugging messages (rhbz#918310)
 * Not having the virtio channel is not an error; instead silently do nothing
 
-spice-vdagent-0.14.0
---------------------
+News in spice-vdagent 0.14.0
+============================
+
 * More multi-monitor and arbritary resolution support bugfixes
 * Add support for file transfers from client to guest
 * Add support for setups with multiple Screens (multiple qxl devices each
   mapped to their own screen), limitations:
- -Max one monitor per Screen / qxl device
- -All monitors / Screens must have the same resolution
- -No client -> guest resolution syncing
+  * Max one monitor per Screen / qxl device
+  * All monitors / Screens must have the same resolution
+  * No client -> guest resolution syncing
 * Add spice-vdagent -X cmdline option, which runtime disables console-kit /
   systemd-logind integration for setups where these are not used
 * Add manpages for spice-vdagent and spice-vdagentd
 
-spice-vdagent-0.12.1
---------------------
+News in spice-vdagent 0.12.1
+============================
+
 * Various bugfixes for multi-monitor and arbritary resolution support
 * Requires libXrandr >= 1.3, Note 0.12.0 also required this, but did not
   check for it. For older distributions use 0.10.1
 
-spice-vdagent-0.12.0
---------------------
+News in spice-vdagent 0.12.0
+============================
+
 * Full multi-monitor and arbritary resolution support, this requires a new
   enough xorg-x11-drv-qxl driver, as well as a new enough host
 * systemd service support, using systemd hardware acivation
 * Use syslog for logging, rather then logging to private log files
 
-spice-vdagent-0.10.1
---------------------
+News in spice-vdagent 0.10.1
+============================
+
 * Fix a race condition when opening the vdagent virtio serial port, which
   caused it to get opened / closed in rapid succession a number of times
   on vm boot
 
-spice-vdagent-0.10.0
---------------------
+News in spice-vdagent 0.10.0
+============================
+
 * Add limited support for multiple displays, see README
 * Add support for RHEL-5 (and other distributions with a non hotplug
   capable Xorg and/or no console-kit), see README.RHEL-5
 * Add support for using libsystemd-logind as session information source
   instead of console-kit
 
-spice-vdagent-0.8.1
--------------------
+News in spice-vdagent 0.8.1
+===========================
+
 * In daemon mode the session vdagent now retries connecting to the system
   vdagentd every second, once a connection is made a version check is done,
   if the version differs (which only happens on an upgrade from one version
   to the next) the sesion vdagent re-execs itself (Marc-André Lureau)
 
-spice-vdagent-0.8.0
--------------------
+News in spice-vdagent 0.8.0
+===========================
+
 * Add support for copy and paste using the primary selection, to use this
   you need a spice-gtk widget based client and the latest spice-gtk code
   (Marc-André Lureau and Hans de Goede)
@@ -62,8 +70,9 @@ spice-vdagent-0.8.0
   as RHEL-5 (Christophe Fergeau)
 * Various small bugfixes (Hans de Goede)
 
-spice-vdagent-0.6.3
--------------------
+News in spice-vdagent 0.6.3
+===========================
+
 * Initial release, starting with version nr 0.6.3, to indicate that it
   more or less supports all parts of the cdagent protocol in spice-protocol
   and spice 0.6.3
