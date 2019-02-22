@@ -1,3 +1,50 @@
+News in spice-vdagent 0.18.0
+============================
+
+* Add GTK+ framework to handle x11 backend such as clipboard
+* Deprecate X11 backend in favor of GTK+ framework
+* Ask pkg-config to appropriate directory to install udev rules
+* Fix leak of udscs's file descriptor
+* Better quote directory path when calling xdg-open to save file transfer
+* Bump GLib to 2.34
+* Add systemd socket activation (rhbz#1340160)
+* Add support to detailed errors on file transfers
+* Add check for available free space in guest before starting a file transfer
+* Use better names for duplicated files on file transfer
+* Improve support on big endian guests (#5)
+* Use IdleHint to check if a session is locked over console-kit (rhbz#1412673)
+* Fixes double free on errors over udscs by improving memory ownership
+* Hide autostart file on Unity
+* Improve command line messages for vdagentd
+* Fix typo in --enable-static-uinput configure option
+* Code repository moved to gitlab.freedesktop.org
+
+News in spice-vdagent 0.17.0
+============================
+
+* Denies file-transfer in locked sessions
+  * systems under systemd (rhbz#1323623)
+  * systems under console-kit (rhbz#1323630)
+* Denies file-transfer in login screen
+  * systems under systemd (rhbz#1328761)
+  * systems under console-kit (rhbz#1323640)
+* Bump glib version to 2.28
+* Set exit code to 1 instead of 0 when virtio device cannot be opened
+* Fix double-free on uinput->screen_info (rhbz#1262635)
+* Code improvement over unix domain client server support (udcs)
+* Fix build compatiblity with different libsystemd versions (fdo#94209)
+
+News in spice-vdagent 0.16.0
+============================
+
+* Add audio volume synchronization support
+* Add support for maximum clipboard size
+* Add support for more clipboard targets (STRING and TIMESTAMP)
+* Improve handling of transfers of multiple files
+* Fix transfer of >2GB files on 32 bit systems
+* XSpice improvements
+* Various bug fixes related to resolution changes
+
 News in spice-vdagent 0.15.0
 ============================
 

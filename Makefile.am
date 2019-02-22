@@ -150,7 +150,7 @@ manpage_DATA =					\
 	$(NULL)
 
 EXTRA_DIST =					\
-	NEWS					\
+	CHANGELOG.md				\
 	data/70-spice-vdagentd.rules		\
 	data/spice-vdagent.desktop		\
 	data/spice-vdagentd			\
