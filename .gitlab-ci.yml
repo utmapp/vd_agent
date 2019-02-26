@@ -2,7 +2,7 @@ image: fedora:latest
 
 before_script:
   - >
-    dnf install 'dnf-command(copr)' git libtool sudo make redhat-rpm-config bzip2
+    dnf install 'dnf-command(copr)' git libtool make redhat-rpm-config bzip2
     python3 python3-six python3-pyparsing
     -y
   - dnf copr enable @spice/nightly -y
@@ -20,21 +20,20 @@ configure-optional-packages:
   script:
   - ./autogen.sh --with-session-info=systemd --with-init-script=systemd+redhat
   - make
-  - sudo make install
-  - sudo make uninstall
+  - make install
+  - make uninstall
   - make distclean
 
   - ./autogen.sh --with-session-info=console-kit --with-init-script=redhat
   - make
-  - sudo make install
-  - sudo make uninstall
+  - make install
+  - make uninstall
   - make distclean
-
 
 configure-without-optionals:
   script:
   - ./autogen.sh --with-gtk=no --with-session-info=none
   - make
-  - sudo make install
-  - sudo make uninstall
+  - make install
+  - make uninstall
   - make distclean
