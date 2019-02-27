@@ -12,32 +12,28 @@ before_script:
   - git clone https://gitlab.freedesktop.org/spice/spice-protocol.git
   - (cd spice-protocol && ./autogen.sh --prefix=/usr && make install)
 
-make-check-distcheck:
+fedora-autotools:
   script:
   - ./autogen.sh
   - make
   - make check
   - make distcheck
-  - make distclean
+  - git clean -xfd
 
-configure-optional-packages:
-  script:
   - ./autogen.sh --with-session-info=systemd --with-init-script=systemd+redhat
   - make
   - make install
   - make uninstall
-  - make distclean
+  - git clean -xfd
 
   - ./autogen.sh --with-session-info=console-kit --with-init-script=redhat
   - make
   - make install
   - make uninstall
-  - make distclean
+  - git clean -xfd
 
-configure-without-optionals:
-  script:
   - ./autogen.sh --with-gtk=no --with-session-info=none
   - make
   - make install
   - make uninstall
-  - make distclean
+  - git clean -xfd
