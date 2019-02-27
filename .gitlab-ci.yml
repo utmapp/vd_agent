@@ -1,12 +1,16 @@
 image: fedora:latest
 
+variables:
+  DEPS_COMMON: git libtool make python3 python3-six redhat-rpm-config
+      bzip2 python3-pyparsing meson ninja-build gtk-doc glib2-devel
+      gettext gettext-devel libpciaccess-devel alsa-lib-devel
+      libXfixes-devel libX11-devel libXrandr-devel libXinerama-devel
+      gtk3-devel dbus-devel systemd-devel
+
 before_script:
-  - >
-    dnf install 'dnf-command(copr)' git libtool make redhat-rpm-config bzip2
-    python3 python3-six python3-pyparsing
-    -y
-  - dnf copr enable @spice/nightly -y
-  - dnf builddep spice-vdagent -y
+  - dnf install -y $DEPS_COMMON
+  - git clone https://gitlab.freedesktop.org/spice/spice-protocol.git
+  - (cd spice-protocol && ./autogen.sh --prefix=/usr && make install)
 
 make-check-distcheck:
   script:
