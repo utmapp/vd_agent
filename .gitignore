@@ -11,6 +11,7 @@ src/stamp-h1
 tests/test-*.log
 tests/test-*.trs
 tests/test-file-xfers
+tests/test-device-info
 config.log
 config.status
 aclocal.m4
