@@ -132,6 +132,7 @@ static void send_capabilities(struct vdagent_virtio_port *vport,
     VD_AGENT_SET_CAPABILITY(caps->caps, VD_AGENT_CAP_GUEST_LINEEND_LF);
     VD_AGENT_SET_CAPABILITY(caps->caps, VD_AGENT_CAP_MAX_CLIPBOARD);
     VD_AGENT_SET_CAPABILITY(caps->caps, VD_AGENT_CAP_AUDIO_VOLUME_SYNC);
+    VD_AGENT_SET_CAPABILITY(caps->caps, VD_AGENT_CAP_GRAPHICS_DEVICE_INFO);
     virtio_msg_uint32_to_le((uint8_t *)caps, size, 0);
 
     vdagent_virtio_port_write(vport, VDP_CLIENT_PORT,
