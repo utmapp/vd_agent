@@ -17,7 +17,7 @@ src_spice_vdagent_CFLAGS =			\
 	$(DRM_CFLAGS)				\
 	$(X_CFLAGS)				\
 	$(SPICE_CFLAGS)				\
-	$(GLIB2_CFLAGS)				\
+	$(GOBJECT_CFLAGS)			\
 	$(GTK_CFLAGS)				\
 	$(ALSA_CFLAGS)				\
 	-I$(srcdir)/src				\
@@ -28,7 +28,7 @@ src_spice_vdagent_LDADD =			\
 	$(DRM_LIBS)				\
 	$(X_LIBS)				\
 	$(SPICE_LIBS)				\
-	$(GLIB2_LIBS)				\
+	$(GOBJECT_LIBS)				\
 	$(GTK_LIBS)				\
 	$(ALSA_LIBS)				\
 	$(NULL)
@@ -52,7 +52,7 @@ src_spice_vdagent_SOURCES =			\
 
 tests_test_file_xfers_CFLAGS =			\
 	$(SPICE_CFLAGS)				\
-	$(GLIB2_CFLAGS)				\
+	$(GOBJECT_CFLAGS)			\
 	-I$(srcdir)/src				\
 	-I$(srcdir)/src/vdagent			\
 	-DUDSCS_NO_SERVER			\
@@ -60,7 +60,7 @@ tests_test_file_xfers_CFLAGS =			\
 
 tests_test_file_xfers_LDADD =			\
 	$(SPICE_LIBS)				\
-	$(GLIB2_LIBS)				\
+	$(GOBJECT_LIBS)				\
 	$(NULL)
 
 tests_test_file_xfers_SOURCES =			\
@@ -76,7 +76,7 @@ src_spice_vdagentd_CFLAGS =			\
 	$(LIBSYSTEMD_LOGIN_CFLAGS)		\
 	$(PCIACCESS_CFLAGS)			\
 	$(SPICE_CFLAGS)				\
-	$(GLIB2_CFLAGS)				\
+	$(GOBJECT_CFLAGS)			\
 	$(PIE_CFLAGS)				\
 	-I$(srcdir)/src				\
 	$(NULL)
@@ -87,7 +87,7 @@ src_spice_vdagentd_LDADD =			\
 	$(LIBSYSTEMD_LOGIN_LIBS)		\
 	$(PCIACCESS_LIBS)			\
 	$(SPICE_LIBS)				\
-	$(GLIB2_LIBS)				\
+	$(GOBJECT_LIBS)				\
 	$(PIE_LDFLAGS)				\
 	$(NULL)
 
