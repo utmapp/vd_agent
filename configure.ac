@@ -100,7 +100,7 @@ AC_ARG_ENABLE([static-uinput],
               [enable_static_uinput="$enableval"],
               [enable_static_uinput="no"])
 
-PKG_CHECK_MODULES([GOBJECT], [gobject-2.0 >= 2.34])
+PKG_CHECK_MODULES([GOBJECT], [gobject-2.0 >= 2.50])
 PKG_CHECK_MODULES(X, [xfixes xrandr >= 1.3 xinerama x11])
 PKG_CHECK_MODULES(SPICE, [spice-protocol >= 0.14.0])
 PKG_CHECK_MODULES(ALSA, [alsa >= 1.0.22])
