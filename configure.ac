@@ -82,7 +82,7 @@ AC_ARG_WITH([gtk],
             [],
             [with_gtk="auto"])
 if test "x$with_gtk" != "xno"; then
-  PKG_CHECK_MODULES([GTK], [gtk+-3.0 >= 3.10], [
+  PKG_CHECK_MODULES([GTK], [gtk+-3.0 >= 3.22], [
                      AC_DEFINE([WITH_GTK], [1], [If defined, vdagent will favor GTK+ over Xlib])
                      with_gtk="yes"
                  ], [
