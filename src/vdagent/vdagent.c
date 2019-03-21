@@ -165,8 +165,8 @@ static void vdagent_quit_loop(VDAgent *agent)
 {
     /* other GMainLoop(s) might be running, quit them before agent->loop */
     if (agent->clipboards) {
-        vdagent_clipboards_finalize(agent->clipboards, agent->conn != NULL);
-        agent->clipboards = NULL;
+        vdagent_clipboards_set_conn(agent->clipboards, agent->conn);
+        g_clear_object(&agent->clipboards);
     }
     if (agent->loop)
         g_main_loop_quit(agent->loop);
@@ -403,7 +403,8 @@ static gboolean vdagent_init_async_cb(gpointer user_data)
     if (!vdagent_init_file_xfer(agent))
         syslog(LOG_WARNING, "File transfer is disabled");
 
-    agent->clipboards = vdagent_clipboards_init(agent->x11, agent->conn);
+    agent->clipboards = vdagent_clipboards_new(agent->x11);
+    vdagent_clipboards_set_conn(agent->clipboards, agent->conn);
 
     if (parent_socket != -1) {
         if (write(parent_socket, "OK", 2) != 2)

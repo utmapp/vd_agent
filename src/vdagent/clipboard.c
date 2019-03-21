@@ -76,14 +76,24 @@ typedef struct {
 } Selection;
 #endif
 
-struct VDAgentClipboards {
-#ifdef WITH_GTK
+struct _VDAgentClipboards {
+    GObject parent;
+
     struct udscs_connection *conn;
-    Selection                selections[SELECTION_COUNT];
+
+#ifdef WITH_GTK
+    Selection selections[SELECTION_COUNT];
 #else
     struct vdagent_x11 *x11;
 #endif
 };
+
+struct _VDAgentClipboardsClass
+{
+    GObjectClass parent;
+};
+
+G_DEFINE_TYPE(VDAgentClipboards, vdagent_clipboards, G_TYPE_OBJECT)
 
 #ifdef WITH_GTK
 static const struct {
@@ -453,43 +463,56 @@ err:
 #endif
 }
 
-VDAgentClipboards *vdagent_clipboards_init(struct vdagent_x11      *x11,
-                                           struct udscs_connection *conn)
+static void
+vdagent_clipboards_init(VDAgentClipboards *self)
 {
-#ifdef WITH_GTK
-    guint sel_id;
-#endif
+}
 
-    VDAgentClipboards *c;
-    c = g_new0(VDAgentClipboards, 1);
+VDAgentClipboards *vdagent_clipboards_new(struct vdagent_x11 *x11)
+{
+    VDAgentClipboards *self = g_object_new(VDAGENT_TYPE_CLIPBOARDS, NULL);
+
 #ifndef WITH_GTK
-    c->x11 = x11;
+    self->x11 = x11;
 #else
-    c->conn = conn;
+    guint sel_id;
 
     for (sel_id = 0; sel_id < SELECTION_COUNT; sel_id++) {
         GtkClipboard *clipboard = gtk_clipboard_get(sel_atom[sel_id]);
-        c->selections[sel_id].clipboard = clipboard;
+        self->selections[sel_id].clipboard = clipboard;
         g_signal_connect(G_OBJECT(clipboard), "owner-change",
-                         G_CALLBACK(clipboard_owner_change_cb), c);
+                         G_CALLBACK(clipboard_owner_change_cb), self);
     }
 #endif
 
-    return c;
+    return self;
 }
 
-void vdagent_clipboards_finalize(VDAgentClipboards *c, gboolean conn_alive)
+void
+vdagent_clipboards_set_conn(VDAgentClipboards *self, struct udscs_connection *conn)
+{
+    self->conn = conn;
+}
+
+static void vdagent_clipboards_dispose(GObject *obj)
 {
 #ifdef WITH_GTK
+    VDAgentClipboards *self = VDAGENT_CLIPBOARDS(obj);
     guint sel_id;
+
     for (sel_id = 0; sel_id < SELECTION_COUNT; sel_id++)
-        g_signal_handlers_disconnect_by_func(c->selections[sel_id].clipboard,
-            G_CALLBACK(clipboard_owner_change_cb), c);
+        g_signal_handlers_disconnect_by_func(self->selections[sel_id].clipboard,
+            G_CALLBACK(clipboard_owner_change_cb), self);
 
-    if (conn_alive == FALSE)
-        c->conn = NULL;
-    vdagent_clipboards_release_all(c);
+    if (self->conn)
+        vdagent_clipboards_release_all(self);
 #endif
+}
 
-    g_free(c);
+static void
+vdagent_clipboards_class_init(VDAgentClipboardsClass *klass)
+{
+    GObjectClass *oclass = G_OBJECT_CLASS(klass);
+
+    oclass->dispose = vdagent_clipboards_dispose;
 }
