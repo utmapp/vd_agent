@@ -529,11 +529,10 @@ static void vdagent_x11_handle_event(struct vdagent_x11 *x11, const XEvent *even
         if (ev.xfev.owner == x11->selection_window)
             return;
 
-        /* If the clipboard owner is changed we no longer own it */
-        vdagent_x11_set_clipboard_owner(x11, selection, owner_none);
-
-        if (ev.xfev.owner == None)
+        if (ev.xfev.owner == None) {
+            vdagent_x11_set_clipboard_owner(x11, selection, owner_none);
             return;
+        }
 
         /* Request the supported targets from the new owner */
         XConvertSelection(x11->display, ev.xfev.selection, x11->targets_atom,

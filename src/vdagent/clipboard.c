@@ -242,13 +242,13 @@ static void clipboard_owner_change_cb(GtkClipboard        *clipboard,
         return;
     }
 
-    if (sel->owner == OWNER_GUEST) {
-        clipboard_new_owner(c, sel_id, OWNER_NONE);
-        udscs_write(c->conn, VDAGENTD_CLIPBOARD_RELEASE, sel_id, 0, NULL, 0);
-    }
-
-    if (event->reason != GDK_OWNER_CHANGE_NEW_OWNER)
+    if (event->reason != GDK_OWNER_CHANGE_NEW_OWNER) {
+        if (sel->owner == OWNER_GUEST) {
+            clipboard_new_owner(c, sel_id, OWNER_NONE);
+            udscs_write(c->conn, VDAGENTD_CLIPBOARD_RELEASE, sel_id, 0, NULL, 0);
+        }
         return;
+    }
 
     /* if there's a pending request for clipboard targets, cancel it */
     if (sel->last_targets_req)
