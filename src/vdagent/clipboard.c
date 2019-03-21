@@ -238,8 +238,9 @@ static void clipboard_owner_change_cb(GtkClipboard        *clipboard,
     Selection *sel = &c->selections[sel_id];
 
     /* if the event was caused by gtk_clipboard_set_with_data(), ignore it  */
-    if (sel->owner == OWNER_CLIENT)
+    if (gtk_clipboard_get_owner(clipboard) == G_OBJECT(c)) {
         return;
+    }
 
     if (sel->owner == OWNER_GUEST) {
         clipboard_new_owner(c, sel_id, OWNER_NONE);
@@ -357,9 +358,10 @@ void vdagent_clipboard_grab(VDAgentClipboards *c, guint sel_id,
         g_clear_pointer(&sel->last_targets_req, request_ref_cancel);
     }
 
-    if (gtk_clipboard_set_with_data(sel->clipboard,
-                                    targets, n_targets,
-                                    clipboard_get_cb, clipboard_clear_cb, c))
+    if (gtk_clipboard_set_with_owner(sel->clipboard,
+                                     targets, n_targets,
+                                     clipboard_get_cb, clipboard_clear_cb,
+                                     G_OBJECT(c)))
         clipboard_new_owner(c, sel_id, OWNER_CLIENT);
     else {
         syslog(LOG_ERR, "%s: sel_id=%u: clipboard grab failed", __func__, sel_id);
