@@ -32,8 +32,26 @@
 #define SELECTION_COUNT (VD_AGENT_CLIPBOARD_SELECTION_PRIMARY + 1)
 #define TYPE_COUNT      (VD_AGENT_CLIPBOARD_IMAGE_JPG + 1)
 
-#define sel_id_from_clip(clipboard) \
-    GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(clipboard), "vdagent-selection-id"))
+static const GdkAtom sel_atom[] = {
+    [VD_AGENT_CLIPBOARD_SELECTION_CLIPBOARD] = GDK_SELECTION_CLIPBOARD,
+    [VD_AGENT_CLIPBOARD_SELECTION_PRIMARY] = GDK_SELECTION_PRIMARY,
+};
+
+G_STATIC_ASSERT(G_N_ELEMENTS(sel_atom) == SELECTION_COUNT);
+
+static gint sel_id_from_clip(GtkClipboard *clipboard)
+{
+    GdkAtom sel = gtk_clipboard_get_selection(clipboard);
+    int i;
+
+    for (i = 0; i < G_N_ELEMENTS(sel_atom); i++) {
+        if (sel == sel_atom[i]) {
+            return i;
+        }
+    }
+
+    g_return_val_if_reached(0);
+}
 
 enum {
     OWNER_NONE,
@@ -440,10 +458,6 @@ VDAgentClipboards *vdagent_clipboards_init(struct vdagent_x11      *x11,
 {
 #ifdef WITH_GTK
     guint sel_id;
-    const GdkAtom sel_atom[SELECTION_COUNT] = {
-        GDK_SELECTION_CLIPBOARD, /* VD_AGENT_CLIPBOARD_SELECTION_CLIPBOARD */
-        GDK_SELECTION_PRIMARY,   /* VD_AGENT_CLIPBOARD_SELECTION_PRIMARY */
-    };
 #endif
 
     VDAgentClipboards *c;
@@ -456,9 +470,6 @@ VDAgentClipboards *vdagent_clipboards_init(struct vdagent_x11      *x11,
     for (sel_id = 0; sel_id < SELECTION_COUNT; sel_id++) {
         GtkClipboard *clipboard = gtk_clipboard_get(sel_atom[sel_id]);
         c->selections[sel_id].clipboard = clipboard;
-        /* enables the use of sel_id_from_clipboard(clipboard) macro */
-        g_object_set_data(G_OBJECT(clipboard), "vdagent-selection-id",
-                          GUINT_TO_POINTER(sel_id));
         g_signal_connect(G_OBJECT(clipboard), "owner-change",
                          G_CALLBACK(clipboard_owner_change_cb), c);
     }
