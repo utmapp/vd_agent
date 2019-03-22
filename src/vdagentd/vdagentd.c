@@ -83,6 +83,7 @@ static int quit = 0;
 static int retval = 0;
 static int client_connected = 0;
 static int max_clipboard = -1;
+static uint32_t clipboard_serial[256];
 
 /* utility functions */
 static void virtio_msg_uint32_to_le(uint8_t *_msg, uint32_t size, uint32_t offset)
@@ -134,6 +135,7 @@ static void send_capabilities(struct vdagent_virtio_port *vport,
     VD_AGENT_SET_CAPABILITY(caps->caps, VD_AGENT_CAP_AUDIO_VOLUME_SYNC);
     VD_AGENT_SET_CAPABILITY(caps->caps, VD_AGENT_CAP_GRAPHICS_DEVICE_INFO);
     VD_AGENT_SET_CAPABILITY(caps->caps, VD_AGENT_CAP_CLIPBOARD_NO_RELEASE_ON_REGRAB);
+    VD_AGENT_SET_CAPABILITY(caps->caps, VD_AGENT_CAP_CLIPBOARD_GRAB_SERIAL);
     virtio_msg_uint32_to_le((uint8_t *)caps, size, 0);
 
     vdagent_virtio_port_write(vport, VDP_CLIENT_PORT,
@@ -232,6 +234,7 @@ static void do_client_capabilities(struct vdagent_virtio_port *vport,
         if (debug)
             syslog(LOG_DEBUG, "New client connected");
         client_connected = 1;
+        memset(clipboard_serial, 0, sizeof(clipboard_serial));
         send_capabilities(vport, 0);
     }
 }
@@ -241,6 +244,7 @@ static void do_client_clipboard(struct vdagent_virtio_port *vport,
 {
     uint32_t msg_type = 0, data_type = 0, size = message_header->size;
     uint8_t selection = VD_AGENT_CLIPBOARD_SELECTION_CLIPBOARD;
+    uint32_t serial;
 
     if (!active_session_conn) {
         syslog(LOG_WARNING,
@@ -258,6 +262,23 @@ static void do_client_clipboard(struct vdagent_virtio_port *vport,
 
     switch (message_header->type) {
     case VD_AGENT_CLIPBOARD_GRAB:
+        if (VD_AGENT_HAS_CAPABILITY(capabilities, capabilities_size,
+                                    VD_AGENT_CAP_CLIPBOARD_GRAB_SERIAL)) {
+            serial = *(guint32 *)data;
+            data += 4;
+            size -= 4;
+
+            if (serial == clipboard_serial[selection] - 1) {
+                g_debug("client grab wins");
+            } else if (serial == clipboard_serial[selection]) {
+                clipboard_serial[selection]++;
+            } else {
+                g_debug("grab discard, serial %u != session serial %u",
+                        serial, clipboard_serial[selection]);
+                return;
+            }
+        }
+
         msg_type = VDAGENTD_CLIPBOARD_GRAB;
         agent_owns_clipboard[selection] = 0;
         break;
@@ -480,6 +501,12 @@ static gboolean vdagent_message_check_size(const VDAgentMessage *message_header)
         }
     }
 
+    if (VD_AGENT_HAS_CAPABILITY(capabilities, capabilities_size,
+                                VD_AGENT_CAP_CLIPBOARD_GRAB_SERIAL)
+        && message_header->type == VD_AGENT_CLIPBOARD_GRAB) {
+        min_size += 4;
+    }
+
     switch (message_header->type) {
     case VD_AGENT_MONITORS_CONFIG:
     case VD_AGENT_FILE_XFER_START:
@@ -600,6 +627,11 @@ static void virtio_write_clipboard(uint8_t selection, uint32_t msg_type,
                                 VD_AGENT_CAP_CLIPBOARD_SELECTION)) {
         size += 4;
     }
+    if (msg_type == VD_AGENT_CLIPBOARD_GRAB
+        && VD_AGENT_HAS_CAPABILITY(capabilities, capabilities_size,
+                                   VD_AGENT_CAP_CLIPBOARD_GRAB_SERIAL)) {
+        size += sizeof(uint32_t);
+    }
     if (data_type != -1) {
         size += 4;
     }
@@ -617,8 +649,14 @@ static void virtio_write_clipboard(uint8_t selection, uint32_t msg_type,
         vdagent_virtio_port_write_append(virtio_port, (uint8_t*)&data_type, 4);
     }
 
-    if (msg_type == VD_AGENT_CLIPBOARD_GRAB)
+    if (msg_type == VD_AGENT_CLIPBOARD_GRAB) {
+        if (VD_AGENT_HAS_CAPABILITY(capabilities, capabilities_size,
+                                    VD_AGENT_CAP_CLIPBOARD_GRAB_SERIAL)) {
+            uint32_t serial = GUINT32_TO_LE(clipboard_serial[selection]++);
+            vdagent_virtio_port_write_append(virtio_port, (uint8_t*)&serial, sizeof(serial));
+        }
         virtio_msg_uint32_to_le(data, data_size, 0);
+    }
     vdagent_virtio_port_write_append(virtio_port, data, data_size);
 }
 
