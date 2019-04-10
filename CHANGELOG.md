@@ -1,3 +1,27 @@
+News in spice-vdagent 0.19.0
+============================
+
+* Add libdrm dependency
+* Fix file descriptor leak on failed connections
+* Handle new VD_AGENT_GRAPHICS_DEVICE_INFO message advertised by
+  VD_AGENT_CAP_GRAPHICS_DEVICE_INFO capability
+* Session agent autostart changed to WindowManager ([rhbz#1623947])
+  This fixes possible race with xdg-user-dirs
+* Fix of sending empty screen resolution messages ([rhbz#1641723])
+* Fix 'Dependency failed for Activation socket' with systemd ([rhbz#1545212])
+* Fix error messages about on selecting text on host ([rhbz#1594876])
+  this was also fixed with Gtk backend
+* Update paths from /var/run → /run
+* Fix Session agent restart
+* Add test for file creation
+* Prefer GLib memory functions stdlib.h ones
+* Several code and logs improvements
+
+[rhbz#1623947]: https://bugzilla.redhat.com/show_bug.cgi?id=1623947
+[rhbz#1641723]: https://bugzilla.redhat.com/show_bug.cgi?id=1641723
+[rhbz#1545212]: https://bugzilla.redhat.com/show_bug.cgi?id=1545212
+[rhbz#1594876]: https://bugzilla.redhat.com/show_bug.cgi?id=1594876
+
 News in spice-vdagent 0.18.0
 ============================
 
