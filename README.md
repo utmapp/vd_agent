@@ -27,6 +27,19 @@ Features:
 * Limited support for setups with multiple Screens (multiple qxl devices each
   mapped to their own screen)
 
+## Install
+
+From inside your virtual machine (e.g., GNOME Boxes), use your guest system’s
+package manager to install.
+
+For example, if you’re running a Debian/Ubuntu derivative in a VM, use:
+
+```shell
+sudo apt install spice-vdagent
+```
+
+## How it works
+
 All vdagent communications on the guest side run over a single pipe which
 gets presented to the guest os as a virtio serial port.
 
