@@ -1191,6 +1191,8 @@ int main(int argc, char *argv[])
     openlog("spice-vdagentd", do_daemonize ? 0 : LOG_PERROR, LOG_USER);
 
     /* Setup communication with vdagent process(es) */
+    server = udscs_server_new(agent_connect, agent_read_complete,
+                              agent_disconnect, debug);
 #ifdef WITH_SYSTEMD_SOCKET_ACTIVATION
     int n_fds;
     /* try to retrieve pre-configured sockets from systemd */
@@ -1199,28 +1201,20 @@ int main(int argc, char *argv[])
         syslog(LOG_CRIT, "Received too many sockets from systemd (%i)", n_fds);
         return 1;
     } else if (n_fds == 1) {
-        server = udscs_create_server_for_fd(SD_LISTEN_FDS_START, agent_connect,
-                                            agent_read_complete,
-                                            agent_disconnect,
-                                            debug);
+        udscs_server_listen_to_socket(server, SD_LISTEN_FDS_START, &err);
         own_socket = FALSE;
     } else
     /* systemd socket activation not enabled, create our own */
 #endif /* WITH_SYSTEMD_SOCKET_ACTIVATION */
     {
-        server = udscs_create_server(vdagentd_socket, agent_connect,
-                                     agent_read_complete, agent_disconnect,
-                                     debug);
+        udscs_server_listen_to_address(server, vdagentd_socket, &err);
     }
 
-    if (!server) {
-        if (errno == EADDRINUSE) {
-            syslog(LOG_CRIT, "Fatal the server socket %s exists already. Delete it?",
-                   vdagentd_socket);
-        } else {
-            syslog(LOG_CRIT, "Fatal could not create the server socket %s",
-                   vdagentd_socket);
-        }
+    if (err) {
+        syslog(LOG_CRIT, "Fatal could not create the server socket %s: %s",
+                         vdagentd_socket, err->message);
+        g_error_free(err);
+        udscs_destroy_server(server);
         return 1;
     }
 

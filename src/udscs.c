@@ -172,7 +172,7 @@ static gboolean udscs_server_accept_cb(GSocketService    *service,
                                        GObject           *source_object,
                                        gpointer           user_data);
 
-static struct udscs_server *udscs_server_new(
+struct udscs_server *udscs_server_new(
     udscs_connect_callback connect_callback,
     udscs_read_callback read_callback,
     VDAgentConnErrorCb error_cb,
@@ -193,66 +193,34 @@ static struct udscs_server *udscs_server_new(
     return server;
 }
 
-struct udscs_server *udscs_create_server_for_fd(int fd,
-    udscs_connect_callback connect_callback,
-    udscs_read_callback read_callback,
-    VDAgentConnErrorCb error_cb,
-    int debug)
+void udscs_server_listen_to_socket(struct udscs_server *server,
+                                   gint                 fd,
+                                   GError             **err)
 {
-    struct udscs_server *server;
     GSocket *socket;
-    GError *err = NULL;
 
-    server = udscs_server_new(connect_callback, read_callback,
-                              error_cb, debug);
-
-    socket = g_socket_new_from_fd(fd, &err);
-    if (err) {
-        goto error;
+    socket = g_socket_new_from_fd(fd, err);
+    if (socket == NULL) {
+        return;
     }
     g_socket_listener_add_socket(G_SOCKET_LISTENER(server->service),
-                                 socket, NULL, &err);
+                                 socket, NULL, err);
     g_object_unref(socket);
-    if (err) {
-        goto error;
-    }
-
-    return server;
-error:
-    syslog(LOG_ERR, "%s: %s", __func__, err->message);
-    g_error_free(err);
-    udscs_destroy_server(server);
-    return NULL;
 }
 
-struct udscs_server *udscs_create_server(const char *socketname,
-    udscs_connect_callback connect_callback,
-    udscs_read_callback read_callback,
-    VDAgentConnErrorCb error_cb,
-    int debug)
+void udscs_server_listen_to_address(struct udscs_server *server,
+                                    const gchar         *addr,
+                                    GError             **err)
 {
-    struct udscs_server *server;
-    GSocketAddress *socket_addr;
-    GError *err = NULL;
+    GSocketAddress *sock_addr;
 
-    server = udscs_server_new(connect_callback, read_callback,
-                              error_cb, debug);
-
-    socket_addr = g_unix_socket_address_new(socketname);
+    sock_addr = g_unix_socket_address_new(addr);
     g_socket_listener_add_address(G_SOCKET_LISTENER(server->service),
-                                  socket_addr,
+                                  sock_addr,
                                   G_SOCKET_TYPE_STREAM,
                                   G_SOCKET_PROTOCOL_DEFAULT,
-                                  NULL, NULL, &err);
-    g_object_unref(socket_addr);
-    if (err) {
-        syslog(LOG_ERR, "%s: %s", __func__, err->message);
-        g_error_free(err);
-        udscs_destroy_server(server);
-        return NULL;
-    }
-
-    return server;
+                                  NULL, NULL, err);
+    g_object_unref(sock_addr);
 }
 
 void udscs_server_destroy_connection(struct udscs_server *server,

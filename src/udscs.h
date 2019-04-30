@@ -75,30 +75,28 @@ struct udscs_server;
  */
 typedef void (*udscs_connect_callback)(UdscsConnection *conn);
 
-/* Create a server for the given file descriptor. This allows us to use
- * pre-configured sockets for use with systemd socket activation, etc.
- *
- * See udscs_create_server() for more information
- */
-struct udscs_server *udscs_create_server_for_fd(int fd,
-    udscs_connect_callback connect_callback,
-    udscs_read_callback read_callback,
-    VDAgentConnErrorCb error_cb,
-    int debug);
-
-/* Create the unix domain socket specified by socketname and
- * start listening on it.
- * Only sockets bound to a pathname are supported.
+/* Initialize a new udscs_server struct.
  *
  * If debug is true then the events on this socket and related individual
  * connections will be traced.
  * This includes the incoming and outgoing message names.
  */
-struct udscs_server *udscs_create_server(const char *socketname,
+struct udscs_server *udscs_server_new(
     udscs_connect_callback connect_callback,
     udscs_read_callback read_callback,
     VDAgentConnErrorCb error_cb,
     int debug);
+
+/* Start listening on a pre-configured socket specified by the given @fd.
+ * This can be used with systemd socket activation, etc. */
+void udscs_server_listen_to_socket(struct udscs_server *server,
+                                   gint                 fd,
+                                   GError             **err);
+
+/* Create a new socket, bind it to @address and start listening on it. */
+void udscs_server_listen_to_address(struct udscs_server *server,
+                                    const gchar         *addr,
+                                    GError             **err);
 
 void udscs_server_destroy_connection(struct udscs_server *server,
                                      UdscsConnection     *conn);
