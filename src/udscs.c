@@ -30,18 +30,15 @@
 #include "vdagentd-proto-strings.h"
 #include "vdagent-connection.h"
 
-struct udscs_connection {
+struct _UdscsConnection {
     VDAgentConnection parent_instance;
-
     int debug;
-
-    /* Callbacks */
     udscs_read_callback read_callback;
 };
 
 G_DEFINE_TYPE(UdscsConnection, udscs_connection, VDAGENT_TYPE_CONNECTION)
 
-static void debug_print_message_header(struct udscs_connection     *conn,
+static void debug_print_message_header(UdscsConnection             *conn,
                                        struct udscs_message_header *header,
                                        const gchar                 *direction)
 {
@@ -101,13 +98,13 @@ static void udscs_connection_class_init(UdscsConnectionClass *klass)
     conn_class->handle_message = conn_handle_message;
 }
 
-struct udscs_connection *udscs_connect(const char *socketname,
+UdscsConnection *udscs_connect(const char *socketname,
     udscs_read_callback read_callback,
     VDAgentConnErrorCb error_cb,
     int debug)
 {
     GIOStream *io_stream;
-    struct udscs_connection *conn;
+    UdscsConnection *conn;
     GError *err = NULL;
 
     io_stream = vdagent_socket_connect(socketname, &err);
@@ -133,7 +130,7 @@ struct udscs_connection *udscs_connect(const char *socketname,
     return conn;
 }
 
-void udscs_write(struct udscs_connection *conn, uint32_t type, uint32_t arg1,
+void udscs_write(UdscsConnection *conn, uint32_t type, uint32_t arg1,
     uint32_t arg2, const uint8_t *data, uint32_t size)
 {
     gpointer buf;
@@ -281,7 +278,7 @@ static gboolean udscs_server_accept_cb(GSocketService    *service,
                                        gpointer           user_data)
 {
     struct udscs_server *server = user_data;
-    struct udscs_connection *new_conn;
+    UdscsConnection *new_conn;
 
     new_conn = g_object_new(UDSCS_TYPE_CONNECTION, NULL);
     new_conn->debug = server->debug;

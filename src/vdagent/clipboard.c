@@ -79,7 +79,7 @@ typedef struct {
 struct _VDAgentClipboards {
     GObject parent;
 
-    struct udscs_connection *conn;
+    UdscsConnection *conn;
 
 #ifdef WITH_GTK
     Selection selections[SELECTION_COUNT];
@@ -491,7 +491,7 @@ VDAgentClipboards *vdagent_clipboards_new(struct vdagent_x11 *x11)
 }
 
 void
-vdagent_clipboards_set_conn(VDAgentClipboards *self, struct udscs_connection *conn)
+vdagent_clipboards_set_conn(VDAgentClipboards *self, UdscsConnection *conn)
 {
     self->conn = conn;
 }

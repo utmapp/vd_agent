@@ -46,7 +46,7 @@ typedef struct VDAgent {
     VDAgentClipboards *clipboards;
     struct vdagent_x11 *x11;
     struct vdagent_file_xfers *xfers;
-    struct udscs_connection *conn;
+    UdscsConnection *conn;
     GIOChannel *x11_channel;
 
     GMainLoop *loop;
@@ -172,7 +172,7 @@ static void vdagent_quit_loop(VDAgent *agent)
         g_main_loop_quit(agent->loop);
 }
 
-static void daemon_read_complete(struct udscs_connection *conn,
+static void daemon_read_complete(UdscsConnection *conn,
     struct udscs_message_header *header, uint8_t *data)
 {
     VDAgent *agent = g_object_get_data(G_OBJECT(conn), "agent");

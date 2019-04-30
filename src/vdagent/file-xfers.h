@@ -27,7 +27,7 @@
 struct vdagent_file_xfers;
 
 struct vdagent_file_xfers *vdagent_file_xfers_create(
-        struct udscs_connection *vdagentd, const char *save_dir,
+        UdscsConnection *vdagentd, const char *save_dir,
         int open_save_dir, int debug);
 void vdagent_file_xfers_destroy(struct vdagent_file_xfers *xfer);
 
@@ -37,7 +37,7 @@ void vdagent_file_xfers_status(struct vdagent_file_xfers *xfers,
     VDAgentFileXferStatusMessage *msg);
 void vdagent_file_xfers_data(struct vdagent_file_xfers *xfers,
     VDAgentFileXferDataMessage *msg);
-void vdagent_file_xfers_error_disabled(struct udscs_connection *vdagentd,
+void vdagent_file_xfers_error_disabled(UdscsConnection *vdagentd,
     uint32_t msg_id);
 int vdagent_file_xfers_create_file(const char *save_dir, char **file_name_p);
 

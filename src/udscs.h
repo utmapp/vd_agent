@@ -29,25 +29,11 @@
 
 G_BEGIN_DECLS
 
-#define UDSCS_TYPE_CONNECTION            (udscs_connection_get_type())
-#define UDSCS_CONNECTION(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), UDSCS_TYPE_CONNECTION, UdscsConnection))
-#define UDSCS_IS_CONNECTION(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), UDSCS_TYPE_CONNECTION))
-#define UDSCS_CONNECTION_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), UDSCS_TYPE_CONNECTION, UdscsConnectionClass))
-#define UDSCS_IS_CONNECTION_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), UDSCS_TYPE_CONNECTION))
-#define UDSCS_CONNECTION_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), UDSCS_TYPE_CONNECTION, UdscsConnectionClass))
-
-typedef struct udscs_connection     UdscsConnection;
-typedef struct UdscsConnectionClass UdscsConnectionClass;
-
-struct UdscsConnectionClass {
-    VDAgentConnectionClass parent_class;
-};
-
-GType udscs_connection_get_type(void);
+#define UDSCS_TYPE_CONNECTION udscs_connection_get_type()
+G_DECLARE_FINAL_TYPE(UdscsConnection, udscs_connection, UDSCS, CONNECTION, VDAgentConnection)
 
 /* ---------- Generic bits and client-side API ---------- */
 
-struct udscs_connection;
 struct udscs_message_header {
     uint32_t type;
     uint32_t arg1;
@@ -59,7 +45,7 @@ struct udscs_message_header {
  * received. The callback does not own the data buffer and should not free it.
  * The data buffer will be freed shortly after the read callback returns.
  */
-typedef void (*udscs_read_callback)(struct udscs_connection *connp,
+typedef void (*udscs_read_callback)(UdscsConnection *conn,
     struct udscs_message_header *header, uint8_t *data);
 
 /* Connect to the unix domain socket specified by socketname.
@@ -68,14 +54,14 @@ typedef void (*udscs_read_callback)(struct udscs_connection *connp,
  * If debug is true then the events on this connection will be traced.
  * This includes the incoming and outgoing message names.
  */
-struct udscs_connection *udscs_connect(const char *socketname,
+UdscsConnection *udscs_connect(const char *socketname,
     udscs_read_callback read_callback,
     VDAgentConnErrorCb error_cb,
     int debug);
 
 /* Queue a message for delivery to the client connected through conn.
  */
-void udscs_write(struct udscs_connection *conn, uint32_t type, uint32_t arg1,
+void udscs_write(UdscsConnection *conn, uint32_t type, uint32_t arg1,
         uint32_t arg2, const uint8_t *data, uint32_t size);
 
 #ifndef UDSCS_NO_SERVER
@@ -87,7 +73,7 @@ struct udscs_server;
 /* Callbacks with this type will be called when a new connection to a
  * server is accepted.
  */
-typedef void (*udscs_connect_callback)(struct udscs_connection *conn);
+typedef void (*udscs_connect_callback)(UdscsConnection *conn);
 
 /* Create a server for the given file descriptor. This allows us to use
  * pre-configured sockets for use with systemd socket activation, etc.
@@ -133,7 +119,7 @@ void udscs_server_write_all(struct udscs_server *server,
 /* Callback type for udscs_server_for_all_clients. Clients can be disconnected
  * from this callback just like with a read callback.
  */
-typedef int (*udscs_for_all_clients_callback)(struct udscs_connection *conn,
+typedef int (*udscs_for_all_clients_callback)(UdscsConnection *conn,
     void *priv);
 
 /* Call func for all clients connected to the server, passing through

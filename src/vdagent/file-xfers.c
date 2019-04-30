@@ -39,7 +39,7 @@
 
 struct vdagent_file_xfers {
     GHashTable *xfers;
-    struct udscs_connection *vdagentd;
+    UdscsConnection *vdagentd;
     char *save_dir;
     int open_save_dir;
     int debug;
@@ -76,7 +76,7 @@ static void vdagent_file_xfer_task_free(gpointer data)
 }
 
 struct vdagent_file_xfers *vdagent_file_xfers_create(
-    struct udscs_connection *vdagentd, const char *save_dir,
+    UdscsConnection *vdagentd, const char *save_dir,
     int open_save_dir, int debug)
 {
     struct vdagent_file_xfers *xfers;
@@ -373,7 +373,7 @@ void vdagent_file_xfers_data(struct vdagent_file_xfers *xfers,
     }
 }
 
-void vdagent_file_xfers_error_disabled(struct udscs_connection *vdagentd, uint32_t msg_id)
+void vdagent_file_xfers_error_disabled(UdscsConnection *vdagentd, uint32_t msg_id)
 {
     g_return_if_fail(vdagentd != NULL);
 

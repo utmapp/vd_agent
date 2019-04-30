@@ -76,7 +76,7 @@ static uint32_t *capabilities = NULL;
 static int capabilities_size = 0;
 static const char *active_session = NULL;
 static unsigned int session_count = 0;
-static struct udscs_connection *active_session_conn = NULL;
+static UdscsConnection *active_session_conn = NULL;
 static int agent_owns_clipboard[256] = { 0, };
 static int retval = 0;
 static int client_connected = 0;
@@ -354,7 +354,7 @@ static void do_client_file_xfer(struct vdagent_virtio_port *vport,
                                 uint8_t *data)
 {
     uint32_t msg_type, id;
-    struct udscs_connection *conn;
+    UdscsConnection *conn;
 
     switch (message_header->type) {
     case VD_AGENT_FILE_XFER_START: {
@@ -685,7 +685,7 @@ static void virtio_write_clipboard(uint8_t selection, uint32_t msg_type,
 }
 
 /* vdagentd <-> vdagent communication handling */
-static void do_agent_clipboard(struct udscs_connection *conn,
+static void do_agent_clipboard(UdscsConnection *conn,
         struct udscs_message_header *header, uint8_t *data)
 {
     uint8_t selection = header->arg1;
@@ -826,10 +826,10 @@ static void check_xorg_resolution(void)
     }
 }
 
-static int connection_matches_active_session(struct udscs_connection *conn,
+static int connection_matches_active_session(UdscsConnection *conn,
     void *priv)
 {
-    struct udscs_connection **conn_ret = (struct udscs_connection **)priv;
+    UdscsConnection **conn_ret = (UdscsConnection **)priv;
     struct agent_data *agent_data = g_object_get_data(G_OBJECT(conn), "agent_data");
 
     /* Check if this connection matches the currently active session */
@@ -855,7 +855,7 @@ static void release_clipboards(void)
     }
 }
 
-static void update_active_session_connection(struct udscs_connection *new_conn)
+static void update_active_session_connection(UdscsConnection *new_conn)
 {
     if (session_info) {
         new_conn = NULL;
@@ -916,7 +916,7 @@ static gboolean remove_active_xfers(gpointer key, gpointer value, gpointer conn)
         return 0;
 }
 
-static void agent_connect(struct udscs_connection *conn)
+static void agent_connect(UdscsConnection *conn)
 {
     struct agent_data *agent_data;
     agent_data = g_new0(struct agent_data, 1);
@@ -966,7 +966,7 @@ static void agent_disconnect(VDAgentConnection *conn, GError *err)
     update_active_session_connection(NULL);
 }
 
-static void do_agent_xorg_resolution(struct udscs_connection     *conn,
+static void do_agent_xorg_resolution(UdscsConnection             *conn,
                                      struct udscs_message_header *header,
                                      guint8                      *data)
 {
@@ -999,7 +999,7 @@ static void do_agent_xorg_resolution(struct udscs_connection     *conn,
     check_xorg_resolution();
 }
 
-static void do_agent_file_xfer_status(struct udscs_connection     *conn,
+static void do_agent_file_xfer_status(UdscsConnection             *conn,
                                       struct udscs_message_header *header,
                                       guint8                      *data)
 {
@@ -1027,7 +1027,7 @@ static void do_agent_file_xfer_status(struct udscs_connection     *conn,
         g_hash_table_remove(active_xfers, task_id);
 }
 
-static void agent_read_complete(struct udscs_connection *conn,
+static void agent_read_complete(UdscsConnection *conn,
     struct udscs_message_header *header, uint8_t *data)
 {
     switch (header->type) {

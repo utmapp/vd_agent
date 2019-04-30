@@ -29,8 +29,7 @@ G_DECLARE_FINAL_TYPE(VDAgentClipboards, vdagent_clipboards, VDAGENT, CLIPBOARDS,
 
 VDAgentClipboards *vdagent_clipboards_new(struct vdagent_x11 *x11);
 
-void vdagent_clipboards_set_conn(VDAgentClipboards *self,
-                                 struct udscs_connection *conn);
+void vdagent_clipboards_set_conn(VDAgentClipboards *self, UdscsConnection *conn);
 
 void vdagent_clipboard_request(VDAgentClipboards *c, guint sel_id, guint type);
 

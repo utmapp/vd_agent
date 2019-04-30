@@ -196,7 +196,7 @@ static gchar *vdagent_x11_get_wm_name(struct vdagent_x11 *x11)
 #endif
 }
 
-struct vdagent_x11 *vdagent_x11_create(struct udscs_connection *vdagentd,
+struct vdagent_x11 *vdagent_x11_create(UdscsConnection *vdagentd,
     int debug, int sync)
 {
     struct vdagent_x11 *x11;
