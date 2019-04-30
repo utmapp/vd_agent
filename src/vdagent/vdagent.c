@@ -172,10 +172,10 @@ static void vdagent_quit_loop(VDAgent *agent)
         g_main_loop_quit(agent->loop);
 }
 
-static void daemon_read_complete(struct udscs_connection **connp,
+static void daemon_read_complete(struct udscs_connection *conn,
     struct udscs_message_header *header, uint8_t *data)
 {
-    VDAgent *agent = udscs_get_user_data(*connp);
+    VDAgent *agent = g_object_get_data(G_OBJECT(conn), "agent");
 
     switch (header->type) {
     case VDAGENTD_MONITORS_CONFIG:
@@ -208,7 +208,7 @@ static void daemon_read_complete(struct udscs_connection **connp,
             vdagent_file_xfers_start(agent->xfers,
                                      (VDAgentFileXferStartMessage *)data);
         } else {
-            vdagent_file_xfers_error_disabled(*connp,
+            vdagent_file_xfers_error_disabled(conn,
                                               ((VDAgentFileXferStartMessage *)data)->id);
         }
         break;
@@ -217,7 +217,7 @@ static void daemon_read_complete(struct udscs_connection **connp,
             vdagent_file_xfers_status(agent->xfers,
                                       (VDAgentFileXferStatusMessage *)data);
         } else {
-            vdagent_file_xfers_error_disabled(*connp,
+            vdagent_file_xfers_error_disabled(conn,
                                               ((VDAgentFileXferStatusMessage *)data)->id);
         }
         break;
@@ -244,7 +244,7 @@ static void daemon_read_complete(struct udscs_connection **connp,
             vdagent_file_xfers_data(agent->xfers,
                                     (VDAgentFileXferDataMessage *)data);
         } else {
-            vdagent_file_xfers_error_disabled(*connp,
+            vdagent_file_xfers_error_disabled(conn,
                                               ((VDAgentFileXferDataMessage *)data)->id);
         }
         break;
@@ -263,10 +263,15 @@ static void daemon_read_complete(struct udscs_connection **connp,
     }
 }
 
-static void daemon_disconnect_cb(struct udscs_connection *conn)
+static void daemon_error_cb(VDAgentConnection *conn, GError *err)
 {
-    VDAgent *agent = udscs_get_user_data(conn);
-    agent->conn = NULL;
+    VDAgent *agent = g_object_get_data(G_OBJECT(conn), "agent");
+
+    if (err) {
+        syslog(LOG_ERR, "%s", err->message);
+        g_error_free(err);
+    }
+    g_clear_pointer(&agent->conn, vdagent_connection_destroy);
     vdagent_quit_loop(agent);
 }
 
@@ -365,7 +370,7 @@ static void vdagent_destroy(VDAgent *agent)
 {
     vdagent_finalize_file_xfer(agent);
     vdagent_x11_destroy(agent->x11, agent->conn == NULL);
-    udscs_destroy_connection(&agent->conn);
+    g_clear_pointer(&agent->conn, vdagent_connection_destroy);
 
     while (g_source_remove_by_user_data(agent))
         continue;
@@ -380,13 +385,13 @@ static gboolean vdagent_init_async_cb(gpointer user_data)
     VDAgent *agent = user_data;
 
     agent->conn = udscs_connect(vdagentd_socket,
-                                daemon_read_complete, daemon_disconnect_cb,
+                                daemon_read_complete, daemon_error_cb,
                                 debug);
     if (agent->conn == NULL) {
         g_timeout_add_seconds(1, vdagent_init_async_cb, agent);
         return G_SOURCE_REMOVE;
     }
-    udscs_set_user_data(agent->conn, agent);
+    g_object_set_data(G_OBJECT(agent->conn), "agent", agent);
 
     agent->x11 = vdagent_x11_create(agent->conn, debug, x11_sync);
     if (agent->x11 == NULL)
@@ -488,6 +493,9 @@ reconnect:
 
     vdagent_destroy(agent);
     agent = NULL;
+
+    /* allow the VDAgentConnection to finalize properly */
+    g_main_context_iteration(NULL, FALSE);
 
     if (!quit && do_daemonize)
         goto reconnect;

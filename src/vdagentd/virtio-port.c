@@ -20,27 +20,20 @@
 */
 #include <config.h>
 
-#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/select.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <glib.h>
+#include <gio/gio.h>
+#include <glib-unix.h>
 
+#include "vdagent-connection.h"
 #include "virtio-port.h"
 
 
 struct vdagent_virtio_port_buf {
     uint8_t *buf;
-    size_t pos;
     size_t size;
     size_t write_pos;
-
-    struct vdagent_virtio_port_buf *next;
 };
 
 /* Data to keep track of the assembling of vdagent messages per chunk port,
@@ -53,142 +46,131 @@ struct vdagent_virtio_port_chunk_port_data {
 };
 
 struct vdagent_virtio_port {
-    int fd;
-    int opening;
-    int is_uds;
-
-    /* Chunk read stuff, single buffer, separate header and data buffer */
-    int chunk_header_read;
-    int chunk_data_pos;
-    VDIChunkHeader chunk_header;
-    uint8_t chunk_data[VD_AGENT_MAX_DATA_SIZE];
+    VDAgentConnection parent_instance;
 
     /* Per chunk port data */
     struct vdagent_virtio_port_chunk_port_data port_data[VDP_END_PORT];
 
-    /* Writes are stored in a linked list of buffers, with both the header
-       + data for a single message in 1 buffer. */
-    struct vdagent_virtio_port_buf *write_buf;
+    struct vdagent_virtio_port_buf write_buf;
 
     /* Callbacks */
     vdagent_virtio_port_read_callback read_callback;
-    vdagent_virtio_port_disconnect_callback disconnect_callback;
+    VDAgentConnErrorCb error_cb;
 };
 
-static void vdagent_virtio_port_do_write(struct vdagent_virtio_port **vportp);
-static void vdagent_virtio_port_do_read(struct vdagent_virtio_port **vportp);
+G_DEFINE_TYPE(VirtioPort, virtio_port, VDAGENT_TYPE_CONNECTION)
+
+static void vdagent_virtio_port_do_chunk(VDAgentConnection *conn,
+                                         gpointer header_data,
+                                         gpointer chunk_data);
+
+static gsize conn_handle_header(VDAgentConnection *conn,
+                                gpointer header_buf)
+{
+    VirtioPort *self = VIRTIO_PORT(conn);
+    VDIChunkHeader *header = header_buf;
+    GError *err;
+
+    header->size = GUINT32_FROM_LE(header->size);
+    header->port = GUINT32_FROM_LE(header->port);
+
+    if (header->size > VD_AGENT_MAX_DATA_SIZE) {
+        err = g_error_new(G_IO_ERROR, G_IO_ERROR_FAILED,
+                          "chunk size %u too large", header->size);
+        self->error_cb(conn, err);
+        return 0;
+    }
+    if (header->port >= VDP_END_PORT) {
+        err = g_error_new(G_IO_ERROR, G_IO_ERROR_FAILED,
+                          "chunk port %u out of range", header->port);
+        self->error_cb(conn, err);
+        return 0;
+    }
+
+    return header->size;
+}
+
+static void virtio_port_init(VirtioPort *self)
+{
+}
+
+static void virtio_port_finalize(GObject *obj)
+{
+    VirtioPort *self = VIRTIO_PORT(obj);
+    guint i;
+
+    g_free(self->write_buf.buf);
+
+    for (i = 0; i < VDP_END_PORT; i++) {
+        g_free(self->port_data[i].message_data);
+    }
+
+    G_OBJECT_CLASS(virtio_port_parent_class)->finalize(obj);
+}
+
+static void virtio_port_class_init(VirtioPortClass *klass)
+{
+    GObjectClass *gobject_class = G_OBJECT_CLASS(klass);
+    VDAgentConnectionClass *conn_class = VDAGENT_CONNECTION_CLASS(klass);
+
+    gobject_class->finalize  = virtio_port_finalize;
+
+    conn_class->handle_header = conn_handle_header;
+    conn_class->handle_message = vdagent_virtio_port_do_chunk;
+}
 
 struct vdagent_virtio_port *vdagent_virtio_port_create(const char *portname,
     vdagent_virtio_port_read_callback read_callback,
-    vdagent_virtio_port_disconnect_callback disconnect_callback)
+    VDAgentConnErrorCb error_cb)
 {
     struct vdagent_virtio_port *vport;
-    struct sockaddr_un address;
-    int c;
+    GIOStream *io_stream;
+    GError *err = NULL;
 
-    vport = g_new0(struct vdagent_virtio_port, 1);
-
-    vport->fd = open(portname, O_RDWR);
-    if (vport->fd == -1) {
-        vport->fd = socket(PF_UNIX, SOCK_STREAM, 0);
-        if (vport->fd == -1) {
-            goto error;
+    io_stream = vdagent_file_open(portname, &err);
+    if (err) {
+        syslog(LOG_ERR, "%s: %s", __func__, err->message);
+        g_clear_error(&err);
+        io_stream = vdagent_socket_connect(portname, &err);
+        if (err) {
+            syslog(LOG_ERR, "%s: %s", __func__, err->message);
+            g_error_free(err);
+            return NULL;
         }
-        address.sun_family = AF_UNIX;
-        snprintf(address.sun_path, sizeof(address.sun_path), "%s", portname);
-        c = connect(vport->fd, (struct sockaddr *)&address, sizeof(address));
-        if (c == 0) {
-            vport->is_uds = 1;
-        } else {
-            goto error;
-        }
-    } else {
-        vport->is_uds = 0;
     }
-    vport->opening = 1;
+
+    vport = g_object_new(VIRTIO_TYPE_PORT, NULL);
+
+    /* When calling vdagent_connection_new(),
+     * @wait_on_opening MUST be set to TRUE:
+     *
+     * When we open the virtio serial port, the following happens:
+     * 1) The linux kernel virtio_console driver sends a
+     *    VIRTIO_CONSOLE_PORT_OPEN message to qemu
+     * 2) qemu's spicevmc chardev driver calls qemu_spice_add_interface to
+     *    register the agent chardev with the spice-server
+     * 3) spice-server then calls the spicevmc chardev driver's state
+     *    callback to let it know it is ready to receive data
+     * 4) The state callback sends a CHR_EVENT_OPENED to the virtio-console
+     *    chardev backend
+     * 5) The virtio-console chardev backend sends VIRTIO_CONSOLE_PORT_OPEN
+     *    to the linux kernel virtio_console driver
+     *
+     * Until steps 1 - 5 have completed the linux kernel virtio_console
+     * driver sees the virtio serial port as being in a disconnected state
+     * and read will return 0 ! So if we blindly assume that a read 0 means
+     * that the channel is closed we will hit a race here.
+     */
+    vdagent_connection_setup(VDAGENT_CONNECTION(vport),
+                             io_stream,
+                             TRUE,
+                             sizeof(VDIChunkHeader),
+                             error_cb);
 
     vport->read_callback = read_callback;
-    vport->disconnect_callback = disconnect_callback;
+    vport->error_cb = error_cb;
 
     return vport;
-
-error:
-    syslog(LOG_ERR, "open %s: %m", portname);
-    if (vport->fd != -1) {
-        close(vport->fd);
-    }
-    g_free(vport);
-    return NULL;
-}
-
-void vdagent_virtio_port_destroy(struct vdagent_virtio_port **vportp)
-{
-    struct vdagent_virtio_port_buf *wbuf, *next_wbuf;
-    struct vdagent_virtio_port *vport = *vportp;
-    int i;
-
-    if (!vport)
-        return;
-
-    if (vport->disconnect_callback)
-        vport->disconnect_callback(vport);
-
-    wbuf = vport->write_buf;
-    while (wbuf) {
-        next_wbuf = wbuf->next;
-        g_free(wbuf->buf);
-        g_free(wbuf);
-        wbuf = next_wbuf;
-    }
-
-    for (i = 0; i < VDP_END_PORT; i++) {
-        g_free(vport->port_data[i].message_data);
-    }
-
-    close(vport->fd);
-    g_free(vport);
-    *vportp = NULL;
-}
-
-int vdagent_virtio_port_fill_fds(struct vdagent_virtio_port *vport,
-        fd_set *readfds, fd_set *writefds)
-{
-    if (!vport)
-        return -1;
-
-    FD_SET(vport->fd, readfds);
-    if (vport->write_buf)
-        FD_SET(vport->fd, writefds);
-
-    return vport->fd + 1;
-}
-
-void vdagent_virtio_port_handle_fds(struct vdagent_virtio_port **vportp,
-        fd_set *readfds, fd_set *writefds)
-{
-    if (*vportp && FD_ISSET((*vportp)->fd, readfds)) {
-        vdagent_virtio_port_do_read(vportp);
-    }
-
-    /* *vportp may have been destroyed in do_read */
-    if (*vportp && FD_ISSET((*vportp)->fd, writefds)) {
-        vdagent_virtio_port_do_write(vportp);
-    }
-}
-
-static struct vdagent_virtio_port_buf* vdagent_virtio_port_get_last_wbuf(
-    struct vdagent_virtio_port *vport)
-{
-    struct vdagent_virtio_port_buf *wbuf;
-
-    wbuf = vport->write_buf;
-    if (!wbuf)
-        return NULL;
-
-    while (wbuf->next)
-        wbuf = wbuf->next;
-
-    return wbuf;
 }
 
 void vdagent_virtio_port_write_start(
@@ -198,15 +180,15 @@ void vdagent_virtio_port_write_start(
         uint32_t message_opaque,
         uint32_t data_size)
 {
-    struct vdagent_virtio_port_buf *wbuf, *new_wbuf;
+    struct vdagent_virtio_port_buf *new_wbuf;
     VDIChunkHeader *chunk_header;
     VDAgentMessage *message_header;
 
-    new_wbuf = g_new(struct vdagent_virtio_port_buf, 1);
-    new_wbuf->pos = 0;
+    g_return_if_fail(vport->write_buf.buf == NULL);
+
+    new_wbuf = &vport->write_buf;
     new_wbuf->write_pos = 0;
     new_wbuf->size = sizeof(*chunk_header) + sizeof(*message_header) + data_size;
-    new_wbuf->next = NULL;
     new_wbuf->buf = g_malloc(new_wbuf->size);
 
     chunk_header = (VDIChunkHeader *) (new_wbuf->buf + new_wbuf->write_pos);
@@ -220,14 +202,6 @@ void vdagent_virtio_port_write_start(
     message_header->opaque = GUINT64_TO_LE(message_opaque);
     message_header->size = GUINT32_TO_LE(data_size);
     new_wbuf->write_pos += sizeof(*message_header);
-
-    if (!vport->write_buf) {
-        vport->write_buf = new_wbuf;
-        return;
-    }
-
-    wbuf = vdagent_virtio_port_get_last_wbuf(vport);
-    wbuf->next = new_wbuf;
 }
 
 int vdagent_virtio_port_write_append(struct vdagent_virtio_port *vport,
@@ -235,8 +209,12 @@ int vdagent_virtio_port_write_append(struct vdagent_virtio_port *vport,
 {
     struct vdagent_virtio_port_buf *wbuf;
 
-    wbuf = vdagent_virtio_port_get_last_wbuf(vport);
-    if (!wbuf) {
+    if (size == 0) {
+        return 0;
+    }
+
+    wbuf = &vport->write_buf;
+    if (!wbuf->buf) {
         syslog(LOG_ERR, "can't append without a buffer");
         return -1;
     }
@@ -248,6 +226,11 @@ int vdagent_virtio_port_write_append(struct vdagent_virtio_port *vport,
 
     memcpy(wbuf->buf + wbuf->write_pos, data, size);
     wbuf->write_pos += size;
+
+    if (wbuf->write_pos == wbuf->size) {
+        vdagent_connection_write(VDAGENT_CONNECTION(vport), wbuf->buf, wbuf->size);
+        wbuf->buf = NULL;
+    }
     return 0;
 }
 
@@ -264,12 +247,6 @@ void vdagent_virtio_port_write(
     vdagent_virtio_port_write_append(vport, data, data_size);
 }
 
-void vdagent_virtio_port_flush(struct vdagent_virtio_port **vportp)
-{
-    while (*vportp && (*vportp)->write_buf)
-        vdagent_virtio_port_do_write(vportp);
-}
-
 void vdagent_virtio_port_reset(struct vdagent_virtio_port *vport, int port)
 {
     if (port >= VDP_END_PORT) {
@@ -280,20 +257,23 @@ void vdagent_virtio_port_reset(struct vdagent_virtio_port *vport, int port)
     memset(&vport->port_data[port], 0, sizeof(vport->port_data[0]));
 }
 
-static void vdagent_virtio_port_do_chunk(struct vdagent_virtio_port **vportp)
+static void vdagent_virtio_port_do_chunk(VDAgentConnection *conn,
+                                         gpointer header_data,
+                                         gpointer chunk_data)
 {
     int avail, read, pos = 0;
-    struct vdagent_virtio_port *vport = *vportp;
+    struct vdagent_virtio_port *vport = VIRTIO_PORT(conn);
+    VDIChunkHeader *chunk_header = header_data;
     struct vdagent_virtio_port_chunk_port_data *port =
-        &vport->port_data[vport->chunk_header.port];
+        &vport->port_data[chunk_header->port];
 
     if (port->message_header_read < sizeof(port->message_header)) {
         read = sizeof(port->message_header) - port->message_header_read;
-        if (read > vport->chunk_header.size) {
-            read = vport->chunk_header.size;
+        if (read > chunk_header->size) {
+            read = chunk_header->size;
         }
         memcpy((uint8_t *)&port->message_header + port->message_header_read,
-               vport->chunk_data, read);
+               chunk_data, read);
         port->message_header_read += read;
         if (port->message_header_read == sizeof(port->message_header)) {
 
@@ -311,11 +291,12 @@ static void vdagent_virtio_port_do_chunk(struct vdagent_virtio_port **vportp)
 
     if (port->message_header_read == sizeof(port->message_header)) {
         read  = port->message_header.size - port->message_data_pos;
-        avail = vport->chunk_header.size - pos;
+        avail = chunk_header->size - pos;
 
         if (avail > read) {
-            syslog(LOG_ERR, "chunk larger than message, lost sync?");
-            vdagent_virtio_port_destroy(vportp);
+            GError *err = g_error_new(G_IO_ERROR, G_IO_ERROR_FAILED,
+                                      "chunk larger than message, lost sync?");
+            vport->error_cb(VDAGENT_CONNECTION(vport), err);
             return;
         }
 
@@ -324,159 +305,18 @@ static void vdagent_virtio_port_do_chunk(struct vdagent_virtio_port **vportp)
 
         if (read) {
             memcpy(port->message_data + port->message_data_pos,
-                   vport->chunk_data + pos, read);
+                   chunk_data + pos, read);
             port->message_data_pos += read;
         }
 
         if (port->message_data_pos == port->message_header.size) {
             if (vport->read_callback) {
-                int r = vport->read_callback(vport, vport->chunk_header.port,
-                                 &port->message_header, port->message_data);
-                if (r == -1) {
-                    vdagent_virtio_port_destroy(vportp);
-                    return;
-                }
+                vport->read_callback(vport, chunk_header->port,
+                                     &port->message_header, port->message_data);
             }
             port->message_header_read = 0;
             port->message_data_pos = 0;
             g_clear_pointer(&port->message_data, g_free);
         }
-    }
-}
-
-static int vport_read(struct vdagent_virtio_port *vport, uint8_t *buf, int len)
-{
-    if (vport->is_uds) {
-        return recv(vport->fd, buf, len, 0);
-    } else {
-        return read(vport->fd, buf, len);
-    }
-}
-
-static void vdagent_virtio_port_do_read(struct vdagent_virtio_port **vportp)
-{
-    ssize_t n;
-    size_t to_read;
-    uint8_t *dest;
-    struct vdagent_virtio_port *vport = *vportp;
-
-    if (vport->chunk_header_read < sizeof(vport->chunk_header)) {
-        to_read = sizeof(vport->chunk_header) - vport->chunk_header_read;
-        dest = (uint8_t *)&vport->chunk_header + vport->chunk_header_read;
-    } else {
-        to_read = vport->chunk_header.size - vport->chunk_data_pos;
-        dest = vport->chunk_data + vport->chunk_data_pos;
-    }
-
-    n = vport_read(vport, dest, to_read);
-    if (n < 0) {
-        if (errno == EINTR)
-            return;
-        syslog(LOG_ERR, "reading from vdagent virtio port: %m");
-    }
-    if (n == 0 && vport->opening) {
-        /* When we open the virtio serial port, the following happens:
-           1) The linux kernel virtio_console driver sends a
-              VIRTIO_CONSOLE_PORT_OPEN message to qemu
-           2) qemu's spicevmc chardev driver calls qemu_spice_add_interface to
-              register the agent chardev with the spice-server
-           3) spice-server then calls the spicevmc chardev driver's state
-              callback to let it know it is ready to receive data
-           4) The state callback sends a CHR_EVENT_OPENED to the virtio-console
-              chardev backend
-           5) The virtio-console chardev backend sends VIRTIO_CONSOLE_PORT_OPEN
-              to the linux kernel virtio_console driver
-
-           Until steps 1 - 5 have completed the linux kernel virtio_console
-           driver sees the virtio serial port as being in a disconnected state
-           and read will return 0 ! So if we blindly assume that a read 0 means
-           that the channel is closed we will hit a race here.
-
-           Therefore we ignore read returning 0 until we've successfully read
-           or written some data. If we hit this race we also sleep a bit here
-           to avoid busy waiting until the above steps complete */
-        usleep(10000);
-        return;
-    }
-    if (n <= 0) {
-        vdagent_virtio_port_destroy(vportp);
-        return;
-    }
-    vport->opening = 0;
-
-    if (vport->chunk_header_read < sizeof(vport->chunk_header)) {
-        vport->chunk_header_read += n;
-        if (vport->chunk_header_read == sizeof(vport->chunk_header)) {
-            vport->chunk_header.size = GUINT32_FROM_LE(vport->chunk_header.size);
-            vport->chunk_header.port = GUINT32_FROM_LE(vport->chunk_header.port);
-            if (vport->chunk_header.size > VD_AGENT_MAX_DATA_SIZE) {
-                syslog(LOG_ERR, "chunk size %u too large",
-                       vport->chunk_header.size);
-                vdagent_virtio_port_destroy(vportp);
-                return;
-            }
-            if (vport->chunk_header.port >= VDP_END_PORT) {
-                syslog(LOG_ERR, "chunk port %u out of range",
-                       vport->chunk_header.port);
-                vdagent_virtio_port_destroy(vportp);
-                return;
-            }
-        }
-    } else {
-        vport->chunk_data_pos += n;
-        if (vport->chunk_data_pos == vport->chunk_header.size) {
-            vdagent_virtio_port_do_chunk(vportp);
-            // coverity[check_after_deref] previous function can change *vportd
-            if (!*vportp)
-                return;
-            vport->chunk_header_read = 0;
-            vport->chunk_data_pos = 0;
-        }
-    }
-}
-
-static int vport_write(struct vdagent_virtio_port *vport, uint8_t *buf, int len)
-{
-    if (vport->is_uds) {
-        return send(vport->fd, buf, len, 0);
-    } else {
-        return write(vport->fd, buf, len);
-    }
-}
-
-static void vdagent_virtio_port_do_write(struct vdagent_virtio_port **vportp)
-{
-    ssize_t n;
-    size_t to_write;
-    struct vdagent_virtio_port *vport = *vportp;
-
-    struct vdagent_virtio_port_buf* wbuf = vport->write_buf;
-    if (!wbuf) {
-        syslog(LOG_ERR, "do_write called on a port without a write buf ?!");
-        return;
-    }
-
-    if (wbuf->write_pos != wbuf->size) {
-        syslog(LOG_ERR, "do_write: buffer is incomplete!!");
-        return;
-    }
-
-    to_write = wbuf->size - wbuf->pos;
-    n = vport_write(vport, wbuf->buf + wbuf->pos, to_write);
-    if (n < 0) {
-        if (errno == EINTR)
-            return;
-        syslog(LOG_ERR, "writing to vdagent virtio port: %m");
-        vdagent_virtio_port_destroy(vportp);
-        return;
-    }
-    if (n > 0)
-        vport->opening = 0;
-
-    wbuf->pos += n;
-    if (wbuf->pos == wbuf->size) {
-        vport->write_buf = wbuf->next;
-        g_free(wbuf->buf);
-        g_free(wbuf);
     }
 }

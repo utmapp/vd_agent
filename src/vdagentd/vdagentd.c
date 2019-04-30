@@ -29,10 +29,9 @@
 #include <errno.h>
 #include <signal.h>
 #include <syslog.h>
-#include <sys/select.h>
 #include <sys/stat.h>
 #include <spice/vd_agent.h>
-#include <glib.h>
+#include <glib-unix.h>
 
 #ifdef WITH_SYSTEMD_SOCKET_ACTIVATION
 #include <systemd/sd-daemon.h>
@@ -79,11 +78,18 @@ static const char *active_session = NULL;
 static unsigned int session_count = 0;
 static struct udscs_connection *active_session_conn = NULL;
 static int agent_owns_clipboard[256] = { 0, };
-static int quit = 0;
 static int retval = 0;
 static int client_connected = 0;
 static int max_clipboard = -1;
 static uint32_t clipboard_serial[256];
+
+static GMainLoop *loop;
+
+static void vdagentd_quit(gint exit_code)
+{
+    retval = exit_code;
+    g_main_loop_quit(loop);
+}
 
 /* utility functions */
 static void virtio_msg_uint32_to_le(uint8_t *_msg, uint32_t size, uint32_t offset)
@@ -158,9 +164,9 @@ void do_client_mouse(struct vdagentd_uinput **uinputp, VDAgentMouseState *mouse)
     vdagentd_uinput_do_mouse(uinputp, mouse);
     if (!*uinputp) {
         /* Try to re-open the tablet */
-        struct agent_data *agent_data =
-            udscs_get_user_data(active_session_conn);
-        if (agent_data)
+        if (active_session_conn) {
+            struct agent_data *agent_data =
+            g_object_get_data(G_OBJECT(active_session_conn), "agent_data");
             *uinputp = vdagentd_uinput_create(uinput_device,
                                               agent_data->width,
                                               agent_data->height,
@@ -168,10 +174,10 @@ void do_client_mouse(struct vdagentd_uinput **uinputp, VDAgentMouseState *mouse)
                                               agent_data->screen_count,
                                               debug > 1,
                                               uinput_fake);
+        }
         if (!*uinputp) {
             syslog(LOG_CRIT, "Fatal uinput error");
-            retval = 1;
-            quit = 1;
+            vdagentd_quit(1);
         }
     }
 }
@@ -545,14 +551,14 @@ static gboolean vdagent_message_check_size(const VDAgentMessage *message_header)
 
 static VDAgentGraphicsDeviceInfo *device_info = NULL;
 static size_t device_info_size = 0;
-static int virtio_port_read_complete(
+static void virtio_port_read_complete(
         struct vdagent_virtio_port *vport,
         int port_nr,
         VDAgentMessage *message_header,
         uint8_t *data)
 {
     if (!vdagent_message_check_size(message_header))
-        return 0;
+        return;
 
     switch (message_header->type) {
     case VD_AGENT_MOUSE_STATE:
@@ -614,8 +620,26 @@ static int virtio_port_read_complete(
     default:
         g_warn_if_reached();
     }
+}
 
-    return 0;
+static void virtio_port_error_cb(VDAgentConnection *conn, GError *err)
+{
+    gboolean old_client_connected = client_connected;
+    syslog(LOG_CRIT, "AIIEEE lost spice client connection, reconnecting (err: %s)",
+                     err ? err->message : "");
+    g_clear_error(&err);
+
+    vdagent_connection_destroy(virtio_port);
+    virtio_port = vdagent_virtio_port_create(portdev,
+                                             virtio_port_read_complete,
+                                             virtio_port_error_cb);
+    if (virtio_port == NULL) {
+        syslog(LOG_CRIT, "Fatal error opening vdagent virtio channel");
+        vdagentd_quit(1);
+        return;
+    }
+    do_client_disconnect();
+    client_connected = old_client_connected;
 }
 
 static void virtio_write_clipboard(uint8_t selection, uint32_t msg_type,
@@ -661,7 +685,7 @@ static void virtio_write_clipboard(uint8_t selection, uint32_t msg_type,
 }
 
 /* vdagentd <-> vdagent communication handling */
-static int do_agent_clipboard(struct udscs_connection *conn,
+static void do_agent_clipboard(struct udscs_connection *conn,
         struct udscs_message_header *header, uint8_t *data)
 {
     uint8_t selection = header->arg1;
@@ -707,7 +731,7 @@ static int do_agent_clipboard(struct udscs_connection *conn,
             syslog(LOG_WARNING, "clipboard is too large (%d > %d), discarding",
                    size, max_clipboard);
             virtio_write_clipboard(selection, msg_type, data_type, NULL, 0);
-            return 0;
+            return;
         }
         break;
     case VDAGENTD_CLIPBOARD_RELEASE:
@@ -723,12 +747,13 @@ static int do_agent_clipboard(struct udscs_connection *conn,
     if (size != header->size) {
         syslog(LOG_ERR,
                "unexpected extra data in clipboard msg, disconnecting agent");
-        return -1;
+        udscs_server_destroy_connection(server, conn);
+        return;
     }
 
     virtio_write_clipboard(selection, msg_type, data_type, data, header->size);
 
-    return 0;
+    return;
 
 error:
     if (header->type == VDAGENTD_CLIPBOARD_REQUEST) {
@@ -736,7 +761,6 @@ error:
         udscs_write(conn, VDAGENTD_CLIPBOARD_DATA,
                     selection, VD_AGENT_CLIPBOARD_NONE, NULL, 0);
     }
-    return 0;
 }
 
 /* When we open the vdagent virtio channel, the server automatically goes into
@@ -748,7 +772,9 @@ error:
    closes both. */
 static void check_xorg_resolution(void)
 {
-    struct agent_data *agent_data = udscs_get_user_data(active_session_conn);
+    struct agent_data *agent_data = NULL;
+    if (active_session_conn)
+        agent_data = g_object_get_data(G_OBJECT(active_session_conn), "agent_data");
 
     if (agent_data && agent_data->screen_info) {
         if (!uinput)
@@ -767,8 +793,7 @@ static void check_xorg_resolution(void)
                                         agent_data->screen_count);
         if (!uinput) {
             syslog(LOG_CRIT, "Fatal uinput error");
-            retval = 1;
-            quit = 1;
+            vdagentd_quit(1);
             return;
         }
 
@@ -776,11 +801,10 @@ static void check_xorg_resolution(void)
             syslog(LOG_INFO, "opening vdagent virtio channel");
             virtio_port = vdagent_virtio_port_create(portdev,
                                                      virtio_port_read_complete,
-                                                     NULL);
+                                                     virtio_port_error_cb);
             if (!virtio_port) {
                 syslog(LOG_CRIT, "Fatal error opening vdagent virtio channel");
-                retval = 1;
-                quit = 1;
+                vdagentd_quit(1);
                 return;
             }
             send_capabilities(virtio_port, 1);
@@ -790,18 +814,23 @@ static void check_xorg_resolution(void)
         vdagentd_uinput_destroy(&uinput);
 #endif
         if (virtio_port) {
-            vdagent_virtio_port_flush(&virtio_port);
-            vdagent_virtio_port_destroy(&virtio_port);
+            if (only_once) {
+                syslog(LOG_INFO, "Exiting after one client session.");
+                vdagentd_quit(0);
+                return;
+            }
+            vdagent_connection_flush(VDAGENT_CONNECTION(virtio_port));
+            g_clear_pointer(&virtio_port, vdagent_connection_destroy);
             syslog(LOG_INFO, "closed vdagent virtio channel");
         }
     }
 }
 
-static int connection_matches_active_session(struct udscs_connection **connp,
+static int connection_matches_active_session(struct udscs_connection *conn,
     void *priv)
 {
     struct udscs_connection **conn_ret = (struct udscs_connection **)priv;
-    struct agent_data *agent_data = udscs_get_user_data(*connp);
+    struct agent_data *agent_data = g_object_get_data(G_OBJECT(conn), "agent_data");
 
     /* Check if this connection matches the currently active session */
     if (!agent_data->session || !active_session)
@@ -809,7 +838,7 @@ static int connection_matches_active_session(struct udscs_connection **connp,
     if (strcmp(agent_data->session, active_session))
         return 0;
 
-    *conn_ret = *connp;
+    *conn_ret = conn;
     return 1;
 }
 
@@ -891,13 +920,24 @@ static void agent_connect(struct udscs_connection *conn)
 {
     struct agent_data *agent_data;
     agent_data = g_new0(struct agent_data, 1);
+    GError *err = NULL;
+    gint pid;
 
     if (session_info) {
-        uint32_t pid = udscs_get_peer_pid(conn);
+        pid = vdagent_connection_get_peer_pid(VDAGENT_CONNECTION(conn), &err);
+        if (err) {
+            syslog(LOG_ERR, "Could not get peer PID, disconnecting new client: %s",
+                            err->message);
+            g_error_free(err);
+            g_free(agent_data);
+            udscs_server_destroy_connection(server, conn);
+            return;
+        }
+
         agent_data->session = session_info_session_for_pid(session_info, pid);
     }
 
-    udscs_set_user_data(conn, (void *)agent_data);
+    g_object_set_data(G_OBJECT(conn), "agent_data", agent_data);
     udscs_write(conn, VDAGENTD_VERSION, 0, 0,
                 (uint8_t *)VERSION, strlen(VERSION) + 1);
     update_active_session_connection(conn);
@@ -908,24 +948,29 @@ static void agent_connect(struct udscs_connection *conn)
     }
 }
 
-static void agent_disconnect(struct udscs_connection *conn)
+static void agent_disconnect(VDAgentConnection *conn, GError *err)
 {
-    struct agent_data *agent_data = udscs_get_user_data(conn);
+    struct agent_data *agent_data = g_object_get_data(G_OBJECT(conn), "agent_data");
 
     g_hash_table_foreach_remove(active_xfers, remove_active_xfers, conn);
 
     g_clear_pointer(&agent_data->session, g_free);
-    update_active_session_connection(NULL);
-
     g_free(agent_data->screen_info);
     g_free(agent_data);
+    if (err) {
+        syslog(LOG_ERR, "%s", err->message);
+        g_error_free(err);
+    }
+    udscs_server_destroy_connection(server, UDSCS_CONNECTION(conn));
+
+    update_active_session_connection(NULL);
 }
 
-static void do_agent_xorg_resolution(struct udscs_connection    **connp,
+static void do_agent_xorg_resolution(struct udscs_connection     *conn,
                                      struct udscs_message_header *header,
                                      guint8                      *data)
 {
-    struct agent_data *agent_data = udscs_get_user_data(*connp);
+    struct agent_data *agent_data = g_object_get_data(G_OBJECT(conn), "agent_data");
     guint res_size = sizeof(struct vdagentd_guest_xorg_resolution);
     guint n = header->size / res_size;
 
@@ -941,7 +986,7 @@ static void do_agent_xorg_resolution(struct udscs_connection    **connp,
     if (header->size != n * res_size) {
         syslog(LOG_ERR, "guest xorg resolution message has wrong size, "
                         "disconnecting agent");
-        udscs_destroy_connection(connp);
+        udscs_server_destroy_connection(server, conn);
         return;
     }
 
@@ -954,7 +999,7 @@ static void do_agent_xorg_resolution(struct udscs_connection    **connp,
     check_xorg_resolution();
 }
 
-static void do_agent_file_xfer_status(struct udscs_connection    **connp,
+static void do_agent_file_xfer_status(struct udscs_connection     *conn,
                                       struct udscs_message_header *header,
                                       guint8                      *data)
 {
@@ -977,35 +1022,41 @@ static void do_agent_file_xfer_status(struct udscs_connection    **connp,
                           data, data_size);
 
     if (header->arg2 == VD_AGENT_FILE_XFER_STATUS_CAN_SEND_DATA)
-        g_hash_table_insert(active_xfers, task_id, *connp);
+        g_hash_table_insert(active_xfers, task_id, conn);
     else
         g_hash_table_remove(active_xfers, task_id);
 }
 
-static void agent_read_complete(struct udscs_connection **connp,
+static void agent_read_complete(struct udscs_connection *conn,
     struct udscs_message_header *header, uint8_t *data)
 {
     switch (header->type) {
     case VDAGENTD_GUEST_XORG_RESOLUTION:
-        do_agent_xorg_resolution(connp, header, data);
+        do_agent_xorg_resolution(conn, header, data);
         break;
     case VDAGENTD_CLIPBOARD_GRAB:
     case VDAGENTD_CLIPBOARD_REQUEST:
     case VDAGENTD_CLIPBOARD_DATA:
     case VDAGENTD_CLIPBOARD_RELEASE:
-        if (do_agent_clipboard(*connp, header, data)) {
-            udscs_destroy_connection(connp);
-            return;
-        }
+        do_agent_clipboard(conn, header, data);
         break;
     case VDAGENTD_FILE_XFER_STATUS:
-        do_agent_file_xfer_status(connp, header, data);
+        do_agent_file_xfer_status(conn, header, data);
         break;
 
     default:
         syslog(LOG_ERR, "unknown message from vdagent: %u, ignoring",
                header->type);
     }
+}
+
+static gboolean si_io_channel_cb(GIOChannel  *source,
+                                 GIOCondition condition,
+                                 gpointer     data)
+{
+    active_session = session_info_get_active_session(session_info);
+    update_active_session_connection(NULL);
+    return G_SOURCE_CONTINUE;
 }
 
 /* main */
@@ -1049,76 +1100,10 @@ static void daemonize(void)
     }
 }
 
-static void main_loop(void)
+static gboolean signal_handler(gpointer user_data)
 {
-    fd_set readfds, writefds;
-    int n, nfds;
-    int ck_fd = 0;
-    int once = 0;
-
-    while (!quit) {
-        FD_ZERO(&readfds);
-        FD_ZERO(&writefds);
-
-        nfds = udscs_server_fill_fds(server, &readfds, &writefds);
-        n = vdagent_virtio_port_fill_fds(virtio_port, &readfds, &writefds);
-        if (n >= nfds)
-            nfds = n + 1;
-
-        if (session_info) {
-            ck_fd = session_info_get_fd(session_info);
-            FD_SET(ck_fd, &readfds);
-            if (ck_fd >= nfds)
-                nfds = ck_fd + 1;
-        }
-
-        n = select(nfds, &readfds, &writefds, NULL, NULL);
-        if (n == -1) {
-            if (errno == EINTR)
-                continue;
-            syslog(LOG_CRIT, "Fatal error select: %m");
-            retval = 1;
-            break;
-        }
-
-        udscs_server_handle_fds(server, &readfds, &writefds);
-
-        if (virtio_port) {
-            once = 1;
-            vdagent_virtio_port_handle_fds(&virtio_port, &readfds, &writefds);
-            if (!virtio_port) {
-                int old_client_connected = client_connected;
-                syslog(LOG_CRIT,
-                       "AIIEEE lost spice client connection, reconnecting");
-                virtio_port = vdagent_virtio_port_create(portdev,
-                                                     virtio_port_read_complete,
-                                                     NULL);
-                if (!virtio_port) {
-                    syslog(LOG_CRIT,
-                           "Fatal error opening vdagent virtio channel");
-                    retval = 1;
-                    break;
-                }
-                do_client_disconnect();
-                client_connected = old_client_connected;
-            }
-        }
-        else if (only_once && once)
-        {
-            syslog(LOG_INFO, "Exiting after one client session.");
-            break;
-        }
-
-        if (session_info && FD_ISSET(ck_fd, &readfds)) {
-            active_session = session_info_get_active_session(session_info);
-            update_active_session_connection(NULL);
-        }
-    }
-}
-
-static void quit_handler(int sig)
-{
-    quit = 1;
+    vdagentd_quit(0);
+    return G_SOURCE_REMOVE;
 }
 
 static gboolean parse_debug_level_cb(const gchar *option_name,
@@ -1172,8 +1157,9 @@ int main(int argc, char *argv[])
 {
     GOptionContext *context;
     GError *err = NULL;
-    struct sigaction act;
     gboolean own_socket = TRUE;
+    GIOChannel *si_io_channel = NULL;
+    guint si_watch_id = 0;
 
     context = g_option_context_new(NULL);
     g_option_context_add_main_entries(context, cmd_entries, NULL);
@@ -1198,13 +1184,9 @@ int main(int argc, char *argv[])
         uinput_device = g_strdup(DEFAULT_UINPUT_DEVICE);
     }
 
-    memset(&act, 0, sizeof(act));
-    act.sa_flags = SA_RESTART;
-    act.sa_handler = quit_handler;
-    sigaction(SIGINT, &act, NULL);
-    sigaction(SIGHUP, &act, NULL);
-    sigaction(SIGTERM, &act, NULL);
-    sigaction(SIGQUIT, &act, NULL);
+    g_unix_signal_add(SIGINT, signal_handler, NULL);
+    g_unix_signal_add(SIGHUP, signal_handler, NULL);
+    g_unix_signal_add(SIGTERM, signal_handler, NULL);
 
     openlog("spice-vdagentd", do_daemonize ? 0 : LOG_PERROR, LOG_USER);
 
@@ -1236,7 +1218,7 @@ int main(int argc, char *argv[])
             syslog(LOG_CRIT, "Fatal the server socket %s exists already. Delete it?",
                    vdagentd_socket);
         } else {
-            syslog(LOG_CRIT, "Fatal could not create the server socket %s: %m",
+            syslog(LOG_CRIT, "Fatal could not create the server socket %s",
                    vdagentd_socket);
         }
         return 1;
@@ -1266,19 +1248,36 @@ int main(int argc, char *argv[])
 
     if (want_session_info)
         session_info = session_info_create(debug);
-    if (!session_info)
+    if (session_info) {
+        si_io_channel = g_io_channel_unix_new(session_info_get_fd(session_info));
+        si_watch_id = g_io_add_watch(si_io_channel, G_IO_IN, si_io_channel_cb, NULL);
+        g_io_channel_unref(si_io_channel);
+    } else {
         syslog(LOG_WARNING, "no session info, max 1 session agent allowed");
+    }
 
     active_xfers = g_hash_table_new(g_direct_hash, g_direct_equal);
-    main_loop();
+
+    loop = g_main_loop_new(NULL, FALSE);
+    g_main_loop_run(loop);
 
     release_clipboards();
 
     vdagentd_uinput_destroy(&uinput);
-    vdagent_virtio_port_flush(&virtio_port);
-    vdagent_virtio_port_destroy(&virtio_port);
-    session_info_destroy(session_info);
-    udscs_destroy_server(server);
+    if (si_watch_id > 0) {
+        g_source_remove(si_watch_id);
+    }
+    g_clear_pointer(&session_info, session_info_destroy);
+    g_clear_pointer(&server, udscs_destroy_server);
+    if (virtio_port) {
+        vdagent_connection_flush(VDAGENT_CONNECTION(virtio_port));
+        g_clear_pointer(&virtio_port, vdagent_connection_destroy);
+    }
+
+    /* allow the VDAgentConnection(s) to finalize properly */
+    g_main_context_iteration(NULL, FALSE);
+
+    g_main_loop_unref(loop);
 
     /* leave the socket around if it was provided by systemd */
     if (own_socket) {

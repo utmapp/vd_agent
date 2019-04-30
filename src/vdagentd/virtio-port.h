@@ -22,58 +22,43 @@
 #ifndef __VIRTIO_PORT_H
 #define __VIRTIO_PORT_H
 
-#include <stdio.h>
 #include <stdint.h>
-#include <sys/select.h>
 #include <spice/vd_agent.h>
+#include <glib-object.h>
+#include "vdagent-connection.h"
+
+G_BEGIN_DECLS
+
+#define VIRTIO_TYPE_PORT            (virtio_port_get_type())
+#define VIRTIO_PORT(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), VIRTIO_TYPE_PORT, VirtioPort))
+#define VIRTIO_IS_PORT(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), VIRTIO_TYPE_PORT))
+#define VIRTIO_PORT_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), VIRTIO_TYPE_PORT, VirtioPortClass))
+#define VIRTIO_IS_PORT_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), VIRTIO_TYPE_PORT))
+#define VIRTIO_PORT_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), VIRTIO_TYPE_PORT, VirtioPortClass))
+
+typedef struct vdagent_virtio_port VirtioPort;
+typedef struct VirtioPortClass VirtioPortClass;
+
+struct VirtioPortClass {
+    VDAgentConnectionClass parent_class;
+};
+
+GType virtio_port_get_type(void);
 
 struct vdagent_virtio_port;
 
 /* Callbacks with this type will be called when a complete message has been
-   received. Sometimes the callback may want to close the port, in this
-   case do *not* call vdagent_virtio_port_destroy from the callback. The desire
-   to close the port can be indicated be returning -1 from the callback,
-   in other cases return 0. */
-typedef int (*vdagent_virtio_port_read_callback)(
+   received. */
+typedef void (*vdagent_virtio_port_read_callback)(
     struct vdagent_virtio_port *vport,
     int port_nr,
     VDAgentMessage *message_header,
     uint8_t *data);
 
-/* Callbacks with this type will be called when the port is disconnected.
-   Note:
-   1) vdagent_virtio_port will destroy the port in question itself after
-      this callback has completed!
-   2) This callback is always called, even if the disconnect is initiated
-      by the vdagent_virtio_port user through returning -1 from a read
-      callback, or by explicitly calling vdagent_virtio_port_destroy */
-typedef void (*vdagent_virtio_port_disconnect_callback)(
-    struct vdagent_virtio_port *conn);
-
-
 /* Create a vdagent virtio port object for port portname */
 struct vdagent_virtio_port *vdagent_virtio_port_create(const char *portname,
     vdagent_virtio_port_read_callback read_callback,
-    vdagent_virtio_port_disconnect_callback disconnect_callback);
-
-/* The contents of portp will be made NULL */
-void vdagent_virtio_port_destroy(struct vdagent_virtio_port **vportp);
-
-
-/* Given a vdagent_virtio_port fill the fd_sets pointed to by readfds and
-   writefds for select() usage.
-
-   Return value: value of the highest fd + 1 */
-int vdagent_virtio_port_fill_fds(struct vdagent_virtio_port *vport,
-        fd_set *readfds, fd_set *writefds);
-
-/* Handle any events flagged by select for the given vdagent_virtio_port.
-   Note the port may be destroyed (when disconnected) by this call
-   in this case the disconnect calllback will get called before the
-   destruction and the contents of connp will be made NULL */
-void vdagent_virtio_port_handle_fds(struct vdagent_virtio_port **vportp,
-        fd_set *readfds, fd_set *writefds);
-
+    VDAgentConnErrorCb error_cb);
 
 /* Queue a message for delivery, either bit by bit, or all at once */
 void vdagent_virtio_port_write_start(
@@ -96,7 +81,8 @@ void vdagent_virtio_port_write(
         const uint8_t *data,
         uint32_t data_size);
 
-void vdagent_virtio_port_flush(struct vdagent_virtio_port **vportp);
 void vdagent_virtio_port_reset(struct vdagent_virtio_port *vport, int port);
+
+G_END_DECLS
 
 #endif

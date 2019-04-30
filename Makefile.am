@@ -9,6 +9,8 @@ TESTS = $(check_PROGRAMS)
 common_sources =				\
 	src/udscs.c				\
 	src/udscs.h				\
+	src/vdagent-connection.c		\
+	src/vdagent-connection.h		\
 	src/vdagentd-proto-strings.h		\
 	src/vdagentd-proto.h			\
 	$(NULL)
