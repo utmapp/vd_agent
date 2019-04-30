@@ -29,59 +29,44 @@
 
 G_BEGIN_DECLS
 
-#define VIRTIO_TYPE_PORT            (virtio_port_get_type())
-#define VIRTIO_PORT(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), VIRTIO_TYPE_PORT, VirtioPort))
-#define VIRTIO_IS_PORT(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), VIRTIO_TYPE_PORT))
-#define VIRTIO_PORT_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), VIRTIO_TYPE_PORT, VirtioPortClass))
-#define VIRTIO_IS_PORT_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), VIRTIO_TYPE_PORT))
-#define VIRTIO_PORT_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), VIRTIO_TYPE_PORT, VirtioPortClass))
-
-typedef struct vdagent_virtio_port VirtioPort;
-typedef struct VirtioPortClass VirtioPortClass;
-
-struct VirtioPortClass {
-    VDAgentConnectionClass parent_class;
-};
-
-GType virtio_port_get_type(void);
-
-struct vdagent_virtio_port;
+#define VIRTIO_TYPE_PORT virtio_port_get_type()
+G_DECLARE_FINAL_TYPE(VirtioPort, virtio_port, VIRTIO, PORT, VDAgentConnection)
 
 /* Callbacks with this type will be called when a complete message has been
    received. */
 typedef void (*vdagent_virtio_port_read_callback)(
-    struct vdagent_virtio_port *vport,
+    VirtioPort *vport,
     int port_nr,
     VDAgentMessage *message_header,
     uint8_t *data);
 
 /* Create a vdagent virtio port object for port portname */
-struct vdagent_virtio_port *vdagent_virtio_port_create(const char *portname,
+VirtioPort *vdagent_virtio_port_create(const char *portname,
     vdagent_virtio_port_read_callback read_callback,
     VDAgentConnErrorCb error_cb);
 
 /* Queue a message for delivery, either bit by bit, or all at once */
 void vdagent_virtio_port_write_start(
-        struct vdagent_virtio_port *vport,
+        VirtioPort *vport,
         uint32_t port_nr,
         uint32_t message_type,
         uint32_t message_opaque,
         uint32_t data_size);
 
 int vdagent_virtio_port_write_append(
-        struct vdagent_virtio_port *vport,
+        VirtioPort *vport,
         const uint8_t *data,
         uint32_t size);
 
 void vdagent_virtio_port_write(
-        struct vdagent_virtio_port *vport,
+        VirtioPort *vport,
         uint32_t port_nr,
         uint32_t message_type,
         uint32_t message_opaque,
         const uint8_t *data,
         uint32_t data_size);
 
-void vdagent_virtio_port_reset(struct vdagent_virtio_port *vport, int port);
+void vdagent_virtio_port_reset(VirtioPort *vport, int port);
 
 G_END_DECLS
 

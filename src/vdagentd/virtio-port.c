@@ -45,7 +45,7 @@ struct vdagent_virtio_port_chunk_port_data {
     uint8_t *message_data;
 };
 
-struct vdagent_virtio_port {
+struct _VirtioPort {
     VDAgentConnection parent_instance;
 
     /* Per chunk port data */
@@ -119,11 +119,11 @@ static void virtio_port_class_init(VirtioPortClass *klass)
     conn_class->handle_message = vdagent_virtio_port_do_chunk;
 }
 
-struct vdagent_virtio_port *vdagent_virtio_port_create(const char *portname,
+VirtioPort *vdagent_virtio_port_create(const char *portname,
     vdagent_virtio_port_read_callback read_callback,
     VDAgentConnErrorCb error_cb)
 {
-    struct vdagent_virtio_port *vport;
+    VirtioPort *vport;
     GIOStream *io_stream;
     GError *err = NULL;
 
@@ -174,7 +174,7 @@ struct vdagent_virtio_port *vdagent_virtio_port_create(const char *portname,
 }
 
 void vdagent_virtio_port_write_start(
-        struct vdagent_virtio_port *vport,
+        VirtioPort *vport,
         uint32_t port_nr,
         uint32_t message_type,
         uint32_t message_opaque,
@@ -204,7 +204,7 @@ void vdagent_virtio_port_write_start(
     new_wbuf->write_pos += sizeof(*message_header);
 }
 
-int vdagent_virtio_port_write_append(struct vdagent_virtio_port *vport,
+int vdagent_virtio_port_write_append(VirtioPort *vport,
                                      const uint8_t *data, uint32_t size)
 {
     struct vdagent_virtio_port_buf *wbuf;
@@ -235,7 +235,7 @@ int vdagent_virtio_port_write_append(struct vdagent_virtio_port *vport,
 }
 
 void vdagent_virtio_port_write(
-        struct vdagent_virtio_port *vport,
+        VirtioPort *vport,
         uint32_t port_nr,
         uint32_t message_type,
         uint32_t message_opaque,
@@ -247,7 +247,7 @@ void vdagent_virtio_port_write(
     vdagent_virtio_port_write_append(vport, data, data_size);
 }
 
-void vdagent_virtio_port_reset(struct vdagent_virtio_port *vport, int port)
+void vdagent_virtio_port_reset(VirtioPort *vport, int port)
 {
     if (port >= VDP_END_PORT) {
         syslog(LOG_ERR, "vdagent_virtio_port_reset port out of range");
@@ -262,7 +262,7 @@ static void vdagent_virtio_port_do_chunk(VDAgentConnection *conn,
                                          gpointer chunk_data)
 {
     int avail, read, pos = 0;
-    struct vdagent_virtio_port *vport = VIRTIO_PORT(conn);
+    VirtioPort *vport = VIRTIO_PORT(conn);
     VDIChunkHeader *chunk_header = header_data;
     struct vdagent_virtio_port_chunk_port_data *port =
         &vport->port_data[chunk_header->port];

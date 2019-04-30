@@ -67,7 +67,7 @@ static gboolean do_daemonize = TRUE;
 static gboolean want_session_info = TRUE;
 
 static struct udscs_server *server = NULL;
-static struct vdagent_virtio_port *virtio_port = NULL;
+static VirtioPort *virtio_port = NULL;
 static GHashTable *active_xfers = NULL;
 static struct session_info *session_info = NULL;
 static struct vdagentd_uinput *uinput = NULL;
@@ -121,7 +121,7 @@ static void virtio_msg_uint16_from_le(uint8_t *_msg, uint32_t size, uint32_t off
 }
 
 /* vdagentd <-> spice-client communication handling */
-static void send_capabilities(struct vdagent_virtio_port *vport,
+static void send_capabilities(VirtioPort *vport,
     uint32_t request)
 {
     VDAgentAnnounceCapabilities *caps;
@@ -182,7 +182,7 @@ void do_client_mouse(struct vdagentd_uinput **uinputp, VDAgentMouseState *mouse)
     }
 }
 
-static void do_client_monitors(struct vdagent_virtio_port *vport, int port_nr,
+static void do_client_monitors(VirtioPort *vport, int port_nr,
     VDAgentMessage *message_header, VDAgentMonitorsConfig *new_monitors)
 {
     VDAgentReply reply;
@@ -213,7 +213,7 @@ static void do_client_monitors(struct vdagent_virtio_port *vport, int port_nr,
                               (uint8_t *)&reply, sizeof(reply));
 }
 
-static void do_client_volume_sync(struct vdagent_virtio_port *vport, int port_nr,
+static void do_client_volume_sync(VirtioPort *vport, int port_nr,
     VDAgentMessage *message_header,
     VDAgentAudioVolumeSync *avs)
 {
@@ -226,7 +226,7 @@ static void do_client_volume_sync(struct vdagent_virtio_port *vport, int port_nr
                 (uint8_t *)avs, message_header->size);
 }
 
-static void do_client_capabilities(struct vdagent_virtio_port *vport,
+static void do_client_capabilities(VirtioPort *vport,
     VDAgentMessage *message_header,
     VDAgentAnnounceCapabilities *caps)
 {
@@ -245,7 +245,7 @@ static void do_client_capabilities(struct vdagent_virtio_port *vport,
     }
 }
 
-static void do_client_clipboard(struct vdagent_virtio_port *vport,
+static void do_client_clipboard(VirtioPort *vport,
     VDAgentMessage *message_header, uint8_t *data)
 {
     uint32_t msg_type = 0, data_type = 0, size = message_header->size;
@@ -317,7 +317,7 @@ static void do_client_clipboard(struct vdagent_virtio_port *vport,
 
 /* Send file-xfer status to the client. In the case status is an error,
  * optional data for the client and log message may be specified. */
-static void send_file_xfer_status(struct vdagent_virtio_port *vport,
+static void send_file_xfer_status(VirtioPort *vport,
                                   const char *msg, uint32_t id, uint32_t xfer_status,
                                   const uint8_t *data, uint32_t data_size)
 {
@@ -349,7 +349,7 @@ static void send_file_xfer_status(struct vdagent_virtio_port *vport,
     g_free(status);
 }
 
-static void do_client_file_xfer(struct vdagent_virtio_port *vport,
+static void do_client_file_xfer(VirtioPort *vport,
                                 VDAgentMessage *message_header,
                                 uint8_t *data)
 {
@@ -552,7 +552,7 @@ static gboolean vdagent_message_check_size(const VDAgentMessage *message_header)
 static VDAgentGraphicsDeviceInfo *device_info = NULL;
 static size_t device_info_size = 0;
 static void virtio_port_read_complete(
-        struct vdagent_virtio_port *vport,
+        VirtioPort *vport,
         int port_nr,
         VDAgentMessage *message_header,
         uint8_t *data)
