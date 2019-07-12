@@ -431,6 +431,7 @@ int main(int argc, char *argv[])
     if (error != NULL) {
         g_printerr("Invalid arguments, %s\n", error->message);
         g_clear_error(&error);
+        g_free(orig_argv);
         return -1;
     }
 
@@ -446,6 +447,7 @@ int main(int argc, char *argv[])
 
     if (!g_file_test(portdev, G_FILE_TEST_EXISTS)) {
         g_debug("vdagent virtio channel %s does not exist, exiting", portdev);
+        g_free(orig_argv);
         return 0;
     }
 
