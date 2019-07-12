@@ -204,13 +204,13 @@ static PciAddress* parse_pci_address_from_spice(char *input)
 static bool compare_addresses(PciAddress *a, PciAddress *b)
 {
     // only check domain, slot, and function
-    if (!(a->domain == b->domain
-        && g_list_length(a->devices) == g_list_length(b->devices))) {
+    if (a->domain != b->domain) {
         return false;
     }
 
-    for (GList *la = a->devices, *lb = b->devices;
-         la != NULL;
+    const GList *la, *lb;
+    for (la = a->devices, lb = b->devices;
+         la != NULL && lb != NULL;
          la = la->next, lb = lb->next) {
         PciDevice *deva = la->data;
         PciDevice *devb = lb->data;
@@ -220,7 +220,9 @@ static bool compare_addresses(PciAddress *a, PciAddress *b)
             return false;
         }
     }
-    return true;
+
+    /* True only if both have the same length */
+    return (la == NULL && lb == NULL);
 }
 
 // Connector type names from xorg modesetting driver
