@@ -392,7 +392,7 @@ static void vdagent_x11_set_clipboard_owner(struct vdagent_x11 *x11,
                 once = 0;
             }
             vdagent_x11_send_selection_notify(x11, None, curr_sel);
-            if (curr_sel == x11->selection_req) {
+            if (prev_sel == NULL) {
                 x11->selection_req = next_sel;
                 free(x11->selection_req_data);
                 x11->selection_req_data = NULL;
@@ -400,7 +400,6 @@ static void vdagent_x11_set_clipboard_owner(struct vdagent_x11 *x11,
                 x11->selection_req_data_size = 0;
                 x11->selection_req_atom = None;
             } else {
-                // coverity[var_deref_op] if it is not the first there's a previous
                 prev_sel->next = next_sel;
             }
             free(curr_sel);
@@ -424,12 +423,11 @@ static void vdagent_x11_set_clipboard_owner(struct vdagent_x11 *x11,
             if (x11->vdagentd)
                 udscs_write(x11->vdagentd, VDAGENTD_CLIPBOARD_DATA, selection,
                             VD_AGENT_CLIPBOARD_NONE, NULL, 0);
-            if (curr_conv == x11->conversion_req) {
+            if (prev_conv == NULL) {
                 x11->conversion_req = next_conv;
                 x11->clipboard_data_size = 0;
                 x11->expect_property_notify = 0;
             } else {
-                // coverity[var_deref_op] if it is not the first there's a previous
                 prev_conv->next = next_conv;
             }
             free(curr_conv);
