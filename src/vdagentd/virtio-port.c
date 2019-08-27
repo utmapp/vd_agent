@@ -146,7 +146,8 @@ void vdagent_virtio_port_destroy(struct vdagent_virtio_port **vportp)
     }
 
     close(vport->fd);
-    g_clear_pointer(vportp, g_free);
+    g_free(vport);
+    *vportp = NULL;
 }
 
 int vdagent_virtio_port_fill_fds(struct vdagent_virtio_port *vport,
