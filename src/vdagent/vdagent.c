@@ -418,10 +418,8 @@ int main(int argc, char *argv[])
     GOptionContext *context;
     GError *error = NULL;
     VDAgent *agent;
-    char **orig_argv;
-
-    orig_argv = g_memdup(argv, sizeof(char*) * (argc+1));
-    orig_argv[argc] = NULL;
+    char **orig_argv = g_memdup(argv, sizeof(char*) * (argc+1));
+    orig_argv[argc] = NULL; /* To avoid clang analyzer false-positive */
 
     context = g_option_context_new(NULL);
     g_option_context_add_main_entries(context, entries, NULL);
