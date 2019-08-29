@@ -166,14 +166,14 @@ int vdagent_virtio_port_fill_fds(struct vdagent_virtio_port *vport,
 void vdagent_virtio_port_handle_fds(struct vdagent_virtio_port **vportp,
         fd_set *readfds, fd_set *writefds)
 {
-    if (!*vportp)
-        return;
-
-    if (FD_ISSET((*vportp)->fd, readfds))
+    if (*vportp && FD_ISSET((*vportp)->fd, readfds)) {
         vdagent_virtio_port_do_read(vportp);
+    }
 
-    if (*vportp && FD_ISSET((*vportp)->fd, writefds))
+    /* *vportp may have been destroyed in do_read */
+    if (*vportp && FD_ISSET((*vportp)->fd, writefds)) {
         vdagent_virtio_port_do_write(vportp);
+    }
 }
 
 static struct vdagent_virtio_port_buf* vdagent_virtio_port_get_last_wbuf(
