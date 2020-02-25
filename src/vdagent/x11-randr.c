@@ -778,64 +778,34 @@ static void dump_monitors_config(struct vdagent_x11 *x11,
 
 // handle the device info message from the server. This will allow us to
 // maintain a mapping from spice display id to xrandr output
-void vdagent_x11_handle_graphics_device_info(struct vdagent_x11 *x11, uint8_t *data, size_t size)
+void vdagent_x11_handle_device_display_info(struct vdagent_x11 *x11,
+                                            VDAgentDeviceDisplayInfo *device_display_info)
 {
-    VDAgentGraphicsDeviceInfo *graphics_device_info = (VDAgentGraphicsDeviceInfo *)data;
-    VDAgentDeviceDisplayInfo *device_display_info = graphics_device_info->display_info;
+    RROutput x_output;
+    if (lookup_xrandr_output_for_device_info(device_display_info, x11->display,
+                                             x11->randr.res, &x_output)) {
+        gint64 *value = g_new(gint64, 1);
+        *value = x_output;
 
-    void *buffer_end = data + size;
+        syslog(LOG_INFO, "Adding graphics device info: channel_id: %u monitor_id: "
+               "%u device_address: %s, device_display_id: %u xrandr output ID: %lu",
+               device_display_info->channel_id,
+               device_display_info->monitor_id,
+               device_display_info->device_address,
+               device_display_info->device_display_id,
+               x_output);
 
-    syslog(LOG_INFO, "Received Graphics Device Info:");
-
-    for (size_t i = 0; i < graphics_device_info->count; ++i) {
-        if ((void*) device_display_info > buffer_end ||
-                (void*) (&device_display_info->device_address +
-                    device_display_info->device_address_len) > buffer_end) {
-            syslog(LOG_ERR, "Malformed graphics_display_info message, "
-                   "extends beyond the end of the buffer");
-            break;
-        }
-
-        // make sure the string is terminated:
-        if (device_display_info->device_address_len > 0) {
-            device_display_info->device_address[device_display_info->device_address_len - 1] = '\0';
-        } else {
-            syslog(LOG_WARNING, "Zero length device_address received for channel_id: %u, monitor_id: %u",
-                   device_display_info->channel_id, device_display_info->monitor_id);
-        }
-
-        RROutput x_output;
-        if (lookup_xrandr_output_for_device_info(device_display_info, x11->display,
-                                                 x11->randr.res, &x_output)) {
-            gint64 *value = g_new(gint64, 1);
-            *value = x_output;
-
-            syslog(LOG_INFO, "Adding graphics device info: channel_id: %u monitor_id: "
-                   "%u device_address: %s, device_display_id: %u xrandr output ID: %lu",
-                   device_display_info->channel_id,
-                   device_display_info->monitor_id,
-                   device_display_info->device_address,
-                   device_display_info->device_display_id,
-                   x_output);
-
-            g_hash_table_insert(x11->guest_output_map,
-                GUINT_TO_POINTER(device_display_info->channel_id + device_display_info->monitor_id),
-                value);
-        } else {
-            syslog(LOG_INFO, "channel_id: %u monitor_id: %u device_address: %s, "
-                   "device_display_id: %u xrandr output ID NOT FOUND",
-                   device_display_info->channel_id,
-                   device_display_info->monitor_id,
-                   device_display_info->device_address,
-                   device_display_info->device_display_id);
-        }
-
-        device_display_info = (VDAgentDeviceDisplayInfo*) ((char*) device_display_info +
-            sizeof(VDAgentDeviceDisplayInfo) + device_display_info->device_address_len);
+        g_hash_table_insert(x11->guest_output_map,
+            GUINT_TO_POINTER(device_display_info->channel_id + device_display_info->monitor_id),
+            value);
+    } else {
+        syslog(LOG_INFO, "channel_id: %u monitor_id: %u device_address: %s, "
+               "device_display_id: %u xrandr output ID NOT FOUND",
+               device_display_info->channel_id,
+               device_display_info->monitor_id,
+               device_display_info->device_address,
+               device_display_info->device_display_id);
     }
-
-    // make sure daemon is up-to-date with (possibly updated) device IDs
-    vdagent_x11_send_daemon_guest_xorg_res(x11, 1);
 }
 
 static int get_output_index_for_display_id(struct vdagent_x11 *x11, int display_id)

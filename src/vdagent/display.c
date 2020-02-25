@@ -109,7 +109,38 @@ int vdagent_display_has_icons_on_desktop(VDAgentDisplay *display)
 void vdagent_display_handle_graphics_device_info(VDAgentDisplay *display, uint8_t *data,
         size_t size)
 {
-    vdagent_x11_handle_graphics_device_info(display->x11, data, size);
+    VDAgentGraphicsDeviceInfo *graphics_device_info = (VDAgentGraphicsDeviceInfo *)data;
+    VDAgentDeviceDisplayInfo *device_display_info = graphics_device_info->display_info;
+
+    void *buffer_end = data + size;
+
+    syslog(LOG_INFO, "Received Graphics Device Info:");
+
+    for (size_t i = 0; i < graphics_device_info->count; ++i) {
+        if ((void*) device_display_info > buffer_end ||
+                (void*) (&device_display_info->device_address +
+                    device_display_info->device_address_len) > buffer_end) {
+            syslog(LOG_ERR, "Malformed graphics_display_info message, "
+                   "extends beyond the end of the buffer");
+            break;
+        }
+
+        // make sure the string is terminated:
+        if (device_display_info->device_address_len > 0) {
+            device_display_info->device_address[device_display_info->device_address_len - 1] = '\0';
+        } else {
+            syslog(LOG_WARNING, "Zero length device_address received for channel_id: %u, monitor_id: %u",
+                   device_display_info->channel_id, device_display_info->monitor_id);
+        }
+
+        vdagent_x11_handle_device_display_info(display->x11, device_display_info);
+
+        device_display_info = (VDAgentDeviceDisplayInfo*) ((char*) device_display_info +
+            sizeof(VDAgentDeviceDisplayInfo) + device_display_info->device_address_len);
+    }
+
+    // make sure daemon is up-to-date with (possibly updated) device IDs
+    vdagent_x11_send_daemon_guest_xorg_res(display->x11, 1);
 }
 
 /*

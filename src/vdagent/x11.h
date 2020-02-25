@@ -51,6 +51,7 @@ void vdagent_x11_client_disconnected(struct vdagent_x11 *x11);
 #endif
 
 int vdagent_x11_has_icons_on_desktop(struct vdagent_x11 *x11);
-void vdagent_x11_handle_graphics_device_info(struct vdagent_x11 *x11, uint8_t *data, size_t size);
+void vdagent_x11_handle_device_display_info(struct vdagent_x11 *x11,
+                                            VDAgentDeviceDisplayInfo *device_display_info);
 
 #endif
