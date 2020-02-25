@@ -38,16 +38,15 @@
 #include "udscs.h"
 #include "vdagentd-proto.h"
 #include "audio.h"
-#include "x11.h"
 #include "file-xfers.h"
 #include "clipboard.h"
+#include "display.h"
 
 typedef struct VDAgent {
     VDAgentClipboards *clipboards;
-    struct vdagent_x11 *x11;
+    VDAgentDisplay *display;
     struct vdagent_file_xfers *xfers;
     UdscsConnection *conn;
-    GIOChannel *x11_channel;
 
     GMainLoop *loop;
 } VDAgent;
@@ -114,7 +113,7 @@ static const gchar *xfer_get_download_directory(VDAgent *agent)
         return fx_dir;
     }
 
-    return g_get_user_special_dir(vdagent_x11_has_icons_on_desktop(agent->x11) ?
+    return g_get_user_special_dir(vdagent_display_has_icons_on_desktop(agent->display) ?
                                   G_USER_DIRECTORY_DESKTOP :
                                   G_USER_DIRECTORY_DOWNLOAD);
 }
@@ -144,7 +143,7 @@ static gboolean vdagent_init_file_xfer(VDAgent *agent)
     }
 
     open_dir = fx_open_dir == -1 ?
-               !vdagent_x11_has_icons_on_desktop(agent->x11) :
+               !vdagent_display_has_icons_on_desktop(agent->display) :
                fx_open_dir;
 
     agent->xfers = vdagent_file_xfers_create(agent->conn, xfer_dir,
@@ -179,7 +178,7 @@ static void daemon_read_complete(UdscsConnection *conn,
 
     switch (header->type) {
     case VDAGENTD_MONITORS_CONFIG:
-        vdagent_x11_set_monitor_config(agent->x11, (VDAgentMonitorsConfig *)data, 0);
+        vdagent_display_set_monitor_config(agent->display, (VDAgentMonitorsConfig *)data, 0);
         break;
     case VDAGENTD_CLIPBOARD_REQUEST:
         vdagent_clipboard_request(agent->clipboards, header->arg1, header->arg2);
@@ -249,7 +248,7 @@ static void daemon_read_complete(UdscsConnection *conn,
         }
         break;
     case VDAGENTD_GRAPHICS_DEVICE_INFO:
-        vdagent_x11_handle_graphics_device_info(agent->x11, data, header->size);
+        vdagent_display_handle_graphics_device_info(agent->display, data, header->size);
         break;
     case VDAGENTD_CLIENT_DISCONNECTED:
         vdagent_clipboards_release_all(agent->clipboards);
@@ -335,15 +334,7 @@ static int daemonize(void)
     return 0;
 }
 
-static gboolean x11_io_channel_cb(GIOChannel *source,
-                                  GIOCondition condition,
-                                  gpointer data)
-{
-    VDAgent *agent = data;
-    vdagent_x11_do_read(agent->x11);
 
-    return G_SOURCE_CONTINUE;
-}
 
 gboolean vdagent_signal_handler(gpointer user_data)
 {
@@ -369,13 +360,12 @@ static VDAgent *vdagent_new(void)
 static void vdagent_destroy(VDAgent *agent)
 {
     vdagent_finalize_file_xfer(agent);
-    vdagent_x11_destroy(agent->x11, agent->conn == NULL);
+    vdagent_display_destroy(agent->display, agent->conn == NULL);
     g_clear_pointer(&agent->conn, vdagent_connection_destroy);
 
     while (g_source_remove_by_user_data(agent))
         continue;
 
-    g_clear_pointer(&agent->x11_channel, g_io_channel_unref);
     g_clear_pointer(&agent->loop, g_main_loop_unref);
     g_free(agent);
 }
@@ -393,22 +383,15 @@ static gboolean vdagent_init_async_cb(gpointer user_data)
     }
     g_object_set_data(G_OBJECT(agent->conn), "agent", agent);
 
-    agent->x11 = vdagent_x11_create(agent->conn, debug, x11_sync);
-    if (agent->x11 == NULL)
-        goto err_init;
-    agent->x11_channel = g_io_channel_unix_new(vdagent_x11_get_fd(agent->x11));
-    if (agent->x11_channel == NULL)
+    agent->display = vdagent_display_create(agent->conn, debug, x11_sync);
+    if (agent->display == NULL)
         goto err_init;
 
-    g_io_add_watch(agent->x11_channel,
-                   G_IO_IN,
-                   x11_io_channel_cb,
-                   agent);
 
     if (!vdagent_init_file_xfer(agent))
         syslog(LOG_WARNING, "File transfer is disabled");
 
-    agent->clipboards = vdagent_clipboards_new(agent->x11);
+    agent->clipboards = vdagent_clipboards_new(vdagent_display_get_x11(agent->display));
     vdagent_clipboards_set_conn(agent->clipboards, agent->conn);
 
     if (parent_socket != -1) {

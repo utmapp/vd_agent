@@ -43,6 +43,8 @@ src_spice_vdagent_SOURCES =			\
 	src/vdagent/clipboard.h			\
 	src/vdagent/device-info.c		\
 	src/vdagent/device-info.h		\
+	src/vdagent/display.c			\
+	src/vdagent/display.h			\
 	src/vdagent/file-xfers.c		\
 	src/vdagent/file-xfers.h		\
 	src/vdagent/x11-priv.h			\
