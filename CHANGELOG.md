@@ -1,3 +1,18 @@
+Gitlab markdown format support linking to Issues (#) and Merge requests (!) and more, see bellow:
+
+https://gitlab.freedesktop.org/spice/linux/vd_agent/-/blob/master/CHANGELOG.md
+
+News in spice-vdagent 0.20.0
+============================
+
+* Add gio-unix and gobject dependency >= 2.50
+* Bump gtk+ >= 3.22 (optional dependency)
+* Last release with gtk+ being optional
+* !4 - Race fixes between client and guest clipboard
+* !2 - Fix session lookup for new GNOME versions
+* !3 - Now using GMainLoop and GIO to handle I/O of messages
+* Several minor covscan fixes
+
 News in spice-vdagent 0.19.0
 ============================
 
