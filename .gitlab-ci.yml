@@ -10,7 +10,8 @@ variables:
 before_script:
   - dnf install -y $DEPS_COMMON
   - git clone https://gitlab.freedesktop.org/spice/spice-protocol.git
-  - (cd spice-protocol && ./autogen.sh --prefix=/usr && make install)
+  - meson --buildtype=release spice-protocol build-spice-protocol --prefix=/usr --werror
+  - ninja -C build-spice-protocol install
 
 fedora-autotools:
   script:
