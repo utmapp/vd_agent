@@ -1184,10 +1184,6 @@ int main(int argc, char *argv[])
         uinput_device = g_strdup(DEFAULT_UINPUT_DEVICE);
     }
 
-    g_unix_signal_add(SIGINT, signal_handler, NULL);
-    g_unix_signal_add(SIGHUP, signal_handler, NULL);
-    g_unix_signal_add(SIGTERM, signal_handler, NULL);
-
     openlog("spice-vdagentd", do_daemonize ? 0 : LOG_PERROR, LOG_USER);
 
     /* Setup communication with vdagent process(es) */
@@ -1240,6 +1236,10 @@ int main(int argc, char *argv[])
     }
 #endif
 
+    g_unix_signal_add(SIGINT, signal_handler, NULL);
+    g_unix_signal_add(SIGHUP, signal_handler, NULL);
+    g_unix_signal_add(SIGTERM, signal_handler, NULL);
+
     if (want_session_info)
         session_info = session_info_create(debug);
     if (session_info) {
@@ -1252,6 +1252,7 @@ int main(int argc, char *argv[])
 
     active_xfers = g_hash_table_new(g_direct_hash, g_direct_equal);
 
+    udscs_server_start(server);
     loop = g_main_loop_new(NULL, FALSE);
     g_main_loop_run(loop);
 

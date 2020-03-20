@@ -98,6 +98,8 @@ void udscs_server_listen_to_address(struct udscs_server *server,
                                     const gchar         *addr,
                                     GError             **err);
 
+void udscs_server_start(struct udscs_server *server);
+
 void udscs_server_destroy_connection(struct udscs_server *server,
                                      UdscsConnection     *conn);
 

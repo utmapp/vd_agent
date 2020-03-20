@@ -186,6 +186,7 @@ struct udscs_server *udscs_server_new(
     server->read_callback = read_callback;
     server->error_cb = error_cb;
     server->service = g_socket_service_new();
+    g_socket_service_stop(server->service);
 
     g_signal_connect(server->service, "incoming",
         G_CALLBACK(udscs_server_accept_cb), server);
@@ -221,6 +222,11 @@ void udscs_server_listen_to_address(struct udscs_server *server,
                                   G_SOCKET_PROTOCOL_DEFAULT,
                                   NULL, NULL, err);
     g_object_unref(sock_addr);
+}
+
+void udscs_server_start(struct udscs_server *server)
+{
+    g_socket_service_start(server->service);
 }
 
 void udscs_server_destroy_connection(struct udscs_server *server,
