@@ -1224,9 +1224,6 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (do_daemonize)
-        daemonize();
-
 #ifdef WITH_STATIC_UINPUT
     uinput = vdagentd_uinput_create(uinput_device, 1024, 768, NULL, 0,
                                     debug > 1, uinput_fake);
@@ -1235,6 +1232,9 @@ int main(int argc, char *argv[])
         return 1;
     }
 #endif
+
+    if (do_daemonize)
+        daemonize();
 
     g_unix_signal_add(SIGINT, signal_handler, NULL);
     g_unix_signal_add(SIGHUP, signal_handler, NULL);
