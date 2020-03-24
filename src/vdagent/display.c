@@ -25,9 +25,12 @@
 #ifdef WITH_GTK
 #include <gdk/gdk.h>
 #include <gtk/gtk.h>    // for GTK_CHECK_VERSION
-#ifdef GDK_WINDOWING_X11
-    #if ! GTK_CHECK_VERSION(3, 98, 0)
-        #include <gdk/gdkx.h>
+#if GTK_CHECK_VERSION(3, 98, 0)
+    #include <gdk/wayland/gdkwayland.h>
+    #include <gdk/x11/gdkx.h>
+#else
+    #ifdef GDK_WINDOWING_X11
+         #include <gdk/gdkx.h>
     #endif
 #endif
 #endif
@@ -50,6 +53,10 @@
  * The x11.c and x11-randr.c files contains the x11-specific functions.
  */
 struct VDAgentDisplay {
+#ifdef USE_GTK_FOR_MONITORS
+    // association between SPICE display ID and expected connector name
+    GHashTable *connector_mapping;
+#endif
     struct vdagent_x11 *x11;
     UdscsConnection *vdagentd;
     int debug;
@@ -132,6 +139,9 @@ VDAgentDisplay* vdagent_display_create(UdscsConnection *vdagentd, int debug, int
     }
 
     display->x11->vdagent_display = display;
+#ifdef USE_GTK_FOR_MONITORS
+    display->connector_mapping = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+#endif
 
     display->x11_channel = g_io_channel_unix_new(vdagent_x11_get_fd(display->x11));
     if (display->x11_channel == NULL) {
@@ -166,6 +176,10 @@ void vdagent_display_destroy(VDAgentDisplay *display, int vdagentd_disconnected)
     if (!display) {
         return;
     }
+
+#ifdef USE_GTK_FOR_MONITORS
+    g_hash_table_destroy(display->connector_mapping);
+#endif
 
     g_clear_pointer(&display->x11_channel, g_io_channel_unref);
     vdagent_x11_destroy(display->x11, vdagentd_disconnected);
@@ -227,6 +241,23 @@ void vdagent_display_handle_graphics_device_info(VDAgentDisplay *display, uint8_
                    device_display_info->channel_id, device_display_info->monitor_id);
         }
 
+#ifdef USE_GTK_FOR_MONITORS
+        if (GDK_IS_WAYLAND_DISPLAY(gdk_display_get_default())) {
+            // Get the expected connector name from hardware info. Store it with the SPICE display ID.
+            char expected_name[100];
+            int ret = get_connector_name_for_device_info(device_display_info, expected_name,
+                                                         sizeof(expected_name), false);
+            if (ret == 0) {
+                g_hash_table_insert(display->connector_mapping,
+                                    g_strdup(expected_name),
+                                    GUINT_TO_POINTER(device_display_info->channel_id + device_display_info->monitor_id));
+                syslog(LOG_DEBUG, "Mapping connector %s to display #%d", expected_name,
+                       (device_display_info->channel_id + device_display_info->monitor_id));
+            }
+        }
+        else
+            // under X11, use the X11 API
+#endif
         vdagent_x11_handle_device_display_info(display->x11, device_display_info);
 
         device_display_info = (VDAgentDeviceDisplayInfo*) ((char*) device_display_info +

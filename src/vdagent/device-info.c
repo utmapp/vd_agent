@@ -388,12 +388,14 @@ static char* find_device_at_pci_address(PciAddress *pci_addr, int *vendor_id, in
     return NULL;
 }
 
-// PCI address should be in the following format:
-//   pci/$domain/$slot.$fn/$slot.$fn
-bool lookup_xrandr_output_for_device_info(VDAgentDeviceDisplayInfo *device_info,
-                                          Display *xdisplay,
-                                          XRRScreenResources *xres,
-                                          RROutput *output_id)
+
+/**
+ * Look up DRM info for the device, and retrieve the expected connector name.
+ * This name will later be compared to the monitor names found at the display manager level.
+ */
+int get_connector_name_for_device_info(VDAgentDeviceDisplayInfo *device_info,
+                                       char *expected_name, size_t name_size,
+                                       bool has_virtual_zero_display)
 {
     PciAddress *user_pci_addr = parse_pci_address_from_spice((char*)device_info->device_address);
     if (!user_pci_addr) {
@@ -401,7 +403,7 @@ bool lookup_xrandr_output_for_device_info(VDAgentDeviceDisplayInfo *device_info,
                "Couldn't parse PCI address '%s'. "
                "Address should be the form 'pci/$domain/$slot.$fn/$slot.fn...",
                device_info->device_address);
-        return false;
+        return -1;
     }
 
     int vendor_id = 0;
@@ -412,68 +414,106 @@ bool lookup_xrandr_output_for_device_info(VDAgentDeviceDisplayInfo *device_info,
     int drm_fd = open(dev_path, O_RDWR);
     if (drm_fd < 0) {
         syslog(LOG_WARNING, "Unable to open file %s", dev_path);
-        return false;
+        g_free(dev_path);
+        return -1;
     }
 
     drmModeResPtr res = drmModeGetResources(drm_fd);
-    if (res) {
-        // find the drm output that is equal to device_display_id
-        if (device_info->device_display_id >= res->count_connectors) {
-            syslog(LOG_WARNING,
-                   "Specified display id %i is higher than the maximum display id "
-                   "provided by this device (%i)",
-                   device_info->device_display_id, res->count_connectors - 1);
-            close(drm_fd);
-            return false;
-        }
-
-        drmModeConnectorPtr conn =
-            drmModeGetConnector(drm_fd, res->connectors[device_info->device_display_id]);
-        drmModeFreeResources(res);
-        res = NULL;
+    if (res == NULL) {
+        syslog(LOG_WARNING,
+               "Unable to get DRM resources for card %s. "
+               "Falling back to using xrandr output index.",
+               dev_path);
         close(drm_fd);
+        g_free(dev_path);
+        return 1;   // error out - actual handling is deferred to the caller
+    }
 
-        if (conn == NULL) {
-            syslog(LOG_WARNING, "Unable to get drm connector for display id %i",
-                   device_info->device_display_id);
+    // no need for dev_path anymore
+    g_free(dev_path);
+
+    // find the drm output that is equal to device_display_id
+    if (device_info->device_display_id >= res->count_connectors) {
+        syslog(LOG_WARNING,
+               "Specified display id %i is higher than the maximum display id "
+               "provided by this device (%i)",
+               device_info->device_display_id, res->count_connectors - 1);
+        close(drm_fd);
+        return -1;
+    }
+
+    drmModeConnectorPtr conn =
+        drmModeGetConnector(drm_fd, res->connectors[device_info->device_display_id]);
+    drmModeFreeResources(res);
+    res = NULL;
+    close(drm_fd);
+
+    if (conn == NULL) {
+        syslog(LOG_WARNING, "Unable to get drm connector for display id %i",
+               device_info->device_display_id);
+        return -1;
+    }
+
+    bool decrement_name = false;
+
+    if (vendor_id == PCI_VENDOR_ID_REDHAT && device_id == PCI_DEVICE_ID_QXL
+        && has_virtual_zero_display) {
+        decrement_name = true;
+    }
+
+    // Compare the name of the xrandr output against what we would
+    // expect based on the drm connection type. The xrandr names
+    // are driver-specific, so we need to special-case some
+    // drivers.  Most hardware these days uses the 'modesetting'
+    // driver, but the QXL device uses its own driver which has
+    // different naming conventions
+    if (vendor_id == PCI_VENDOR_ID_REDHAT && device_id == PCI_DEVICE_ID_QXL) {
+        drm_conn_name_qxl(conn, expected_name, name_size, decrement_name);
+    } else {
+        drm_conn_name_modesetting(conn, expected_name, name_size);
+    }
+    drmModeFreeConnector(conn);
+
+    return 0;
+}
+
+// PCI address should be in the following format:
+//   pci/$domain/$slot.$fn/$slot.$fn
+bool lookup_xrandr_output_for_device_info(VDAgentDeviceDisplayInfo *device_info,
+                                          Display *xdisplay,
+                                          XRRScreenResources *xres,
+                                          RROutput *output_id)
+{
+    char expected_name[100];
+    int ret;
+
+    // Older QXL drivers numbered their outputs starting with
+    // 0. This contrasts with most drivers who start numbering
+    // outputs with 1.  In this case, the expected drm connector
+    // name will need to be decremented before comparing to the
+    // xrandr output name
+    bool has_virtual_zero_display = false;
+    for (int i = 0; i < xres->noutput; ++i) {
+        XRROutputInfo *oinfo = XRRGetOutputInfo(xdisplay, xres, xres->outputs[i]);
+        if (!oinfo) {
+            syslog(LOG_WARNING, "Unable to lookup XRandr output info for output %li",
+                   xres->outputs[i]);
             return false;
         }
-
-        bool decrement_name = false;
-        if (vendor_id == PCI_VENDOR_ID_REDHAT && device_id == PCI_DEVICE_ID_QXL) {
-            // Older QXL drivers numbered their outputs starting with
-            // 0. This contrasts with most drivers who start numbering
-            // outputs with 1.  In this case, the expected drm connector
-            // name will need to be decremented before comparing to the
-            // xrandr output name
-            for (int i = 0; i < xres->noutput; ++i) {
-                XRROutputInfo *oinfo = XRRGetOutputInfo(xdisplay, xres, xres->outputs[i]);
-                if (!oinfo) {
-                    syslog(LOG_WARNING, "Unable to lookup XRandr output info for output %li",
-                           xres->outputs[i]);
-                    return false;
-                }
-                if (strcmp(oinfo->name, "Virtual-0") == 0) {
-                    decrement_name = true;
-                    XRRFreeOutputInfo(oinfo);
-                    break;
-                }
-                XRRFreeOutputInfo(oinfo);
-            }
+        if (strcmp(oinfo->name, "Virtual-0") == 0) {
+            has_virtual_zero_display = true;
+            XRRFreeOutputInfo(oinfo);
+            break;
         }
-        // Compare the name of the xrandr output against what we would
-        // expect based on the drm connection type. The xrandr names
-        // are driver-specific, so we need to special-case some
-        // drivers.  Most hardware these days uses the 'modesetting'
-        // driver, but the QXL device uses its own driver which has
-        // different naming conventions
-        char expected_name[100];
-        if (vendor_id == PCI_VENDOR_ID_REDHAT && device_id == PCI_DEVICE_ID_QXL) {
-            drm_conn_name_qxl(conn, expected_name, sizeof(expected_name), decrement_name);
-        } else {
-            drm_conn_name_modesetting(conn, expected_name, sizeof(expected_name));
-        }
+        XRRFreeOutputInfo(oinfo);
+    }
 
+    ret = get_connector_name_for_device_info(device_info, expected_name, sizeof(expected_name),
+                                             has_virtual_zero_display);
+    switch (ret) {
+    case -1:    // generic error => exit
+        return false;
+    case 0:
         // Loop through xrandr outputs and check whether the xrandr
         // output name matches the drm connector name
         for (int i = 0; i < xres->noutput; ++i) {
@@ -493,13 +533,8 @@ bool lookup_xrandr_output_for_device_info(VDAgentDeviceDisplayInfo *device_info,
             }
             XRRFreeOutputInfo(oinfo);
         }
-        drmModeFreeConnector(conn);
-    } else {
-        close(drm_fd);
-        syslog(LOG_WARNING,
-               "Unable to get DRM resources for card %s. "
-               "Falling back to using xrandr output index.",
-               dev_path);
+        break;
+    case 1:     // no DRM info found
         // This is probably a proprietary driver (e.g. Nvidia) that does
         // not provide outputs via drm, so the only thing we can do is just
         // assume that it is the only device assigned to X, and use the
