@@ -301,8 +301,6 @@ struct vdagent_x11 *vdagent_x11_create(UdscsConnection *vdagentd,
         x11->width[i]  = attrib.width;
         x11->height[i] = attrib.height;
     }
-    vdagent_x11_send_daemon_guest_xorg_res(x11, 1);
-
 
     /* Flush output buffers and consume any pending events */
     vdagent_x11_do_read(x11);

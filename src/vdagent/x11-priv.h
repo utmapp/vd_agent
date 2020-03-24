@@ -7,6 +7,7 @@
 #include <spice/vd_agent.h>
 
 #include <X11/extensions/Xrandr.h>
+#include "display.h"
 
 #ifndef USE_GTK_FOR_CLIPBOARD
 
@@ -155,14 +156,16 @@ struct vdagent_x11 {
     int has_xinerama;
     int dont_send_guest_xorg_res;
     GHashTable *guest_output_map;
+
+    VDAgentDisplay *vdagent_display;
 };
 
 extern int (*vdagent_x11_prev_error_handler)(Display *, XErrorEvent *);
 extern int vdagent_x11_caught_error;
 
 void vdagent_x11_randr_init(struct vdagent_x11 *x11);
-void vdagent_x11_send_daemon_guest_xorg_res(struct vdagent_x11 *x11,
-                                            int update);
+GArray *vdagent_x11_get_resolutions(struct vdagent_x11 *x11, gboolean update,
+                                    int *width, int *height, int *system_screen_count);
 void vdagent_x11_randr_handle_root_size_change(struct vdagent_x11 *x11,
                                             int screen, int width, int height);
 int vdagent_x11_randr_handle_event(struct vdagent_x11 *x11,

@@ -35,6 +35,9 @@
 #include "x11.h"
 #include "x11-priv.h"
 
+#include "device-info.h"
+#include "vdagentd-proto.h"
+
 #include "display.h"
 
 /**
@@ -51,6 +54,35 @@ struct VDAgentDisplay {
     GIOChannel *x11_channel;
 };
 
+void vdagent_display_send_daemon_guest_res(VDAgentDisplay *display, gboolean update)
+{
+    GArray *res_array;
+    int width, height, screen_count;
+
+    res_array = vdagent_x11_get_resolutions(display->x11, update, &width, &height, &screen_count);
+    if (res_array == NULL) {
+        return;
+    }
+
+    if (display->x11->debug) {
+        syslog(LOG_DEBUG, "Sending guest screen resolutions to vdagentd:");
+        if (res_array->len > screen_count) {
+            syslog(LOG_DEBUG, "(NOTE: list may contain overlapping areas when "
+                              "multiple spice displays show the same guest output)");
+        }
+        struct vdagentd_guest_xorg_resolution *res =
+            (struct vdagentd_guest_xorg_resolution*)res_array->data;
+        for (int i = 0; i < res_array->len; i++) {
+            syslog(LOG_DEBUG, "   display_id=%d - %dx%d%+d%+d",
+                   res[i].display_id, res[i].width, res[i].height, res[i].x, res[i].y);
+        }
+    }
+
+    udscs_write(display->x11->vdagentd, VDAGENTD_GUEST_XORG_RESOLUTION, width, height,
+                (uint8_t *)res_array->data,
+                res_array->len * sizeof(struct vdagentd_guest_xorg_resolution));
+    g_array_free(res_array, TRUE);
+}
 
 static gchar *vdagent_display_get_wm_name(VDAgentDisplay *display)
 {
@@ -94,6 +126,8 @@ VDAgentDisplay* vdagent_display_create(UdscsConnection *vdagentd, int debug, int
         return NULL;
     }
 
+    display->x11->vdagent_display = display;
+
     display->x11_channel = g_io_channel_unix_new(vdagent_x11_get_fd(display->x11));
     if (display->x11_channel == NULL) {
         vdagent_x11_destroy(display->x11, TRUE);
@@ -118,6 +152,7 @@ VDAgentDisplay* vdagent_display_create(UdscsConnection *vdagentd, int debug, int
                __func__, net_wm_name, vdagent_display_has_icons_on_desktop(display));
     g_free(net_wm_name);
 
+    vdagent_display_send_daemon_guest_res(display, TRUE);
     return display;
 }
 
@@ -194,7 +229,7 @@ void vdagent_display_handle_graphics_device_info(VDAgentDisplay *display, uint8_
     }
 
     // make sure daemon is up-to-date with (possibly updated) device IDs
-    vdagent_x11_send_daemon_guest_xorg_res(display->x11, 1);
+    vdagent_display_send_daemon_guest_res(display, TRUE);
 }
 
 /*

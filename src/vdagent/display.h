@@ -33,5 +33,7 @@ void vdagent_display_set_monitor_config(VDAgentDisplay *display,
 
 struct vdagent_x11 *vdagent_display_get_x11(VDAgentDisplay *display);
 
+void vdagent_display_send_daemon_guest_res(VDAgentDisplay *display, gboolean update);
+
 
 #endif /* SRC_VDAGENT_DISPLAY_H_ */
