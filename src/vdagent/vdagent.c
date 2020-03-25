@@ -423,7 +423,9 @@ int main(int argc, char *argv[])
                                  "\tSpice session guest agent: X11\n"
                                  "\tVersion: " VERSION);
 #ifdef WITH_GTK
+#if ! GTK_CHECK_VERSION(3, 98, 0)  // not with GTK4 - option parsing is gone
     g_option_context_add_group(context, gtk_get_option_group(FALSE));
+#endif
 #endif
     g_option_context_parse(context, &argc, &argv, &error);
     g_option_context_free(context);
@@ -457,8 +459,15 @@ int main(int argc, char *argv[])
     syslog(LOG_INFO, "vdagent started");
 
 #ifdef WITH_GTK
+#if GTK_CHECK_VERSION(3, 98, 0)
+    // GTK4: use Wayland if possible, otherwise use X11
+    gdk_set_allowed_backends("wayland,x11");
+    gtk_init();
+#else
+    // GTK3: need to use X11 as talking to Wayland will cause bugs
     gdk_set_allowed_backends("x11");
     gtk_init(NULL, NULL);
+#endif
 #endif
 
 reconnect:

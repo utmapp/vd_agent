@@ -81,13 +81,30 @@ AC_ARG_WITH([gtk],
                [Use GTK+ instead of Xlib @<:@default=auto@:>@])],
             [],
             [with_gtk="auto"])
-if test "x$with_gtk" != "xno"; then
-  PKG_CHECK_MODULES([GTK], [gtk+-3.0 >= 3.22], [
-                     AC_DEFINE([WITH_GTK], [1], [If defined, vdagent will favor GTK+ over Xlib])
+AC_ARG_WITH([gtk4],
+            [AS_HELP_STRING(
+               [--with-gtk4=@<:@yes/no@:>@],
+               [Use GTK4 instead of Xlib @<:@default=no@:>@])],
+            [],
+            [with_gtk4="no"])
+if test "x$with_gtk4" == "xyes"; then
+    PKG_CHECK_MODULES([GTK], [gtk4 >= 3.98], [
+                     AC_DEFINE([WITH_GTK], [1], [If defined, load GTK+ libraries])
+                     AC_DEFINE([USE_GTK_FOR_MONITORS], [1], [If defined, use GTK for monitor resolution instead of XRandr])
+                     with_gtk="yes"
+                 ], [
+                     AC_MSG_ERROR([GTK4 requested but not found])
+                     with_gtk="no"])
+else
+    if test "x$with_gtk" != "xno"; then
+        PKG_CHECK_MODULES([GTK], [gtk+-3.0 >= 3.22], [
+                     AC_DEFINE([WITH_GTK], [1], [If defined, load GTK+ libraries])
+                     AC_DEFINE([USE_GTK_FOR_CLIPBOARD], [1], [If defined, use GTK for clipboard features])
                      with_gtk="yes"
                  ], [
                      AS_IF([test "x$with_gtk" = "xyes"], [AC_MSG_ERROR([GTK+ requested but not found])])
                      with_gtk="no"])
+    fi
 fi
 
 AC_ARG_ENABLE([pciaccess],

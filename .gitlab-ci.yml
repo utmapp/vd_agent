@@ -5,7 +5,7 @@ variables:
       bzip2 python3-pyparsing meson ninja-build gtk-doc glib2-devel
       gettext gettext-devel libpciaccess-devel alsa-lib-devel
       libXfixes-devel libX11-devel libXrandr-devel libXinerama-devel
-      gtk3-devel dbus-devel systemd-devel procps-ng libdrm-devel
+      gtk3-devel dbus-devel systemd-devel procps-ng libdrm-devel gtk4-devel
 
 before_script:
   - dnf install -y $DEPS_COMMON
@@ -38,3 +38,10 @@ fedora-autotools:
   - make install
   - make uninstall
   - git clean -xfd
+
+  - ./autogen.sh --with-gtk4
+  - make
+  - make install
+  - make uninstall
+  - git clean -xfd
+

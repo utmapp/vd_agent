@@ -36,8 +36,13 @@
 #include <glib.h>
 #ifdef WITH_GTK
 #include <gdk/gdk.h>
+#include <gtk/gtk.h>    // for GTK_CHECK_VERSION
 #ifdef GDK_WINDOWING_X11
-#include <gdk/gdkx.h>
+    #if GTK_CHECK_VERSION(3, 98, 0)
+        #include <gdk/x11/gdkx.h>
+    #else
+        #include <gdk/gdkx.h>
+    #endif
 #endif
 #endif
 #include <stdlib.h>
@@ -57,7 +62,7 @@
 int (*vdagent_x11_prev_error_handler)(Display *, XErrorEvent *);
 int vdagent_x11_caught_error;
 
-#ifndef WITH_GTK
+#ifndef USE_GTK_FOR_CLIPBOARD
 static void vdagent_x11_handle_selection_notify(struct vdagent_x11 *x11,
                                                 const XEvent *event, int incr);
 static void vdagent_x11_handle_selection_request(struct vdagent_x11 *x11);
@@ -90,7 +95,6 @@ static int vdagent_x11_debug_error_handler(
     abort();
 }
 
-#ifndef WITH_GTK
 /* With the clipboard we're sometimes dealing with Properties on another apps
    Window. which can go away at any time. */
 static int vdagent_x11_ignore_bad_window_handler(
@@ -101,7 +105,6 @@ static int vdagent_x11_ignore_bad_window_handler(
 
     return vdagent_x11_prev_error_handler(display, error);
 }
-#endif
 
 void vdagent_x11_set_error_handler(struct vdagent_x11 *x11,
     int (*handler)(Display *, XErrorEvent *))
@@ -123,7 +126,6 @@ int vdagent_x11_restore_error_handler(struct vdagent_x11 *x11)
     return error;
 }
 
-#ifndef GDK_WINDOWING_X11
 gchar *vdagent_x11_get_wm_name(struct vdagent_x11 *x11)
 {
     Atom type_ret;
@@ -188,14 +190,13 @@ gchar *vdagent_x11_get_wm_name(struct vdagent_x11 *x11)
         return g_strdup("unknown");
     return net_wm_name;
 }
-#endif
 
 struct vdagent_x11 *vdagent_x11_create(UdscsConnection *vdagentd,
     int debug, int sync)
 {
     struct vdagent_x11 *x11;
     XWindowAttributes attrib;
-#ifdef WITH_GTK
+#ifdef USE_GTK_FOR_CLIPBOARD
     int i;
 #else
     int i, j, major, minor;
@@ -234,7 +235,7 @@ struct vdagent_x11 *vdagent_x11_create(UdscsConnection *vdagentd,
 
     for (i = 0; i < x11->screen_count; i++)
         x11->root_window[i] = RootWindow(x11->display, i);
-#ifndef WITH_GTK
+#ifndef USE_GTK_FOR_CLIPBOARD
     x11->clipboard_atom = XInternAtom(x11->display, "CLIPBOARD", False);
     x11->clipboard_primary_atom = XInternAtom(x11->display, "PRIMARY", False);
     x11->targets_atom = XInternAtom(x11->display, "TARGETS", False);
@@ -261,7 +262,7 @@ struct vdagent_x11 *vdagent_x11_create(UdscsConnection *vdagentd,
 
     vdagent_x11_randr_init(x11);
 
-#ifndef WITH_GTK
+#ifndef USE_GTK_FOR_CLIPBOARD
     if (XFixesQueryExtension(x11->display, &x11->xfixes_event_base, &i) &&
         XFixesQueryVersion(x11->display, &major, &minor) && major >= 1) {
         XFixesSelectSelectionInput(x11->display, x11->root_window[0],
@@ -311,7 +312,7 @@ void vdagent_x11_destroy(struct vdagent_x11 *x11, int vdagentd_disconnected)
     if (!x11)
         return;
 
-#ifndef WITH_GTK
+#ifndef USE_GTK_FOR_CLIPBOARD
     if (vdagentd_disconnected)
         x11->vdagentd = NULL;
 
@@ -338,7 +339,7 @@ int vdagent_x11_get_fd(struct vdagent_x11 *x11)
     return ConnectionNumber(x11->display);
 }
 
-#ifndef WITH_GTK
+#ifndef USE_GTK_FOR_CLIPBOARD
 static void vdagent_x11_next_selection_request(struct vdagent_x11 *x11)
 {
     struct vdagent_x11_selection_request *selection_request;
@@ -480,7 +481,7 @@ static int vdagent_x11_get_clipboard_selection(struct vdagent_x11 *x11,
 static void vdagent_x11_handle_event(struct vdagent_x11 *x11, const XEvent *event)
 {
     int i, handled = 0;
-#ifndef WITH_GTK
+#ifndef USE_GTK_FOR_CLIPBOARD
     uint8_t selection;
 
     if (event->type == x11->xfixes_event_base) {
@@ -546,7 +547,7 @@ static void vdagent_x11_handle_event(struct vdagent_x11 *x11, const XEvent *even
         /* These are uninteresting */
         handled = 1;
         break;
-#ifndef WITH_GTK
+#ifndef USE_GTK_FOR_CLIPBOARD
     case SelectionNotify:
         if (event->xselection.target == x11->targets_atom)
             vdagent_x11_handle_targets_notify(x11, event);
@@ -623,7 +624,7 @@ void vdagent_x11_do_read(struct vdagent_x11 *x11)
     }
 }
 
-#ifndef WITH_GTK
+#ifndef USE_GTK_FOR_CLIPBOARD
 static const char *vdagent_x11_get_atom_name(struct vdagent_x11 *x11, Atom a)
 {
     if (a == None)

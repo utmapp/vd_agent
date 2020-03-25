@@ -24,8 +24,11 @@
 #include <glib.h>
 #ifdef WITH_GTK
 #include <gdk/gdk.h>
+#include <gtk/gtk.h>    // for GTK_CHECK_VERSION
 #ifdef GDK_WINDOWING_X11
-#include <gdk/gdkx.h>
+    #if ! GTK_CHECK_VERSION(3, 98, 0)
+        #include <gdk/gdkx.h>
+    #endif
 #endif
 #endif
 #include <syslog.h>
@@ -52,14 +55,17 @@ struct VDAgentDisplay {
 static gchar *vdagent_display_get_wm_name(VDAgentDisplay *display)
 {
 #ifdef GDK_WINDOWING_X11
+    // With GTK4, screen have disappear, and with it the access to the window manager name
+    // Use the X11 call instead.
+#if ! GTK_CHECK_VERSION(3, 98, 0)
     GdkDisplay *gdk_display = gdk_display_get_default();
     if (GDK_IS_X11_DISPLAY(gdk_display))
         return g_strdup(gdk_x11_screen_get_window_manager_name(
             gdk_display_get_default_screen(gdk_display)));
     return g_strdup("unsupported");
-#else
-    return vdagent_x11_get_wm_name(display->x11);
 #endif
+#endif
+    return vdagent_x11_get_wm_name(display->x11);
 }
 
 

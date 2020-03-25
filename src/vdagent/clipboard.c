@@ -17,7 +17,7 @@
 */
 #include <config.h>
 
-#ifdef WITH_GTK
+#ifdef USE_GTK_FOR_CLIPBOARD
 # include <gtk/gtk.h>
 # include <syslog.h>
 
@@ -27,7 +27,7 @@
 
 #include "clipboard.h"
 
-#ifdef WITH_GTK
+#ifdef USE_GTK_FOR_CLIPBOARD
 /* 2 selections supported - _SELECTION_CLIPBOARD = 0, _SELECTION_PRIMARY = 1 */
 #define SELECTION_COUNT (VD_AGENT_CLIPBOARD_SELECTION_PRIMARY + 1)
 #define TYPE_COUNT      (VD_AGENT_CLIPBOARD_IMAGE_JPG + 1)
@@ -79,7 +79,7 @@ typedef struct {
 struct _VDAgentClipboards {
     GObject parent;
 
-#ifdef WITH_GTK
+#ifdef USE_GTK_FOR_CLIPBOARD
     UdscsConnection *conn;
 
     Selection selections[SELECTION_COUNT];
@@ -95,7 +95,7 @@ struct _VDAgentClipboardsClass
 
 G_DEFINE_TYPE(VDAgentClipboards, vdagent_clipboards, G_TYPE_OBJECT)
 
-#ifdef WITH_GTK
+#ifdef USE_GTK_FOR_CLIPBOARD
 static const struct {
     guint         type;
     const gchar  *atom_name;
@@ -329,7 +329,7 @@ static void clipboard_clear_cb(GtkClipboard *clipboard, gpointer user_data)
 void vdagent_clipboard_grab(VDAgentClipboards *c, guint sel_id,
                             guint32 *types, guint n_types)
 {
-#ifndef WITH_GTK
+#ifndef USE_GTK_FOR_CLIPBOARD
     vdagent_x11_clipboard_grab(c->x11, sel_id, types, n_types);
 #else
     GtkTargetEntry targets[G_N_ELEMENTS(atom2agent)];
@@ -373,7 +373,7 @@ void vdagent_clipboard_grab(VDAgentClipboards *c, guint sel_id,
 void vdagent_clipboard_data(VDAgentClipboards *c, guint sel_id,
                             guint type, guchar *data, guint size)
 {
-#ifndef WITH_GTK
+#ifndef USE_GTK_FOR_CLIPBOARD
     vdagent_x11_clipboard_data(c->x11, sel_id, type, data, size);
 #else
     g_return_if_fail(sel_id < SELECTION_COUNT);
@@ -403,7 +403,7 @@ void vdagent_clipboard_data(VDAgentClipboards *c, guint sel_id,
 
 void vdagent_clipboard_release(VDAgentClipboards *c, guint sel_id)
 {
-#ifndef WITH_GTK
+#ifndef USE_GTK_FOR_CLIPBOARD
     vdagent_x11_clipboard_release(c->x11, sel_id);
 #else
     g_return_if_fail(sel_id < SELECTION_COUNT);
@@ -417,7 +417,7 @@ void vdagent_clipboard_release(VDAgentClipboards *c, guint sel_id)
 
 void vdagent_clipboards_release_all(VDAgentClipboards *c)
 {
-#ifndef WITH_GTK
+#ifndef USE_GTK_FOR_CLIPBOARD
     vdagent_x11_client_disconnected(c->x11);
 #else
     guint sel_id, owner;
@@ -435,7 +435,7 @@ void vdagent_clipboards_release_all(VDAgentClipboards *c)
 
 void vdagent_clipboard_request(VDAgentClipboards *c, guint sel_id, guint type)
 {
-#ifndef WITH_GTK
+#ifndef USE_GTK_FOR_CLIPBOARD
     vdagent_x11_clipboard_request(c->x11, sel_id, type);
 #else
     Selection *sel;
@@ -474,7 +474,7 @@ VDAgentClipboards *vdagent_clipboards_new(struct vdagent_x11 *x11)
 {
     VDAgentClipboards *self = g_object_new(VDAGENT_TYPE_CLIPBOARDS, NULL);
 
-#ifndef WITH_GTK
+#ifndef USE_GTK_FOR_CLIPBOARD
     self->x11 = x11;
 #else
     guint sel_id;
@@ -493,14 +493,14 @@ VDAgentClipboards *vdagent_clipboards_new(struct vdagent_x11 *x11)
 void
 vdagent_clipboards_set_conn(VDAgentClipboards *self, UdscsConnection *conn)
 {
-#ifdef WITH_GTK
+#ifdef USE_GTK_FOR_CLIPBOARD
     self->conn = conn;
 #endif
 }
 
 static void vdagent_clipboards_dispose(GObject *obj)
 {
-#ifdef WITH_GTK
+#ifdef USE_GTK_FOR_CLIPBOARD
     VDAgentClipboards *self = VDAGENT_CLIPBOARDS(obj);
     guint sel_id;
 

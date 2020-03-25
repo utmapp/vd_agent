@@ -8,7 +8,7 @@
 
 #include <X11/extensions/Xrandr.h>
 
-#ifndef WITH_GTK
+#ifndef USE_GTK_FOR_CLIPBOARD
 /* Macros to print a message to the logfile prefixed by the selection */
 #define SELPRINTF(format, ...) \
     syslog(LOG_ERR, "%s: " format, \
@@ -85,7 +85,7 @@ struct monitor_size {
 
 struct vdagent_x11 {
     Display *display;
-#ifndef WITH_GTK
+#ifndef USE_GTK_FOR_CLIPBOARD
     struct clipboard_format_info clipboard_formats[clipboard_format_count];
     Atom clipboard_atom;
     Atom clipboard_primary_atom;
