@@ -45,3 +45,9 @@ fedora-autotools:
   - make uninstall
   - git clean -xfd
 
+  artifacts:
+    expire_in: '1 week'
+    when: on_failure
+    paths:
+      - test-suite.log
+      - tests/test*.log
