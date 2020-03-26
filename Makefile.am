@@ -171,3 +171,5 @@ tests_test_device_info_LDADD = $(src_spice_vdagent_LDADD)
 tests_test_device_info_CFLAGS = $(src_spice_vdagent_CFLAGS)
 
 check_PROGRAMS += tests/test-device-info
+
+check_PROGRAMS += tests/test-termination

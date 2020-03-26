@@ -5,7 +5,7 @@ variables:
       bzip2 python3-pyparsing meson ninja-build gtk-doc glib2-devel
       gettext gettext-devel libpciaccess-devel alsa-lib-devel
       libXfixes-devel libX11-devel libXrandr-devel libXinerama-devel
-      gtk3-devel dbus-devel systemd-devel
+      gtk3-devel dbus-devel systemd-devel procps-ng
 
 before_script:
   - dnf install -y $DEPS_COMMON
