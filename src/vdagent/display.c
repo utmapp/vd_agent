@@ -63,14 +63,156 @@ struct VDAgentDisplay {
     GIOChannel *x11_channel;
 };
 
+#ifdef USE_GTK_FOR_MONITORS
+static gint vdagent_guest_xorg_resolution_compare(gconstpointer a, gconstpointer b)
+{
+    struct vdagentd_guest_xorg_resolution *ptr_a, *ptr_b;
+
+    ptr_a = (struct vdagentd_guest_xorg_resolution *)a;
+    ptr_b = (struct vdagentd_guest_xorg_resolution *)b;
+
+    return ptr_a->display_id - ptr_b->display_id;
+}
+#endif
+
+static GArray *vdagent_gtk_get_resolutions(VDAgentDisplay *display,
+                                           int *width, int *height, int *screen_count)
+{
+#ifdef USE_GTK_FOR_MONITORS
+    if (!GDK_IS_WAYLAND_DISPLAY(gdk_display_get_default())) {
+        return NULL;
+    }
+
+    GArray *res_array = g_array_new(FALSE, FALSE, sizeof(struct vdagentd_guest_xorg_resolution));
+    int i;
+    GListModel *monitors = NULL;
+
+    GdkDisplay *gdk_display = gdk_display_get_default();
+
+    // Make sure GDK is aware of the changes we want to send.
+    // TODO: This may be removed if we get a notification of change from GDK itself,
+    // but with X11 notification, we end up sending obsolete information.
+    gdk_display_sync(gdk_display);
+
+    monitors = gdk_display_get_monitors(gdk_display);
+    *screen_count = g_list_model_get_n_items(monitors);
+
+    for (i = 0; i < *screen_count; i++) {
+        struct vdagentd_guest_xorg_resolution curr;
+
+        GdkMonitor *monitor = (GdkMonitor*)g_list_model_get_item(monitors, i);
+        GdkRectangle geometry;
+
+        gdk_monitor_get_geometry(monitor, &geometry);
+        curr.x = geometry.x;
+        curr.y = geometry.y;
+        curr.height = geometry.height;
+        curr.width = geometry.width;
+
+        // compute the size of the desktop based on the dimension of the monitors
+        // TODO: check for a specific API giving us that information (not found in GTK ?)
+        if (curr.x + curr.width > *width) {
+            *width = curr.x + curr.width;
+        }
+        if (curr.y + curr.height > *height) {
+            *height = curr.y + curr.height;
+        }
+
+        // retrieve the Spice Display ID based on the connector name
+        const char *name = gdk_monitor_get_connector(monitor);
+        if (!name) {
+            syslog(LOG_WARNING, "Unknown connector for monitor %d", i);
+            continue;
+        }
+
+        gpointer value;
+        if (g_hash_table_lookup_extended(display->connector_mapping, name, NULL, &value)) {
+            curr.display_id = GPOINTER_TO_UINT(value);
+            syslog(LOG_DEBUG, "Found monitor %s with geometry %dx%d+%d-%d - associating it to SPICE display #%d",
+                   name, curr.width, curr.height, curr.x, curr.y, curr.display_id);
+            g_array_append_val(res_array, curr);
+        } else {
+            syslog(LOG_DEBUG, "No SPICE display found for connector %s", name);
+        }
+    }
+
+    if (res_array->len == 0) {
+        syslog(LOG_DEBUG, "No Spice display ID matching - assuming display ID == Monitor index");
+        for (i = 0; i < *screen_count; i++) {
+            struct vdagentd_guest_xorg_resolution res;
+            GdkMonitor *monitor = (GdkMonitor*)g_list_model_get_item(monitors, i);
+            GdkRectangle geometry;
+
+            gdk_monitor_get_geometry(monitor, &geometry);
+            res.x = geometry.x;
+            res.y = geometry.y;
+            res.height = geometry.height;
+            res.width = geometry.width;
+            res.display_id = i;
+
+            g_array_append_val(res_array, res);
+        }
+    }
+
+    if (res_array->len < g_hash_table_size(display->connector_mapping)) {
+        // Complete the array with disabled displays.
+        // We need to send 0x0 resolution to let the daemon know the display is not there anymore.
+
+        syslog(LOG_DEBUG, "%d/%d displays found - completing with disabled displays.",
+               res_array->len, g_hash_table_size(display->connector_mapping));
+
+        GHashTableIter iter;
+        gpointer key, value;
+        g_hash_table_iter_init(&iter, display->connector_mapping);
+        while (g_hash_table_iter_next(&iter, &key, &value)) {
+            bool found = false;
+            int display_id = GPOINTER_TO_INT(value);
+            for (i = 0; i < res_array->len; i++) {
+                struct vdagentd_guest_xorg_resolution *res =
+                    (struct vdagentd_guest_xorg_resolution*)res_array->data;
+                if (res[i].display_id == display_id) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                struct vdagentd_guest_xorg_resolution res;
+
+                res.x = 0;
+                res.y = 0;
+                res.height = 0;
+                res.width = 0;
+                res.display_id = display_id;
+
+                g_array_append_val(res_array, res);
+            }
+        }
+    }
+
+    // sort the list to make sure we send them in the display_id order
+    g_array_sort(res_array, vdagent_guest_xorg_resolution_compare);
+    return res_array;
+#else
+    return NULL;
+#endif
+}
+
 void vdagent_display_send_daemon_guest_res(VDAgentDisplay *display, gboolean update)
 {
     GArray *res_array;
-    int width, height, screen_count;
+    int width = 0, height = 0, screen_count = 0;
 
-    res_array = vdagent_x11_get_resolutions(display->x11, update, &width, &height, &screen_count);
+    res_array = vdagent_gtk_get_resolutions(display, &width, &height, &screen_count);
     if (res_array == NULL) {
-        return;
+        if (display->x11->dont_send_guest_xorg_res) {
+            return;
+        }
+
+        res_array = vdagent_x11_get_resolutions(display->x11, update,
+                                                &width, &height, &screen_count);
+        if (res_array == NULL) {
+            return;
+        }
     }
 
     if (display->debug) {
@@ -183,6 +325,7 @@ void vdagent_display_destroy(VDAgentDisplay *display, int vdagentd_disconnected)
 
     g_clear_pointer(&display->x11_channel, g_io_channel_unref);
     vdagent_x11_destroy(display->x11, vdagentd_disconnected);
+    g_free(display);
 }
 
 /* Function used to determine the default location to save file-xfers,
