@@ -779,11 +779,12 @@ static void dump_monitors_config(struct vdagent_x11 *x11,
 // handle the device info message from the server. This will allow us to
 // maintain a mapping from spice display id to xrandr output
 void vdagent_x11_handle_device_display_info(struct vdagent_x11 *x11,
-                                            VDAgentDeviceDisplayInfo *device_display_info)
+                                            VDAgentDeviceDisplayInfo *device_display_info,
+                                            gboolean has_virtual_zero_display)
 {
     RROutput x_output;
     if (lookup_xrandr_output_for_device_info(device_display_info, x11->display,
-                                             x11->randr.res, &x_output)) {
+                                             x11->randr.res, &x_output, has_virtual_zero_display)) {
         syslog(LOG_INFO, "Adding graphics device info: channel_id: %u monitor_id: "
                "%u device_address: %s, device_display_id: %u xrandr output ID: %lu",
                device_display_info->channel_id,

@@ -27,7 +27,8 @@ struct vdagent_x11;
 bool lookup_xrandr_output_for_device_info(VDAgentDeviceDisplayInfo *device_info,
                                           Display *xdisplay,
                                           XRRScreenResources *xres,
-                                          RROutput *output_id);
+                                          RROutput *output_id,
+                                          bool has_virtual_zero_display);
 
 int get_connector_name_for_device_info(VDAgentDeviceDisplayInfo *device_info,
                                        char *expected_name, size_t name_size,

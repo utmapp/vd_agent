@@ -53,6 +53,7 @@ void vdagent_x11_client_disconnected(struct vdagent_x11 *x11);
 gchar *vdagent_x11_get_wm_name(struct vdagent_x11 *x11);
 
 void vdagent_x11_handle_device_display_info(struct vdagent_x11 *x11,
-                                            VDAgentDeviceDisplayInfo *device_display_info);
+                                            VDAgentDeviceDisplayInfo *device_display_info,
+                                            gboolean has_virtual_zero_display);
 
 #endif

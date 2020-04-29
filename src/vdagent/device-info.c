@@ -482,31 +482,11 @@ int get_connector_name_for_device_info(VDAgentDeviceDisplayInfo *device_info,
 bool lookup_xrandr_output_for_device_info(VDAgentDeviceDisplayInfo *device_info,
                                           Display *xdisplay,
                                           XRRScreenResources *xres,
-                                          RROutput *output_id)
+                                          RROutput *output_id,
+                                          bool has_virtual_zero_display)
 {
     char expected_name[100];
     int ret;
-
-    // Older QXL drivers numbered their outputs starting with
-    // 0. This contrasts with most drivers who start numbering
-    // outputs with 1.  In this case, the expected drm connector
-    // name will need to be decremented before comparing to the
-    // xrandr output name
-    bool has_virtual_zero_display = false;
-    for (int i = 0; i < xres->noutput; ++i) {
-        XRROutputInfo *oinfo = XRRGetOutputInfo(xdisplay, xres, xres->outputs[i]);
-        if (!oinfo) {
-            syslog(LOG_WARNING, "Unable to lookup XRandr output info for output %li",
-                   xres->outputs[i]);
-            return false;
-        }
-        if (strcmp(oinfo->name, "Virtual-0") == 0) {
-            has_virtual_zero_display = true;
-            XRRFreeOutputInfo(oinfo);
-            break;
-        }
-        XRRFreeOutputInfo(oinfo);
-    }
 
     ret = get_connector_name_for_device_info(device_info, expected_name, sizeof(expected_name),
                                              has_virtual_zero_display);

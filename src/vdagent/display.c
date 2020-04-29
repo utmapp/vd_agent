@@ -212,6 +212,57 @@ gboolean vdagent_display_has_icons_on_desktop(VDAgentDisplay *display)
     return FALSE;
 }
 
+static bool has_zero_based_display_id(VDAgentDisplay *display)
+{
+    // Older QXL drivers numbered their outputs starting with
+    // 0. This contrasts with most drivers who start numbering
+    // outputs with 1.  In this case, the expected drm connector
+    // name will need to be decremented before comparing to the
+    // display manager output name
+    bool ret = false;
+#ifdef USE_GTK_FOR_MONITORS
+    GdkDisplay *gdk_display = gdk_display_get_default();
+    if (GDK_IS_WAYLAND_DISPLAY(gdk_display)) {
+        gdk_display_sync(gdk_display);
+
+        GListModel *monitors = gdk_display_get_monitors(gdk_display);
+        int screen_count = g_list_model_get_n_items(monitors);
+        for (int i = 0; i < screen_count; i++) {
+            GdkMonitor *monitor = (GdkMonitor *)g_list_model_get_item(monitors, i);
+            const char *name = gdk_monitor_get_connector(monitor);
+            if (!name) {
+                continue;
+            }
+
+            if (strcmp(name, "Virtual-0") == 0) {
+                ret = true;
+                break;
+            }
+        }
+    }
+    else // otherwise, use the X11 code (below)
+#endif
+    {
+        XRRScreenResources *xres = display->x11->randr.res;
+        Display *xdisplay = display->x11->display;
+        for (int i = 0; i < xres->noutput; ++i) {
+            XRROutputInfo *oinfo = XRRGetOutputInfo(xdisplay, xres, xres->outputs[i]);
+            if (!oinfo) {
+                syslog(LOG_WARNING, "Unable to lookup XRandr output info for output %li",
+                       xres->outputs[i]);
+                return false;
+            }
+            if (strcmp(oinfo->name, "Virtual-0") == 0) {
+                ret = true;
+                XRRFreeOutputInfo(oinfo);
+                break;
+            }
+            XRRFreeOutputInfo(oinfo);
+        }
+    }
+    return ret;
+}
+
 // handle the device info message from the server. This will allow us to
 // maintain a mapping from spice display id to xrandr output
 void vdagent_display_handle_graphics_device_info(VDAgentDisplay *display, uint8_t *data,
@@ -221,6 +272,7 @@ void vdagent_display_handle_graphics_device_info(VDAgentDisplay *display, uint8_
     VDAgentDeviceDisplayInfo *device_display_info = graphics_device_info->display_info;
 
     void *buffer_end = data + size;
+    bool decrement_id = has_zero_based_display_id(display);
 
     syslog(LOG_INFO, "Received Graphics Device Info:");
 
@@ -246,7 +298,7 @@ void vdagent_display_handle_graphics_device_info(VDAgentDisplay *display, uint8_
             // Get the expected connector name from hardware info. Store it with the SPICE display ID.
             char expected_name[100];
             int ret = get_connector_name_for_device_info(device_display_info, expected_name,
-                                                         sizeof(expected_name), false);
+                                                         sizeof(expected_name), decrement_id);
             if (ret == 0) {
                 g_hash_table_insert(display->connector_mapping,
                                     g_strdup(expected_name),
@@ -258,7 +310,7 @@ void vdagent_display_handle_graphics_device_info(VDAgentDisplay *display, uint8_
         else
             // under X11, use the X11 API
 #endif
-        vdagent_x11_handle_device_display_info(display->x11, device_display_info);
+        vdagent_x11_handle_device_display_info(display->x11, device_display_info, decrement_id);
 
         device_display_info = (VDAgentDeviceDisplayInfo*) ((char*) device_display_info +
             sizeof(VDAgentDeviceDisplayInfo) + device_display_info->device_address_len);
