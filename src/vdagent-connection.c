@@ -231,7 +231,7 @@ void vdagent_connection_write(VDAgentConnection *self,
         out = G_POLLABLE_OUTPUT_STREAM(g_io_stream_get_output_stream(priv->io_stream));
 
         source = g_pollable_output_stream_create_source(out, priv->cancellable);
-        g_source_set_callback(source, G_SOURCE_FUNC(out_stream_ready_cb),
+        g_source_set_callback(source, (GSourceFunc) out_stream_ready_cb,
             g_object_ref(self), NULL);
         g_source_attach(source, NULL);
         g_source_unref(source);
