@@ -140,6 +140,8 @@ void vdagentd_uinput_update_size(struct vdagentd_uinput **uinputp,
     ioctl(uinput->fd, UI_SET_KEYBIT, BTN_LEFT);
     ioctl(uinput->fd, UI_SET_KEYBIT, BTN_MIDDLE);
     ioctl(uinput->fd, UI_SET_KEYBIT, BTN_RIGHT);
+    ioctl(uinput->fd, UI_SET_KEYBIT, BTN_SIDE);
+    ioctl(uinput->fd, UI_SET_KEYBIT, BTN_EXTRA);
 
     /* wheel */
     ioctl(uinput->fd, UI_SET_EVBIT, EV_REL);
@@ -200,6 +202,8 @@ void vdagentd_uinput_do_mouse(struct vdagentd_uinput **uinputp,
         { .name = "left",   .mask =  VD_AGENT_LBUTTON_MASK, .btn = BTN_LEFT      },
         { .name = "middle", .mask =  VD_AGENT_MBUTTON_MASK, .btn = BTN_MIDDLE    },
         { .name = "right",  .mask =  VD_AGENT_RBUTTON_MASK, .btn = BTN_RIGHT     },
+        { .name = "side" ,  .mask =  VD_AGENT_SBUTTON_MASK, .btn = BTN_SIDE      },
+        { .name = "extra" , .mask =  VD_AGENT_EBUTTON_MASK, .btn = BTN_EXTRA     },
     };
     static const struct button_s wheel[] = {
         { .name = "up",     .mask =  VD_AGENT_UBUTTON_MASK, .btn = 1  },
