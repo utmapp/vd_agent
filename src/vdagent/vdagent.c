@@ -463,7 +463,7 @@ int main(int argc, char *argv[])
             LOG_USER);
 
     if (!g_file_test(portdev, G_FILE_TEST_EXISTS)) {
-        g_debug("vdagent virtio channel %s does not exist, exiting", portdev);
+        syslog(LOG_DEBUG, "vdagent virtio channel %s does not exist, exiting", portdev);
         g_free(orig_argv);
         return 0;
     }
