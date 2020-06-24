@@ -74,6 +74,7 @@ static void vdagent_x11_send_selection_notify(struct vdagent_x11 *x11,
                 Atom prop, struct vdagent_x11_selection_request *request);
 static void vdagent_x11_set_clipboard_owner(struct vdagent_x11 *x11,
                                             uint8_t selection, int new_owner);
+static void uris_ready_cb(GObject *source, GAsyncResult *res, gpointer user_data);
 
 static const char *vdagent_x11_sel_to_str(uint8_t selection) {
     switch (selection) {
@@ -287,6 +288,8 @@ struct vdagent_x11 *vdagent_x11_create(UdscsConnection *vdagentd,
     /* Be a good X11 citizen and maximize the amount of data we send at once */
     if (x11->max_prop_size > 262144)
         x11->max_prop_size = 262144;
+
+    clipboard_webdav_init();
 #endif
 
     for (i = 0; i < x11->screen_count; i++) {
@@ -326,6 +329,8 @@ void vdagent_x11_destroy(struct vdagent_x11 *x11, int vdagentd_disconnected)
             XFree(x11->atom_name_cache[i].name);
         }
     }
+
+    clipboard_webdav_finalize();
 #endif
 
     g_hash_table_destroy(x11->guest_output_map);
@@ -420,6 +425,9 @@ static void vdagent_x11_set_clipboard_owner(struct vdagent_x11 *x11,
             prev_conv = curr_conv;
         }
     }
+
+    x11->clipboard_has_files[selection] = False;
+    g_clear_pointer(&x11->file_list_data[selection], g_bytes_unref);
 
     if (new_owner == owner_none) {
         /* When going from owner_guest to owner_none we need to send a
@@ -799,6 +807,17 @@ static uint32_t vdagent_x11_target_to_type(struct vdagent_x11 *x11,
     int i, j;
 
     for (i = 0; i < clipboard_format_count; i++) {
+        /* targets for VD_AGENT_CLIPBOARD_FILE_LIST overlap with the text targets */
+        if (x11->clipboard_has_files[selection]) {
+            if (x11->clipboard_formats[i].type == VD_AGENT_CLIPBOARD_UTF8_TEXT) {
+                continue;
+            }
+        } else {
+            if (x11->clipboard_formats[i].type == VD_AGENT_CLIPBOARD_FILE_LIST) {
+                continue;
+            }
+        }
+
         for (j = 0; j < x11->clipboard_formats[i].atom_count; j++) {
             if (x11->clipboard_formats[i].atoms[j] == target) {
                 return x11->clipboard_formats[i].type;
@@ -968,6 +987,11 @@ static void vdagent_x11_handle_targets_notify(struct vdagent_x11 *x11,
     type_count = &x11->clipboard_type_count[selection];
     *type_count = 0;
     for (i = 0; i < clipboard_format_count; i++) {
+        if (x11->clipboard_formats[i].type == VD_AGENT_CLIPBOARD_FILE_LIST) {
+            /* we don't support file copying in this direction yet */
+            continue;
+        }
+
         atom = atom_lists_overlap(x11->clipboard_formats[i].atoms, atoms,
                                   x11->clipboard_formats[i].atom_count, len);
         if (atom) {
@@ -1029,6 +1053,11 @@ static void vdagent_x11_send_targets(struct vdagent_x11 *x11,
     int i, j, k, target_count = 1;
 
     for (i = 0; i < x11->clipboard_type_count[selection]; i++) {
+        if (x11->clipboard_agent_types[selection][i] == VD_AGENT_CLIPBOARD_UTF8_TEXT &&
+            x11->clipboard_has_files[selection]) {
+            continue;
+        }
+
         for (j = 0; j < clipboard_format_count; j++) {
             if (x11->clipboard_formats[j].type !=
                     x11->clipboard_agent_types[selection][i])
@@ -1112,6 +1141,17 @@ static void vdagent_x11_handle_selection_request(struct vdagent_x11 *x11)
     if (type == VD_AGENT_CLIPBOARD_NONE) {
         VSELPRINTF("guest app requested a non-advertised target");
         vdagent_x11_send_selection_notify(x11, None, NULL);
+        return;
+    }
+
+    if (type == VD_AGENT_CLIPBOARD_FILE_LIST && x11->file_list_data[selection]) {
+        VSELPRINTF("setting file list from cache");
+
+        clipboard_data_translate_to_uris_async(
+            vdagent_x11_get_atom_name(x11, event->xselectionrequest.target),
+            x11->file_list_data[selection],
+            NULL, uris_ready_cb, x11
+        );
         return;
     }
 
@@ -1249,6 +1289,13 @@ void vdagent_x11_clipboard_grab(struct vdagent_x11 *x11, uint8_t selection,
                        x11->selection_window, CurrentTime);
     vdagent_x11_set_clipboard_owner(x11, selection, owner_client);
 
+    for (int i = 0; i < x11->clipboard_type_count[selection]; i++) {
+        if (x11->clipboard_agent_types[selection][i] == VD_AGENT_CLIPBOARD_FILE_LIST) {
+            x11->clipboard_has_files[selection] = True;
+            break;
+        }
+    }
+
     /* If there're pending requests for targets, ignore the returned
      * targets as the XSetSelectionOwner() call above made them invalid */
     x11->ignore_targets_notifies[selection] =
@@ -1318,6 +1365,32 @@ static void clipboard_data_send_to_requestor(struct vdagent_x11 *x11,
     }
 }
 
+static void uris_ready_cb(GObject *source, GAsyncResult *res, gpointer user_data)
+{
+    struct vdagent_x11 *x11 = user_data;
+    GError *err = NULL;
+    size_t size;
+
+    char *uris = clipboard_data_translate_to_uris_finish(source, res, &size, &err);
+    if (g_error_matches(err, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+        g_error_free(err);
+        return;
+    }
+    if (!x11->selection_req) {
+        return;
+    }
+    uint8_t selection = x11->selection_req->selection;
+    if (err) {
+        SELPRINTF("failed to translate data to uris %s", err->message);
+        g_error_free(err);
+    }
+
+    clipboard_data_send_to_requestor(x11, selection, (uint8_t *)uris, size, True);
+
+    /* Flush output buffers and consume any pending events */
+    vdagent_x11_do_read(x11);
+}
+
 void vdagent_x11_clipboard_data(struct vdagent_x11 *x11, uint8_t selection,
     uint32_t type, uint8_t *data, uint32_t size)
 {
@@ -1361,7 +1434,18 @@ void vdagent_x11_clipboard_data(struct vdagent_x11 *x11, uint8_t selection,
         return;
     }
 
-    clipboard_data_send_to_requestor(x11, selection, data, size, False);
+    if (type == VD_AGENT_CLIPBOARD_FILE_LIST) {
+        g_clear_pointer(&x11->file_list_data[selection], g_bytes_unref);
+        x11->file_list_data[selection] = g_bytes_new(data, size);
+
+        clipboard_data_translate_to_uris_async(
+            vdagent_x11_get_atom_name(x11, event->xselectionrequest.target),
+            x11->file_list_data[selection], NULL, uris_ready_cb, x11
+        );
+        return;
+    } else {
+        clipboard_data_send_to_requestor(x11, selection, data, size, False);
+    }
 
     /* Flush output buffers and consume any pending events */
     vdagent_x11_do_read(x11);

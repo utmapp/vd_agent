@@ -41,6 +41,8 @@ src_spice_vdagent_SOURCES =			\
 	src/vdagent/audio.h			\
 	src/vdagent/clipboard.c			\
 	src/vdagent/clipboard.h			\
+	src/vdagent/webdav-cb.c			\
+	src/vdagent/webdav-cb.h			\
 	src/vdagent/device-info.c		\
 	src/vdagent/device-info.h		\
 	src/vdagent/display.c			\

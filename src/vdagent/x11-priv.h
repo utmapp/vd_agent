@@ -9,6 +9,9 @@
 #include <X11/extensions/Xrandr.h>
 
 #ifndef USE_GTK_FOR_CLIPBOARD
+
+#include "webdav-cb.h"
+
 /* Macros to print a message to the logfile prefixed by the selection */
 #define SELPRINTF(format, ...) \
     syslog(LOG_ERR, "%s: " format, \
@@ -63,6 +66,9 @@ static const struct clipboard_format_tmpl clipboard_format_templates[] = {
       "image/x-MS-bmp", "image/x-win-bitmap", NULL }, },
     { VD_AGENT_CLIPBOARD_IMAGE_TIFF, { "image/tiff", NULL }, },
     { VD_AGENT_CLIPBOARD_IMAGE_JPG, { "image/jpeg", NULL }, },
+    { VD_AGENT_CLIPBOARD_FILE_LIST, { "text/uri-list",
+      "text/plain;charset=utf-8", "application/x-kde-cutselection",
+      "x-special/gnome-copied-files", "x-special/mate-copied-files", NULL } },
 };
 
 #define clipboard_format_count (sizeof(clipboard_format_templates)/sizeof(clipboard_format_templates[0]))
@@ -103,6 +109,7 @@ struct vdagent_x11 {
     int clipboard_owner[256];
     int clipboard_type_count[256];
     uint32_t clipboard_agent_types[256][256];
+    Bool clipboard_has_files[256];
     Atom clipboard_x11_targets[256][256];
     /* Data for conversion_req which is currently being processed */
     struct vdagent_x11_conversion_request *conversion_req;
@@ -115,6 +122,7 @@ struct vdagent_x11 {
     uint8_t *selection_req_data;
     uint32_t selection_req_data_pos;
     uint32_t selection_req_data_size;
+    GBytes *file_list_data[256];
     Atom selection_req_atom;
 #endif
     Window root_window[MAX_SCREENS];
