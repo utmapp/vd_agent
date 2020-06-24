@@ -1258,10 +1258,69 @@ void vdagent_x11_clipboard_grab(struct vdagent_x11 *x11, uint8_t selection,
     vdagent_x11_do_read(x11);
 }
 
+static void clipboard_data_send_to_requestor(struct vdagent_x11 *x11,
+    uint8_t selection, uint8_t *data, uint32_t size, Bool take_ownership)
+{
+    XEvent *event;
+    Atom prop;
+
+    event = &x11->selection_req->event;
+
+    prop = event->xselectionrequest.property;
+    if (prop == None) {
+        prop = event->xselectionrequest.target;
+    }
+
+    if (size > x11->max_prop_size) {
+        unsigned long len = size;
+        VSELPRINTF("Starting incr send of clipboard data");
+
+        vdagent_x11_set_error_handler(x11, vdagent_x11_ignore_bad_window_handler);
+        XSelectInput(x11->display, event->xselectionrequest.requestor,
+                     PropertyChangeMask);
+        XChangeProperty(x11->display, event->xselectionrequest.requestor, prop,
+                        x11->incr_atom, 32, PropModeReplace,
+                        (unsigned char*)&len, 1);
+        if (vdagent_x11_restore_error_handler(x11) == 0) {
+            if (take_ownership) {
+                x11->selection_req_data = data;
+            } else {
+                /* duplicate data */
+                x11->selection_req_data = malloc(size);
+                if (x11->selection_req_data == NULL) {
+                    SELPRINTF("out of memory allocating selection buffer");
+                    return;
+                }
+                memcpy(x11->selection_req_data, data, size);
+            }
+
+            x11->selection_req_data_pos = 0;
+            x11->selection_req_data_size = size;
+            x11->selection_req_atom = prop;
+            vdagent_x11_send_selection_notify(x11, prop, x11->selection_req);
+        } else {
+            SELPRINTF("clipboard data sent failed, requestor window gone");
+        }
+    } else {
+        vdagent_x11_set_error_handler(x11, vdagent_x11_ignore_bad_window_handler);
+        XChangeProperty(x11->display, event->xselectionrequest.requestor, prop,
+                        event->xselectionrequest.target, 8, PropModeReplace,
+                        data, size);
+        if (vdagent_x11_restore_error_handler(x11) == 0) {
+            vdagent_x11_send_selection_notify(x11, prop, NULL);
+        } else {
+            SELPRINTF("clipboard data sent failed, requestor window gone");
+        }
+
+        if (take_ownership) {
+            g_free(data);
+        }
+    }
+}
+
 void vdagent_x11_clipboard_data(struct vdagent_x11 *x11, uint8_t selection,
     uint32_t type, uint8_t *data, uint32_t size)
 {
-    Atom prop;
     XEvent *event;
     uint32_t type_from_event;
 
@@ -1302,45 +1361,7 @@ void vdagent_x11_clipboard_data(struct vdagent_x11 *x11, uint8_t selection,
         return;
     }
 
-    prop = event->xselectionrequest.property;
-    if (prop == None)
-        prop = event->xselectionrequest.target;
-
-    if (size > x11->max_prop_size) {
-        unsigned long len = size;
-        VSELPRINTF("Starting incr send of clipboard data");
-
-        vdagent_x11_set_error_handler(x11, vdagent_x11_ignore_bad_window_handler);
-        XSelectInput(x11->display, event->xselectionrequest.requestor,
-                     PropertyChangeMask);
-        XChangeProperty(x11->display, event->xselectionrequest.requestor, prop,
-                        x11->incr_atom, 32, PropModeReplace,
-                        (unsigned char*)&len, 1);
-        if (vdagent_x11_restore_error_handler(x11) == 0) {
-            /* duplicate data */
-            x11->selection_req_data = malloc(size);
-            if (x11->selection_req_data != NULL) {
-                memcpy(x11->selection_req_data, data, size);
-                x11->selection_req_data_pos = 0;
-                x11->selection_req_data_size = size;
-                x11->selection_req_atom = prop;
-                vdagent_x11_send_selection_notify(x11, prop, x11->selection_req);
-            } else {
-                SELPRINTF("out of memory allocating selection buffer");
-            }
-        } else {
-            SELPRINTF("clipboard data sent failed, requestor window gone");
-        }
-    } else {
-        vdagent_x11_set_error_handler(x11, vdagent_x11_ignore_bad_window_handler);
-        XChangeProperty(x11->display, event->xselectionrequest.requestor, prop,
-                        event->xselectionrequest.target, 8, PropModeReplace,
-                        data, size);
-        if (vdagent_x11_restore_error_handler(x11) == 0)
-            vdagent_x11_send_selection_notify(x11, prop, NULL);
-        else
-            SELPRINTF("clipboard data sent failed, requestor window gone");
-    }
+    clipboard_data_send_to_requestor(x11, selection, data, size, False);
 
     /* Flush output buffers and consume any pending events */
     vdagent_x11_do_read(x11);
