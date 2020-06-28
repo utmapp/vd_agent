@@ -66,6 +66,12 @@ static const struct clipboard_format_tmpl clipboard_format_templates[] = {
 };
 
 #define clipboard_format_count (sizeof(clipboard_format_templates)/sizeof(clipboard_format_templates[0]))
+
+#define ATOM_NAME_CACHE_SIZE 16
+struct atom_name_cache_item {
+    Atom atom;
+    char *name;
+};
 #endif
 
 #define MAX_SCREENS 16
@@ -87,6 +93,8 @@ struct vdagent_x11 {
     Atom incr_atom;
     Atom multiple_atom;
     Atom timestamp_atom;
+    struct atom_name_cache_item atom_name_cache[ATOM_NAME_CACHE_SIZE];
+    int atom_name_cache_next;
     Window selection_window;
     int has_xfixes;
     int xfixes_event_base;

@@ -341,6 +341,12 @@ void vdagent_x11_destroy(struct vdagent_x11 *x11, int vdagentd_disconnected)
     for (sel = 0; sel < VD_AGENT_CLIPBOARD_SELECTION_SECONDARY; ++sel) {
         vdagent_x11_set_clipboard_owner(x11, sel, owner_none);
     }
+
+    for (int i = 0; i < ATOM_NAME_CACHE_SIZE; i++) {
+        if (x11->atom_name_cache[i].name) {
+            XFree(x11->atom_name_cache[i].name);
+        }
+    }
 #endif
 
     g_hash_table_destroy(x11->guest_output_map);
@@ -645,7 +651,21 @@ static const char *vdagent_x11_get_atom_name(struct vdagent_x11 *x11, Atom a)
     if (a == None)
         return "None";
 
-    return XGetAtomName(x11->display, a);
+    for (int i = 0; i < ATOM_NAME_CACHE_SIZE; i++) {
+        if (x11->atom_name_cache[i].atom == a) {
+            return x11->atom_name_cache[i].name;
+        }
+    }
+
+    struct atom_name_cache_item *cch;
+    cch = &x11->atom_name_cache[x11->atom_name_cache_next];
+    if (cch->name) {
+        XFree(cch->name);
+    }
+    cch->atom = a;
+    cch->name = XGetAtomName(x11->display, a);
+    x11->atom_name_cache_next = (x11->atom_name_cache_next + 1) % ATOM_NAME_CACHE_SIZE;
+    return cch->name;
 }
 
 static int vdagent_x11_get_selection(struct vdagent_x11 *x11, const XEvent *event,
