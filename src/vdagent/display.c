@@ -476,5 +476,13 @@ void vdagent_display_handle_graphics_device_info(VDAgentDisplay *display, uint8_
 void vdagent_display_set_monitor_config(VDAgentDisplay *display, VDAgentMonitorsConfig *mon_config,
         int fallback)
 {
+#ifdef USE_GTK_FOR_MONITORS
+    if (GDK_IS_WAYLAND_DISPLAY(gdk_display_get_default())) {
+        // FIXME: there is no equivalent call to set the monitor config under wayland
+        // Send the configuration back - the client need to know the resolution was not taken into account.
+        vdagent_display_send_daemon_guest_res(display, TRUE);
+        return;
+    }
+#endif
     vdagent_x11_set_monitor_config(display->x11, mon_config, fallback);
 }

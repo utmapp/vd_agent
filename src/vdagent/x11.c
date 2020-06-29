@@ -193,7 +193,7 @@ gchar *vdagent_x11_get_wm_name(struct vdagent_x11 *x11)
 }
 
 struct vdagent_x11 *vdagent_x11_create(UdscsConnection *vdagentd,
-    int debug, int sync)
+                                       int debug, int sync)
 {
     struct vdagent_x11 *x11;
     XWindowAttributes attrib;
