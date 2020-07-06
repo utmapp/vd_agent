@@ -414,7 +414,7 @@ static RROutput get_xrandr_output_for_display_id(struct vdagent_x11 *x11, int di
         gpointer value;
         if (g_hash_table_lookup_extended(x11->guest_output_map, GINT_TO_POINTER(display_id),
                                          NULL, &value)) {
-            return *(gint64*)value;
+            return (RROutput)value;
         }
     }
 
@@ -784,9 +784,6 @@ void vdagent_x11_handle_device_display_info(struct vdagent_x11 *x11,
     RROutput x_output;
     if (lookup_xrandr_output_for_device_info(device_display_info, x11->display,
                                              x11->randr.res, &x_output)) {
-        gint64 *value = g_new(gint64, 1);
-        *value = x_output;
-
         syslog(LOG_INFO, "Adding graphics device info: channel_id: %u monitor_id: "
                "%u device_address: %s, device_display_id: %u xrandr output ID: %lu",
                device_display_info->channel_id,
@@ -797,7 +794,7 @@ void vdagent_x11_handle_device_display_info(struct vdagent_x11 *x11,
 
         g_hash_table_insert(x11->guest_output_map,
             GUINT_TO_POINTER(device_display_info->channel_id + device_display_info->monitor_id),
-            value);
+            (gpointer)x_output);
     } else {
         syslog(LOG_INFO, "channel_id: %u monitor_id: %u device_address: %s, "
                "device_display_id: %u xrandr output ID NOT FOUND",
@@ -1058,12 +1055,11 @@ void vdagent_x11_send_daemon_guest_xorg_res(struct vdagent_x11 *x11, int update)
                 // all down.
                 RROutput output_id = x11->randr.res->outputs[i];
                 GHashTableIter iter;
-                gpointer key, value;
+                gpointer key, other_id;
                 g_hash_table_iter_init(&iter, x11->guest_output_map);
                 bool found = false;
-                while (g_hash_table_iter_next(&iter, &key, &value)) {
-                    gint64 *other_id = value;
-                    if (*other_id == output_id) {
+                while (g_hash_table_iter_next(&iter, &key, &other_id)) {
+                    if ((RROutput)other_id == output_id) {
                         curr.display_id = GPOINTER_TO_INT(key);
                         g_array_append_val(res_array, curr);
                         found = true;

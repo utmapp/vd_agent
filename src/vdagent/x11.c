@@ -208,7 +208,7 @@ struct vdagent_x11 *vdagent_x11_create(UdscsConnection *vdagentd,
     x11->guest_output_map = g_hash_table_new_full(&g_direct_hash,
                                                   &g_direct_equal,
                                                   NULL,
-                                                  &g_free);
+                                                  NULL);
 
 
     x11->display = XOpenDisplay(NULL);
