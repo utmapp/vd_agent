@@ -48,6 +48,21 @@ struct VDAgentDisplay {
     GIOChannel *x11_channel;
 };
 
+
+static gchar *vdagent_display_get_wm_name(VDAgentDisplay *display)
+{
+#ifdef GDK_WINDOWING_X11
+    GdkDisplay *gdk_display = gdk_display_get_default();
+    if (GDK_IS_X11_DISPLAY(gdk_display))
+        return g_strdup(gdk_x11_screen_get_window_manager_name(
+            gdk_display_get_default_screen(gdk_display)));
+    return g_strdup("unsupported");
+#else
+    return vdagent_x11_get_wm_name(display->x11);
+#endif
+}
+
+
 struct vdagent_x11* vdagent_display_get_x11(VDAgentDisplay *display)
 {
     return display->x11;
@@ -64,6 +79,7 @@ static gboolean x11_io_channel_cb(GIOChannel *source, GIOCondition condition, gp
 VDAgentDisplay* vdagent_display_create(UdscsConnection *vdagentd, int debug, int sync)
 {
     VDAgentDisplay *display;
+    gchar *net_wm_name = NULL;
 
     display = g_new0(VDAgentDisplay, 1);
     display->x11 = vdagent_x11_create(vdagentd, debug, sync);
@@ -81,6 +97,21 @@ VDAgentDisplay* vdagent_display_create(UdscsConnection *vdagentd, int debug, int
 
     g_io_add_watch(display->x11_channel, G_IO_IN, x11_io_channel_cb, display);
 
+
+    /* Since we are started at the same time as the wm,
+       sometimes we need to wait a bit for the _NET_WM_NAME to show up. */
+    for (int i = 0; i < 9; i++) {
+        g_free(net_wm_name);
+        net_wm_name = vdagent_display_get_wm_name(display);
+        if (strcmp(net_wm_name, "unknown"))
+            break;
+        usleep(100000);
+    }
+    if (display->x11->debug)
+        syslog(LOG_DEBUG, "%s: net_wm_name=\"%s\", has icons=%d",
+               __func__, net_wm_name, vdagent_display_has_icons_on_desktop(display));
+    g_free(net_wm_name);
+
     return display;
 }
 
@@ -95,13 +126,30 @@ void vdagent_display_destroy(VDAgentDisplay *display, int vdagentd_disconnected)
 }
 
 /* Function used to determine the default location to save file-xfers,
- xdg desktop dir or xdg download dir. We err on the safe side and use a
- whitelist approach, so any unknown desktop will end up with saving
- file-xfers to the xdg download dir, and opening the xdg download dir with
- xdg-open when the file-xfer completes. */
-int vdagent_display_has_icons_on_desktop(VDAgentDisplay *display)
+   xdg desktop dir or xdg download dir. We err on the safe side and use a
+   whitelist approach, so any unknown desktop will end up with saving
+   file-xfers to the xdg download dir, and opening the xdg download dir with
+   xdg-open when the file-xfer completes. */
+gboolean vdagent_display_has_icons_on_desktop(VDAgentDisplay *display)
 {
-    return vdagent_x11_has_icons_on_desktop(display->x11);
+    static const char * const wms_with_icons_on_desktop[] = {
+        "Metacity", /* GNOME-2 or GNOME-3 fallback */
+        "Xfwm4",    /* Xfce */
+        "Marco",    /* Mate */
+        "Metacity (Marco)", /* Mate, newer */
+        NULL
+    };
+    gchar *net_wm_name = vdagent_display_get_wm_name(display);
+    int i;
+
+    for (i = 0; wms_with_icons_on_desktop[i]; i++)
+        if (!strcmp(net_wm_name, wms_with_icons_on_desktop[i])) {
+            g_free(net_wm_name);
+            return TRUE;
+        }
+
+    g_free(net_wm_name);
+    return FALSE;
 }
 
 // handle the device info message from the server. This will allow us to

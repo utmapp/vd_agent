@@ -123,15 +123,9 @@ int vdagent_x11_restore_error_handler(struct vdagent_x11 *x11)
     return error;
 }
 
-static gchar *vdagent_x11_get_wm_name(struct vdagent_x11 *x11)
+#ifndef GDK_WINDOWING_X11
+gchar *vdagent_x11_get_wm_name(struct vdagent_x11 *x11)
 {
-#ifdef GDK_WINDOWING_X11
-    GdkDisplay *display = gdk_display_get_default();
-    if (GDK_IS_X11_DISPLAY(display))
-        return g_strdup(gdk_x11_screen_get_window_manager_name(
-            gdk_display_get_default_screen(display)));
-    return g_strdup("unsupported");
-#else
     Atom type_ret;
     int format_ret;
     unsigned long len, remain;
@@ -193,8 +187,8 @@ static gchar *vdagent_x11_get_wm_name(struct vdagent_x11 *x11)
     if (net_wm_name == NULL)
         return g_strdup("unknown");
     return net_wm_name;
-#endif
 }
+#endif
 
 struct vdagent_x11 *vdagent_x11_create(UdscsConnection *vdagentd,
     int debug, int sync)
@@ -206,7 +200,6 @@ struct vdagent_x11 *vdagent_x11_create(UdscsConnection *vdagentd,
 #else
     int i, j, major, minor;
 #endif
-    gchar *net_wm_name = NULL;
 
     x11 = g_new0(struct vdagent_x11, 1);
     x11->vdagentd = vdagentd;
@@ -308,19 +301,6 @@ struct vdagent_x11 *vdagent_x11_create(UdscsConnection *vdagentd,
     }
     vdagent_x11_send_daemon_guest_xorg_res(x11, 1);
 
-    /* Since we are started at the same time as the wm,
-       sometimes we need to wait a bit for the _NET_WM_NAME to show up. */
-    for (i = 0; i < 9; i++) {
-        g_free(net_wm_name);
-        net_wm_name = vdagent_x11_get_wm_name(x11);
-        if (strcmp(net_wm_name, "unknown"))
-            break;
-        usleep(100000);
-    }
-    if (x11->debug)
-        syslog(LOG_DEBUG, "%s: net_wm_name=\"%s\", has icons=%d",
-               __func__, net_wm_name, vdagent_x11_has_icons_on_desktop(x11));
-    g_free(net_wm_name);
 
     /* Flush output buffers and consume any pending events */
     vdagent_x11_do_read(x11);
@@ -1407,30 +1387,3 @@ void vdagent_x11_client_disconnected(struct vdagent_x11 *x11)
     }
 }
 #endif
-
-/* Function used to determine the default location to save file-xfers,
-   xdg desktop dir or xdg download dir. We err on the safe side and use a
-   whitelist approach, so any unknown desktop will end up with saving
-   file-xfers to the xdg download dir, and opening the xdg download dir with
-   xdg-open when the file-xfer completes. */
-int vdagent_x11_has_icons_on_desktop(struct vdagent_x11 *x11)
-{
-    const char * const wms_with_icons_on_desktop[] = {
-        "Metacity", /* GNOME-2 or GNOME-3 fallback */
-        "Xfwm4",    /* Xfce */
-        "Marco",    /* Mate */
-        "Metacity (Marco)", /* Mate, newer */
-        NULL
-    };
-    gchar *net_wm_name = vdagent_x11_get_wm_name(x11);
-    int i;
-
-    for (i = 0; wms_with_icons_on_desktop[i]; i++)
-        if (!strcmp(net_wm_name, wms_with_icons_on_desktop[i])) {
-            g_free(net_wm_name);
-            return 1;
-        }
-
-    g_free(net_wm_name);
-    return 0;
-}

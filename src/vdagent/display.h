@@ -25,7 +25,7 @@ typedef struct VDAgentDisplay VDAgentDisplay;
 VDAgentDisplay *vdagent_display_create(UdscsConnection *vdagentd, int debug, int sync);
 void vdagent_display_destroy(VDAgentDisplay *display, int vdagentd_disconnected);
 
-int vdagent_display_has_icons_on_desktop(VDAgentDisplay *display);
+gboolean vdagent_display_has_icons_on_desktop(VDAgentDisplay *display);
 void vdagent_display_handle_graphics_device_info(VDAgentDisplay *display, uint8_t *data, size_t size);
 void vdagent_display_set_monitor_config(VDAgentDisplay *display,
                                         VDAgentMonitorsConfig *mon_config,
