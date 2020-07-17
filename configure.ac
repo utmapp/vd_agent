@@ -119,7 +119,7 @@ AC_ARG_ENABLE([static-uinput],
 
 PKG_CHECK_MODULES([GIO2], [gio-unix-2.0 >= 2.50])
 PKG_CHECK_MODULES(X, [xfixes xrandr >= 1.3 xinerama x11])
-PKG_CHECK_MODULES(SPICE, [spice-protocol >= 0.14.1])
+PKG_CHECK_MODULES(SPICE, [spice-protocol >= 0.14.3])
 PKG_CHECK_MODULES(ALSA, [alsa >= 1.0.22])
 PKG_CHECK_MODULES([DBUS], [dbus-1])
 PKG_CHECK_MODULES([DRM], [libdrm])
