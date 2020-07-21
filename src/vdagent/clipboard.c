@@ -79,9 +79,9 @@ typedef struct {
 struct _VDAgentClipboards {
     GObject parent;
 
+#ifdef WITH_GTK
     UdscsConnection *conn;
 
-#ifdef WITH_GTK
     Selection selections[SELECTION_COUNT];
 #else
     struct vdagent_x11 *x11;
@@ -493,7 +493,9 @@ VDAgentClipboards *vdagent_clipboards_new(struct vdagent_x11 *x11)
 void
 vdagent_clipboards_set_conn(VDAgentClipboards *self, UdscsConnection *conn)
 {
+#ifdef WITH_GTK
     self->conn = conn;
+#endif
 }
 
 static void vdagent_clipboards_dispose(GObject *obj)
