@@ -136,7 +136,7 @@ void vdagent_x11_randr_init(struct vdagent_x11 *x11)
         return;
     }
 
-    if (XRRQueryExtension(x11->display, &x11->xrandr_event_base, &i)) {
+    if (XRRQueryExtension(x11->display, &x11->randr.event_base, &i)) {
         XRRQueryVersion(x11->display, &x11->xrandr_major, &x11->xrandr_minor);
         if (x11->xrandr_major == 1 && x11->xrandr_minor >= 3)
             x11->has_xrandr = 1;
@@ -533,7 +533,7 @@ int vdagent_x11_randr_handle_event(struct vdagent_x11 *x11,
 {
     int handled = TRUE;
 
-    switch (event->type - x11->xrandr_event_base) {
+    switch (event->type - x11->randr.event_base) {
         case RRScreenChangeNotify: {
             const XRRScreenChangeNotifyEvent *sce =
                 (const XRRScreenChangeNotifyEvent *) event;

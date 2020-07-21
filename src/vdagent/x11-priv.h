@@ -124,12 +124,12 @@ struct vdagent_x11 {
     int screen_count;
     int width[MAX_SCREENS];
     int height[MAX_SCREENS];
-    int xrandr_event_base;
     /* resolution change state */
     struct {
         XRRScreenResources *res;
         XRROutputInfo **outputs;
         XRRCrtcInfo **crtcs;
+        int event_base;
         int min_width;
         int max_width;
         int min_height;
