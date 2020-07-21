@@ -96,7 +96,6 @@ struct vdagent_x11 {
     struct atom_name_cache_item atom_name_cache[ATOM_NAME_CACHE_SIZE];
     int atom_name_cache_next;
     Window selection_window;
-    int has_xfixes;
     int xfixes_event_base;
     int max_prop_size;
     int expected_targets_notifies[256];

@@ -265,7 +265,6 @@ struct vdagent_x11 *vdagent_x11_create(UdscsConnection *vdagentd,
 #ifndef WITH_GTK
     if (XFixesQueryExtension(x11->display, &x11->xfixes_event_base, &i) &&
         XFixesQueryVersion(x11->display, &major, &minor) && major >= 1) {
-        x11->has_xfixes = 1;
         XFixesSelectSelectionInput(x11->display, x11->root_window[0],
                                    x11->clipboard_atom,
                                    XFixesSetSelectionOwnerNotifyMask|
