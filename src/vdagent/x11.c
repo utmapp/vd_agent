@@ -234,7 +234,6 @@ struct vdagent_x11 *vdagent_x11_create(UdscsConnection *vdagentd,
 
     for (i = 0; i < x11->screen_count; i++)
         x11->root_window[i] = RootWindow(x11->display, i);
-    x11->fd = ConnectionNumber(x11->display);
 #ifndef WITH_GTK
     x11->clipboard_atom = XInternAtom(x11->display, "CLIPBOARD", False);
     x11->clipboard_primary_atom = XInternAtom(x11->display, "PRIMARY", False);
@@ -336,7 +335,7 @@ void vdagent_x11_destroy(struct vdagent_x11 *x11, int vdagentd_disconnected)
 
 int vdagent_x11_get_fd(struct vdagent_x11 *x11)
 {
-    return x11->fd;
+    return ConnectionNumber(x11->display);
 }
 
 #ifndef WITH_GTK
