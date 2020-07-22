@@ -210,11 +210,7 @@ static gboolean do_write(VDAgentConnection *self, gboolean block)
 static gboolean out_stream_ready_cb(GObject *pollable_stream,
                                     gpointer user_data)
 {
-    if (do_write(user_data, FALSE)) {
-        return TRUE;
-    }
-    g_object_unref(user_data);
-    return FALSE;
+    return do_write(user_data, FALSE);
 }
 
 void vdagent_connection_write(VDAgentConnection *self,
@@ -232,7 +228,7 @@ void vdagent_connection_write(VDAgentConnection *self,
 
         source = g_pollable_output_stream_create_source(out, priv->cancellable);
         g_source_set_callback(source, (GSourceFunc) out_stream_ready_cb,
-            g_object_ref(self), NULL);
+            g_object_ref(self), g_object_unref);
         g_source_attach(source, NULL);
         g_source_unref(source);
     }
