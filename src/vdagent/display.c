@@ -51,6 +51,8 @@
  */
 struct VDAgentDisplay {
     struct vdagent_x11 *x11;
+    UdscsConnection *vdagentd;
+    int debug;
     GIOChannel *x11_channel;
 };
 
@@ -64,7 +66,7 @@ void vdagent_display_send_daemon_guest_res(VDAgentDisplay *display, gboolean upd
         return;
     }
 
-    if (display->x11->debug) {
+    if (display->debug) {
         syslog(LOG_DEBUG, "Sending guest screen resolutions to vdagentd:");
         if (res_array->len > screen_count) {
             syslog(LOG_DEBUG, "(NOTE: list may contain overlapping areas when "
@@ -78,7 +80,7 @@ void vdagent_display_send_daemon_guest_res(VDAgentDisplay *display, gboolean upd
         }
     }
 
-    udscs_write(display->x11->vdagentd, VDAGENTD_GUEST_XORG_RESOLUTION, width, height,
+    udscs_write(display->vdagentd, VDAGENTD_GUEST_XORG_RESOLUTION, width, height,
                 (uint8_t *)res_array->data,
                 res_array->len * sizeof(struct vdagentd_guest_xorg_resolution));
     g_array_free(res_array, TRUE);
@@ -120,6 +122,9 @@ VDAgentDisplay* vdagent_display_create(UdscsConnection *vdagentd, int debug, int
     gchar *net_wm_name = NULL;
 
     display = g_new0(VDAgentDisplay, 1);
+    display->vdagentd = vdagentd;
+    display->debug = debug;
+
     display->x11 = vdagent_x11_create(vdagentd, debug, sync);
     if (display->x11 == NULL) {
         g_free(display);
@@ -147,7 +152,7 @@ VDAgentDisplay* vdagent_display_create(UdscsConnection *vdagentd, int debug, int
             break;
         usleep(100000);
     }
-    if (display->x11->debug)
+    if (display->debug)
         syslog(LOG_DEBUG, "%s: net_wm_name=\"%s\", has icons=%d",
                __func__, net_wm_name, vdagent_display_has_icons_on_desktop(display));
     g_free(net_wm_name);
