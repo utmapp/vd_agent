@@ -381,9 +381,11 @@ static void do_client_file_xfer(VirtioPort *vport,
                s->id, VD_AGENT_FILE_XFER_STATUS_SESSION_LOCKED, NULL, 0);
             return;
         }
-        udscs_write(active_session_conn, VDAGENTD_FILE_XFER_START, 0, 0,
-                    data, message_header->size);
-        return;
+        msg_type = VDAGENTD_FILE_XFER_START;
+        id = s->id;
+        // associate the id with the active connection
+        g_hash_table_insert(active_xfers, GUINT_TO_POINTER(id), active_session_conn);
+        break;
     }
     case VD_AGENT_FILE_XFER_STATUS: {
         VDAgentFileXferStatusMessage *s = (VDAgentFileXferStatusMessage *)data;
@@ -408,6 +410,12 @@ static void do_client_file_xfer(VirtioPort *vport,
         return;
     }
     udscs_write(conn, msg_type, 0, 0, data, message_header->size);
+
+    // client told that transfer is ended, agents too stop the transfer
+    // and release resources
+    if (message_header->type == VD_AGENT_FILE_XFER_STATUS) {
+        g_hash_table_remove(active_xfers, GUINT_TO_POINTER(id));
+    }
 }
 
 static void forward_data_to_session_agent(uint32_t type, uint8_t *data, size_t size)
@@ -1012,6 +1020,15 @@ static void do_agent_file_xfer_status(UdscsConnection             *conn,
     const gchar *log_msg = NULL;
     guint data_size = 0;
 
+    UdscsConnection *task_conn = g_hash_table_lookup(active_xfers, task_id);
+    if (task_conn == NULL || task_conn != conn) {
+        // Protect against misbehaving agent.
+        // Ignore the message, but do not disconnect the agent, to protect against
+        // a misbehaving client that tries to disconnect a good agent
+        // e.g. by sending a new task and immediately cancelling it.
+        return;
+    }
+
     /* header->arg1 = file xfer task id, header->arg2 = file xfer status */
     switch (header->arg2) {
         case VD_AGENT_FILE_XFER_STATUS_NOT_ENOUGH_SPACE:
@@ -1026,10 +1043,9 @@ static void do_agent_file_xfer_status(UdscsConnection             *conn,
     send_file_xfer_status(virtio_port, log_msg, header->arg1, header->arg2,
                           data, data_size);
 
-    if (header->arg2 == VD_AGENT_FILE_XFER_STATUS_CAN_SEND_DATA)
-        g_hash_table_insert(active_xfers, task_id, conn);
-    else
+    if (header->arg2 != VD_AGENT_FILE_XFER_STATUS_CAN_SEND_DATA) {
         g_hash_table_remove(active_xfers, task_id);
+    }
 }
 
 static void agent_read_complete(UdscsConnection *conn,
