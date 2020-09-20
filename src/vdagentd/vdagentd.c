@@ -952,16 +952,28 @@ static gboolean remove_active_xfers(gpointer key, gpointer value, gpointer conn)
         return 0;
 }
 
+/* Check a given process has a given UID */
+static bool check_uid_of_pid(pid_t pid, uid_t uid)
+{
+    char fn[128];
+    struct stat st;
+
+    snprintf(fn, sizeof(fn), "/proc/%u/status", (unsigned) pid);
+    if (stat(fn, &st) != 0 || st.st_uid != uid) {
+        return false;
+    }
+    return true;
+}
+
 static void agent_connect(UdscsConnection *conn)
 {
     struct agent_data *agent_data;
     agent_data = g_new0(struct agent_data, 1);
     GError *err = NULL;
-    gint pid;
 
     if (session_info) {
-        pid = vdagent_connection_get_peer_pid(VDAGENT_CONNECTION(conn), &err);
-        if (err || pid <= 0) {
+        PidUid pid_uid = vdagent_connection_get_peer_pid_uid(VDAGENT_CONNECTION(conn), &err);
+        if (err || pid_uid.pid <= 0) {
             static const char msg[] = "Could not get peer PID, disconnecting new client";
             if (err) {
                 syslog(LOG_ERR, "%s: %s", msg, err->message);
@@ -974,7 +986,18 @@ static void agent_connect(UdscsConnection *conn)
             return;
         }
 
-        agent_data->session = session_info_session_for_pid(session_info, pid);
+        agent_data->session = session_info_session_for_pid(session_info, pid_uid.pid);
+
+        /* Check that the UID of the PID did not change, this should be done after
+         * computing the session to avoid race conditions.
+         * This can happen as vdagent_connection_get_peer_pid_uid get information
+         * from the time of creating the socket, but the process in the meantime
+         * have been replaced */
+        if (!check_uid_of_pid(pid_uid.pid, pid_uid.uid)) {
+            agent_data_destroy(agent_data);
+            udscs_server_destroy_connection(server, conn);
+            return;
+        }
     }
 
     g_object_set_data_full(G_OBJECT(conn), "agent_data", agent_data,

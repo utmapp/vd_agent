@@ -142,24 +142,25 @@ void vdagent_connection_destroy(gpointer p)
     g_object_unref(self);
 }
 
-gint vdagent_connection_get_peer_pid(VDAgentConnection *self,
-                                     GError           **err)
+PidUid vdagent_connection_get_peer_pid_uid(VDAgentConnection *self,
+                                           GError           **err)
 {
     VDAgentConnectionPrivate *priv = vdagent_connection_get_instance_private(self);
     GSocket *sock;
     GCredentials *cred;
-    gint pid = -1;
+    PidUid pid_uid = { -1, -1 };
 
-    g_return_val_if_fail(G_IS_SOCKET_CONNECTION(priv->io_stream), pid);
+    g_return_val_if_fail(G_IS_SOCKET_CONNECTION(priv->io_stream), pid_uid);
 
     sock = g_socket_connection_get_socket(G_SOCKET_CONNECTION(priv->io_stream));
     cred = g_socket_get_credentials(sock, err);
     if (cred) {
-        pid = g_credentials_get_unix_pid(cred, err);
+        pid_uid.pid = g_credentials_get_unix_pid(cred, err);
+        pid_uid.uid = g_credentials_get_unix_user(cred, err);
         g_object_unref(cred);
     }
 
-    return pid;
+    return pid_uid;
 }
 
 /* Performs single write operation,

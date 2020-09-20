@@ -92,10 +92,15 @@ void vdagent_connection_write(VDAgentConnection *self,
 /* Synchronously write all queued messages to the output stream. */
 void vdagent_connection_flush(VDAgentConnection *self);
 
-/* Returns the PID of the foreign process connected to the socket
- * or -1 with @err set. */
-gint vdagent_connection_get_peer_pid(VDAgentConnection *self,
-                                     GError           **err);
+typedef struct PidUid {
+    pid_t pid;
+    uid_t uid;
+} PidUid;
+
+/* Returns the PID and UID of the foreign process connected to the socket
+ * or fill @err set. */
+PidUid vdagent_connection_get_peer_pid_uid(VDAgentConnection *self,
+                                           GError           **err);
 
 G_END_DECLS
 
