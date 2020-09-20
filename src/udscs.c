@@ -30,6 +30,12 @@
 #include "vdagentd-proto-strings.h"
 #include "vdagent-connection.h"
 
+// Maximum number of connected agents.
+// Avoid DoS from agents.
+// As each connection end up taking a file descriptor is good to have a limit
+// less than the number of file descriptors in the process (by default 1024).
+#define MAX_CONNECTED_AGENTS 128
+
 struct _UdscsConnection {
     VDAgentConnection parent_instance;
     int debug;
@@ -253,6 +259,12 @@ static gboolean udscs_server_accept_cb(GSocketService    *service,
 {
     struct udscs_server *server = user_data;
     UdscsConnection *new_conn;
+
+    /* prevents DoS having too many agents attached */
+    if (g_list_length(server->connections) >= MAX_CONNECTED_AGENTS) {
+        syslog(LOG_ERR, "Too many agents connected");
+        return TRUE;
+    }
 
     new_conn = g_object_new(UDSCS_TYPE_CONNECTION, NULL);
     new_conn->debug = server->debug;
