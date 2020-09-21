@@ -55,9 +55,9 @@ struct agent_data {
     int screen_count;
 };
 
-/* variables */
-static const char *pidfilename = "/run/spice-vdagentd/spice-vdagentd.pid";
+static const char pidfilename[] = "/run/spice-vdagentd/spice-vdagentd.pid";
 
+/* variables */
 static gchar *portdev = NULL;
 static gchar *vdagentd_socket = NULL;
 static gchar *uinput_device = NULL;
