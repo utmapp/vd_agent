@@ -933,10 +933,14 @@ static void agent_connect(UdscsConnection *conn)
 
     if (session_info) {
         pid = vdagent_connection_get_peer_pid(VDAGENT_CONNECTION(conn), &err);
-        if (err) {
-            syslog(LOG_ERR, "Could not get peer PID, disconnecting new client: %s",
-                            err->message);
-            g_error_free(err);
+        if (err || pid <= 0) {
+            static const char msg[] = "Could not get peer PID, disconnecting new client";
+            if (err) {
+                syslog(LOG_ERR, "%s: %s", msg, err->message);
+                g_error_free(err);
+            } else {
+                syslog(LOG_ERR, "%s", msg);
+            }
             agent_data_destroy(agent_data);
             udscs_server_destroy_connection(server, conn);
             return;
