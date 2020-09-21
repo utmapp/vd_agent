@@ -40,4 +40,7 @@ char *session_info_session_for_pid(struct session_info *ck, uint32_t pid);
 gboolean session_info_session_is_locked(struct session_info *si);
 gboolean session_info_is_user(struct session_info *si);
 
+/* get owner of a given session */
+uid_t session_info_uid_for_session(struct session_info *si, const char *session);
+
 #endif

@@ -988,12 +988,20 @@ static void agent_connect(UdscsConnection *conn)
 
         agent_data->session = session_info_session_for_pid(session_info, pid_uid.pid);
 
+        uid_t session_uid = session_info_uid_for_session(session_info, agent_data->session);
+
         /* Check that the UID of the PID did not change, this should be done after
          * computing the session to avoid race conditions.
          * This can happen as vdagent_connection_get_peer_pid_uid get information
          * from the time of creating the socket, but the process in the meantime
          * have been replaced */
-        if (!check_uid_of_pid(pid_uid.pid, pid_uid.uid)) {
+        if (!check_uid_of_pid(pid_uid.pid, pid_uid.uid) ||
+            /* Check that the user launching the Agent is the same as session one
+             * or root user.
+             * This prevents session hijacks from other users. */
+            (pid_uid.uid != 0 && pid_uid.uid != session_uid)) {
+            syslog(LOG_ERR, "UID mismatch: UID=%u PID=%u suid=%u", pid_uid.uid,
+                   pid_uid.pid, session_uid);
             agent_data_destroy(agent_data);
             udscs_server_destroy_connection(server, conn);
             return;

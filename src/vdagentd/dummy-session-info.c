@@ -55,3 +55,8 @@ gboolean session_info_session_is_locked(G_GNUC_UNUSED struct session_info *si)
 {
     return FALSE;
 }
+
+uid_t session_info_uid_for_session(struct session_info *si, const char *session)
+{
+    return -1;
+}
