@@ -23,6 +23,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -77,9 +78,9 @@ static int capabilities_size = 0;
 static const char *active_session = NULL;
 static unsigned int session_count = 0;
 static UdscsConnection *active_session_conn = NULL;
-static int agent_owns_clipboard[256] = { 0, };
+static bool agent_owns_clipboard[256] = { false, };
 static int retval = 0;
-static int client_connected = 0;
+static bool client_connected = false;
 static int max_clipboard = -1;
 static uint32_t clipboard_serial[256];
 
@@ -155,7 +156,7 @@ static void do_client_disconnect(void)
     if (client_connected) {
         udscs_server_write_all(server, VDAGENTD_CLIENT_DISCONNECTED, 0, 0,
                                NULL, 0);
-        client_connected = 0;
+        client_connected = false;
     }
 }
 
@@ -239,7 +240,7 @@ static void do_client_capabilities(VirtioPort *vport,
         do_client_disconnect();
         if (debug)
             syslog(LOG_DEBUG, "New client connected");
-        client_connected = 1;
+        client_connected = true;
         memset(clipboard_serial, 0, sizeof(clipboard_serial));
         send_capabilities(vport, 0);
     }
@@ -286,7 +287,7 @@ static void do_client_clipboard(VirtioPort *vport,
         }
 
         msg_type = VDAGENTD_CLIPBOARD_GRAB;
-        agent_owns_clipboard[selection] = 0;
+        agent_owns_clipboard[selection] = false;
         break;
     case VD_AGENT_CLIPBOARD_REQUEST: {
         VDAgentClipboardRequest *req = (VDAgentClipboardRequest *)data;
@@ -624,7 +625,7 @@ static void virtio_port_read_complete(
 
 static void virtio_port_error_cb(VDAgentConnection *conn, GError *err)
 {
-    gboolean old_client_connected = client_connected;
+    bool old_client_connected = client_connected;
     syslog(LOG_CRIT, "AIIEEE lost spice client connection, reconnecting (err: %s)",
                      err ? err->message : "");
     g_clear_error(&err);
@@ -717,7 +718,7 @@ static void do_agent_clipboard(UdscsConnection *conn,
     switch (header->type) {
     case VDAGENTD_CLIPBOARD_GRAB:
         msg_type = VD_AGENT_CLIPBOARD_GRAB;
-        agent_owns_clipboard[selection] = 1;
+        agent_owns_clipboard[selection] = true;
         break;
     case VDAGENTD_CLIPBOARD_REQUEST:
         msg_type = VD_AGENT_CLIPBOARD_REQUEST;
@@ -737,7 +738,7 @@ static void do_agent_clipboard(UdscsConnection *conn,
     case VDAGENTD_CLIPBOARD_RELEASE:
         msg_type = VD_AGENT_CLIPBOARD_RELEASE;
         size = 0;
-        agent_owns_clipboard[selection] = 0;
+        agent_owns_clipboard[selection] = false;
         break;
     default:
         syslog(LOG_WARNING, "unexpected clipboard message type");
@@ -851,7 +852,7 @@ static void release_clipboards(void)
             vdagent_virtio_port_write(virtio_port, VDP_CLIENT_PORT,
                                       VD_AGENT_CLIPBOARD_RELEASE, 0, &sel, 1);
         }
-        agent_owns_clipboard[sel] = 0;
+        agent_owns_clipboard[sel] = false;
     }
 }
 
