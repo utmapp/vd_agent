@@ -318,7 +318,7 @@ static char *console_kit_get_first_seat(struct session_info *info)
     }
 
     dbus_message_iter_get_basic(&subiter, &seat);
-    info->seat = strdup(seat);
+    info->seat = g_strdup(seat);
 
 exit:
     if (reply != NULL) {
@@ -383,7 +383,7 @@ const char *session_info_get_active_session(struct session_info *info)
         goto exit;
     }
 
-    info->active_session = strdup(session);
+    info->active_session = g_strdup(session);
     si_dbus_match_rule_update(info);
 
 exit:
