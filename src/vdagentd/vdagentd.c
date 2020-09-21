@@ -86,6 +86,13 @@ static uint32_t clipboard_serial[256];
 
 static GMainLoop *loop;
 
+static void agent_data_destroy(struct agent_data *agent_data)
+{
+    g_free(agent_data->session);
+    g_free(agent_data->screen_info);
+    g_free(agent_data);
+}
+
 static void vdagentd_quit(gint exit_code)
 {
     retval = exit_code;
@@ -930,7 +937,7 @@ static void agent_connect(UdscsConnection *conn)
             syslog(LOG_ERR, "Could not get peer PID, disconnecting new client: %s",
                             err->message);
             g_error_free(err);
-            g_free(agent_data);
+            agent_data_destroy(agent_data);
             udscs_server_destroy_connection(server, conn);
             return;
         }
@@ -938,7 +945,8 @@ static void agent_connect(UdscsConnection *conn)
         agent_data->session = session_info_session_for_pid(session_info, pid);
     }
 
-    g_object_set_data(G_OBJECT(conn), "agent_data", agent_data);
+    g_object_set_data_full(G_OBJECT(conn), "agent_data", agent_data,
+                           (GDestroyNotify) agent_data_destroy);
     udscs_write(conn, VDAGENTD_VERSION, 0, 0,
                 (uint8_t *)VERSION, strlen(VERSION) + 1);
     update_active_session_connection(conn);
@@ -951,13 +959,8 @@ static void agent_connect(UdscsConnection *conn)
 
 static void agent_disconnect(VDAgentConnection *conn, GError *err)
 {
-    struct agent_data *agent_data = g_object_get_data(G_OBJECT(conn), "agent_data");
-
     g_hash_table_foreach_remove(active_xfers, remove_active_xfers, conn);
 
-    g_clear_pointer(&agent_data->session, g_free);
-    g_free(agent_data->screen_info);
-    g_free(agent_data);
     if (err) {
         syslog(LOG_ERR, "%s", err->message);
         g_error_free(err);
