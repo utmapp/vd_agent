@@ -166,7 +166,7 @@ void do_client_mouse(struct vdagentd_uinput **uinputp, VDAgentMouseState *mouse)
     if (!*uinputp) {
         /* Try to re-open the tablet */
         if (active_session_conn) {
-            struct agent_data *agent_data =
+            const struct agent_data *agent_data =
             g_object_get_data(G_OBJECT(active_session_conn), "agent_data");
             *uinputp = vdagentd_uinput_create(uinput_device,
                                               agent_data->width,
@@ -773,7 +773,7 @@ error:
    closes both. */
 static void check_xorg_resolution(void)
 {
-    struct agent_data *agent_data = NULL;
+    const struct agent_data *agent_data = NULL;
     if (active_session_conn)
         agent_data = g_object_get_data(G_OBJECT(active_session_conn), "agent_data");
 
@@ -831,7 +831,7 @@ static int connection_matches_active_session(UdscsConnection *conn,
     void *priv)
 {
     UdscsConnection **conn_ret = (UdscsConnection **)priv;
-    struct agent_data *agent_data = g_object_get_data(G_OBJECT(conn), "agent_data");
+    const struct agent_data *agent_data = g_object_get_data(G_OBJECT(conn), "agent_data");
 
     /* Check if this connection matches the currently active session */
     if (!agent_data->session || !active_session)
