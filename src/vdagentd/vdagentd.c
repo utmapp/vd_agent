@@ -1208,7 +1208,9 @@ int main(int argc, char *argv[])
     /* systemd socket activation not enabled, create our own */
 #endif /* WITH_SYSTEMD_SOCKET_ACTIVATION */
     {
+        mode_t mode = umask(0111);
         udscs_server_listen_to_address(server, vdagentd_socket, &err);
+        umask(mode);
     }
 
     if (err) {
@@ -1217,16 +1219,6 @@ int main(int argc, char *argv[])
         g_error_free(err);
         udscs_destroy_server(server);
         return 1;
-    }
-
-    /* no need to set permissions on a socket that was provided by systemd */
-    if (own_socket) {
-        if (chmod(vdagentd_socket, 0666)) {
-            syslog(LOG_CRIT, "Fatal could not change permissions on %s: %m",
-                   vdagentd_socket);
-            udscs_destroy_server(server);
-            return 1;
-        }
     }
 
 #ifdef WITH_STATIC_UINPUT
