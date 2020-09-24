@@ -952,6 +952,20 @@ static gboolean remove_active_xfers(gpointer key, gpointer value, gpointer conn)
         return 0;
 }
 
+/* Check if this connection matches the passed session */
+static int connection_matches_session(UdscsConnection *conn, void *priv)
+{
+    const char *session = priv;
+    const struct agent_data *agent_data = g_object_get_data(G_OBJECT(conn), "agent_data");
+
+    if (!agent_data || !agent_data->session ||
+        strcmp(agent_data->session, session) != 0) {
+        return 0;
+    }
+
+    return 1;
+}
+
 /* Check a given process has a given UID */
 static bool check_uid_of_pid(pid_t pid, uid_t uid)
 {
@@ -1002,6 +1016,16 @@ static void agent_connect(UdscsConnection *conn)
             (pid_uid.uid != 0 && pid_uid.uid != session_uid)) {
             syslog(LOG_ERR, "UID mismatch: UID=%u PID=%u suid=%u", pid_uid.uid,
                    pid_uid.pid, session_uid);
+            agent_data_destroy(agent_data);
+            udscs_server_destroy_connection(server, conn);
+            return;
+        }
+
+        // Check there are no other connection for this session
+        // Note that "conn" is not counted as "agent_data" is still not attached to it
+        if (udscs_server_for_all_clients(server, connection_matches_session,
+                                         agent_data->session) > 0) {
+            syslog(LOG_ERR, "An agent is already connected for this session");
             agent_data_destroy(agent_data);
             udscs_server_destroy_connection(server, conn);
             return;
