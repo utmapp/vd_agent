@@ -79,17 +79,17 @@ static bool set_alsa_capture(uint8_t mute, uint8_t nchannels, uint16_t *volume)
     case 1: /* MONO */
         vol = volume[0];
         snd_mixer_selem_set_capture_volume(e, SND_MIXER_SCHN_MONO, vol);
-        syslog(LOG_DEBUG, "vdagent-audio: (capture-mono) %lu (%%%0.2f)",
+        syslog(LOG_DEBUG, "vdagent-audio: (capture-mono) %lu (%0.2f%%)",
                vol, 100.0 * vol / UINT16_MAX);
         break;
     case 2: /* LEFT-RIGHT */
         vol = volume[0];
         snd_mixer_selem_set_capture_volume(e, SND_MIXER_SCHN_FRONT_LEFT, vol);
-        syslog(LOG_DEBUG, "vdagent-audio: (capture-left) %lu (%%%0.2f)",
+        syslog(LOG_DEBUG, "vdagent-audio: (capture-left) %lu (%0.2f%%)",
                vol, 100.0 * vol / UINT16_MAX);
         vol = volume[1];
         snd_mixer_selem_set_capture_volume(e, SND_MIXER_SCHN_FRONT_RIGHT, vol);
-        syslog(LOG_DEBUG, "vdagent-audio: (capture-right) %lu (%%%0.2f)",
+        syslog(LOG_DEBUG, "vdagent-audio: (capture-right) %lu (%0.2f%%)",
                vol, 100.0 * vol / UINT16_MAX);
         break;
     default:
@@ -125,17 +125,17 @@ static bool set_alsa_playback (uint8_t mute, uint8_t nchannels, uint16_t *volume
     case 1: /* MONO */
         vol = volume[0];
         snd_mixer_selem_set_playback_volume(e, SND_MIXER_SCHN_MONO, vol);
-        syslog(LOG_DEBUG, "vdagent-audio: (playback-mono) %lu (%%%0.2f)",
+        syslog(LOG_DEBUG, "vdagent-audio: (playback-mono) %lu (%0.2f%%)",
                vol, 100.0 * vol / UINT16_MAX);
         break;
     case 2: /* LEFT-RIGHT */
         vol = volume[0];
         snd_mixer_selem_set_playback_volume(e, SND_MIXER_SCHN_FRONT_LEFT, vol);
-        syslog(LOG_DEBUG, "vdagent-audio: (playback-left) %lu (%%%0.2f)",
+        syslog(LOG_DEBUG, "vdagent-audio: (playback-left) %lu (%0.2f%%)",
                vol, 100.0 * vol / UINT16_MAX);
         vol = volume[1];
         snd_mixer_selem_set_playback_volume(e, SND_MIXER_SCHN_FRONT_RIGHT, vol);
-        syslog(LOG_DEBUG, "vdagent-audio: (playback-right) %lu (%%%0.2f)",
+        syslog(LOG_DEBUG, "vdagent-audio: (playback-right) %lu (%0.2f%%)",
                vol, 100.0 * vol / UINT16_MAX);
         break;
     default:
