@@ -511,6 +511,7 @@ static int set_screen_to_best_size(struct vdagent_x11 *x11, int width, int heigh
 void vdagent_x11_randr_handle_root_size_change(struct vdagent_x11 *x11,
     int screen, int width, int height)
 {
+#ifndef USE_GTK_FOR_MONITORS
     update_randr_res(x11, 0);
 
     if (width == x11->width[screen] && height == x11->height[screen]) {
@@ -523,6 +524,7 @@ void vdagent_x11_randr_handle_root_size_change(struct vdagent_x11 *x11,
 
     x11->width[screen]  = width;
     x11->height[screen] = height;
+#endif
     if (!x11->dont_send_guest_xorg_res) {
         vdagent_display_send_daemon_guest_res(x11->vdagent_display, TRUE);
     }
@@ -542,7 +544,9 @@ int vdagent_x11_randr_handle_event(struct vdagent_x11 *x11,
             break;
         }
         case RRNotify: {
+#ifndef USE_GTK_FOR_MONITORS
             update_randr_res(x11, 0);
+#endif
             if (!x11->dont_send_guest_xorg_res)
                 vdagent_display_send_daemon_guest_res(x11->vdagent_display, TRUE);
             break;
