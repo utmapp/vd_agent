@@ -80,17 +80,17 @@ static bool set_alsa_capture(uint8_t mute, uint8_t nchannels, uint16_t *volume)
         vol = CLAMP(volume[0], min, max);
         snd_mixer_selem_set_capture_volume(e, SND_MIXER_SCHN_MONO, vol);
         syslog(LOG_DEBUG, "vdagent-audio: (capture-mono) %lu (%%%0.2f)",
-               vol, (float) (100*vol/max));
+               vol, 100.0 * vol / max);
         break;
     case 2: /* LEFT-RIGHT */
         vol = CLAMP(volume[0], min, max);
         snd_mixer_selem_set_capture_volume(e, SND_MIXER_SCHN_FRONT_LEFT, vol);
         syslog(LOG_DEBUG, "vdagent-audio: (capture-left) %lu (%%%0.2f)",
-               vol, (float) (100*vol/max));
+               vol, 100.0 * vol / max);
         vol = CLAMP(volume[1], min, max);
         snd_mixer_selem_set_capture_volume(e, SND_MIXER_SCHN_FRONT_RIGHT, vol);
         syslog(LOG_DEBUG, "vdagent-audio: (capture-right) %lu (%%%0.2f)",
-               vol, (float) (100*vol/max));
+               vol, 100.0 * vol / max);
         break;
     default:
         syslog(LOG_WARNING, "vdagent-audio: number of channels not supported");
@@ -126,17 +126,17 @@ static bool set_alsa_playback (uint8_t mute, uint8_t nchannels, uint16_t *volume
         vol = CLAMP(volume[0], min, max);
         snd_mixer_selem_set_playback_volume(e, SND_MIXER_SCHN_MONO, vol);
         syslog(LOG_DEBUG, "vdagent-audio: (playback-mono) %lu (%%%0.2f)",
-               vol, (float) (100*vol/max));
+               vol, 100.0 * vol / max);
         break;
     case 2: /* LEFT-RIGHT */
         vol = CLAMP(volume[0], min, max);
         snd_mixer_selem_set_playback_volume(e, SND_MIXER_SCHN_FRONT_LEFT, vol);
         syslog(LOG_DEBUG, "vdagent-audio: (playback-left) %lu (%%%0.2f)",
-               vol, (float) (100*vol/max));
+               vol, 100.0 * vol / max);
         vol = CLAMP(volume[1], min, max);
         snd_mixer_selem_set_playback_volume(e, SND_MIXER_SCHN_FRONT_RIGHT, vol);
         syslog(LOG_DEBUG, "vdagent-audio: (playback-right) %lu (%%%0.2f)",
-               vol, (float) (100*vol/max));
+               vol, 100.0 * vol / max);
         break;
     default:
         syslog(LOG_WARNING, "vdagent-audio: number of channels not supported");
