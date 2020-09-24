@@ -60,7 +60,7 @@ static bool set_alsa_capture(uint8_t mute, uint8_t nchannels, uint16_t *volume)
 {
     snd_mixer_t *handle = NULL;
     snd_mixer_elem_t *e;
-    long min, max, vol;
+    long vol;
     bool ret = true;
     int alsa_mute;
 
@@ -74,23 +74,23 @@ static bool set_alsa_capture(uint8_t mute, uint8_t nchannels, uint16_t *volume)
     alsa_mute = (mute) ? ALSA_MUTE : ALSA_UNMUTE;
     snd_mixer_selem_set_capture_switch_all(e, alsa_mute);
 
-    snd_mixer_selem_get_capture_volume_range(e, &min, &max);
+    snd_mixer_selem_set_capture_volume_range(e, 0, UINT16_MAX);
     switch (nchannels) {
     case 1: /* MONO */
-        vol = CLAMP(volume[0], min, max);
+        vol = volume[0];
         snd_mixer_selem_set_capture_volume(e, SND_MIXER_SCHN_MONO, vol);
         syslog(LOG_DEBUG, "vdagent-audio: (capture-mono) %lu (%%%0.2f)",
-               vol, 100.0 * vol / max);
+               vol, 100.0 * vol / UINT16_MAX);
         break;
     case 2: /* LEFT-RIGHT */
-        vol = CLAMP(volume[0], min, max);
+        vol = volume[0];
         snd_mixer_selem_set_capture_volume(e, SND_MIXER_SCHN_FRONT_LEFT, vol);
         syslog(LOG_DEBUG, "vdagent-audio: (capture-left) %lu (%%%0.2f)",
-               vol, 100.0 * vol / max);
-        vol = CLAMP(volume[1], min, max);
+               vol, 100.0 * vol / UINT16_MAX);
+        vol = volume[1];
         snd_mixer_selem_set_capture_volume(e, SND_MIXER_SCHN_FRONT_RIGHT, vol);
         syslog(LOG_DEBUG, "vdagent-audio: (capture-right) %lu (%%%0.2f)",
-               vol, 100.0 * vol / max);
+               vol, 100.0 * vol / UINT16_MAX);
         break;
     default:
         syslog(LOG_WARNING, "vdagent-audio: number of channels not supported");
@@ -106,7 +106,7 @@ static bool set_alsa_playback (uint8_t mute, uint8_t nchannels, uint16_t *volume
 {
     snd_mixer_t *handle = NULL;
     snd_mixer_elem_t* e;
-    long min, max, vol;
+    long vol;
     bool ret = true;
     int alsa_mute;
 
@@ -120,23 +120,23 @@ static bool set_alsa_playback (uint8_t mute, uint8_t nchannels, uint16_t *volume
     alsa_mute = (mute) ? ALSA_MUTE : ALSA_UNMUTE;
     snd_mixer_selem_set_playback_switch_all(e, alsa_mute);
 
-    snd_mixer_selem_get_playback_volume_range(e, &min, &max);
+    snd_mixer_selem_set_playback_volume_range(e, 0, UINT16_MAX);
     switch (nchannels) {
     case 1: /* MONO */
-        vol = CLAMP(volume[0], min, max);
+        vol = volume[0];
         snd_mixer_selem_set_playback_volume(e, SND_MIXER_SCHN_MONO, vol);
         syslog(LOG_DEBUG, "vdagent-audio: (playback-mono) %lu (%%%0.2f)",
-               vol, 100.0 * vol / max);
+               vol, 100.0 * vol / UINT16_MAX);
         break;
     case 2: /* LEFT-RIGHT */
-        vol = CLAMP(volume[0], min, max);
+        vol = volume[0];
         snd_mixer_selem_set_playback_volume(e, SND_MIXER_SCHN_FRONT_LEFT, vol);
         syslog(LOG_DEBUG, "vdagent-audio: (playback-left) %lu (%%%0.2f)",
-               vol, 100.0 * vol / max);
-        vol = CLAMP(volume[1], min, max);
+               vol, 100.0 * vol / UINT16_MAX);
+        vol = volume[1];
         snd_mixer_selem_set_playback_volume(e, SND_MIXER_SCHN_FRONT_RIGHT, vol);
         syslog(LOG_DEBUG, "vdagent-audio: (playback-right) %lu (%%%0.2f)",
-               vol, 100.0 * vol / max);
+               vol, 100.0 * vol / UINT16_MAX);
         break;
     default:
         syslog(LOG_WARNING, "vdagent-audio: number of channels not supported");
