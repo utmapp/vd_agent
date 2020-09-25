@@ -680,7 +680,8 @@ static void virtio_write_clipboard(uint8_t selection, uint32_t msg_type,
     if (msg_type == VD_AGENT_CLIPBOARD_GRAB) {
         if (VD_AGENT_HAS_CAPABILITY(capabilities, capabilities_size,
                                     VD_AGENT_CAP_CLIPBOARD_GRAB_SERIAL)) {
-            uint32_t serial = GUINT32_TO_LE(clipboard_serial[selection]++);
+            uint32_t serial = GUINT32_TO_LE(clipboard_serial[selection]);
+            clipboard_serial[selection]++;
             vdagent_virtio_port_write_append(virtio_port, (uint8_t*)&serial, sizeof(serial));
         }
         virtio_msg_uint32_to_le(data, data_size, 0);
