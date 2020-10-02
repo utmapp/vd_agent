@@ -47,6 +47,14 @@
 
 #define DEFAULT_UINPUT_DEVICE "/dev/uinput"
 
+// Maximum number of transfers active at any time.
+// Avoid DoS from client.
+// As each transfer could likely end up taking a file descriptor
+// it is good to have a limit less than the number of file descriptors
+// in the process (by default 1024). The daemon do not open file
+// descriptors for the transfers but the agents do.
+#define MAX_ACTIVE_TRANSFERS 128
+
 struct agent_data {
     char *session;
     int width;
@@ -379,6 +387,21 @@ static void do_client_file_xfer(VirtioPort *vport,
                "User's session is locked and cannot start file transfer. "
                "Cancelling client file-xfer request %u",
                s->id, VD_AGENT_FILE_XFER_STATUS_SESSION_LOCKED, NULL, 0);
+            return;
+        } else if (g_hash_table_size(active_xfers) >= MAX_ACTIVE_TRANSFERS) {
+            VDAgentFileXferStatusError error = {
+                GUINT32_TO_LE(VD_AGENT_FILE_XFER_STATUS_ERROR_GLIB_IO),
+                GUINT32_TO_LE(G_IO_ERROR_TOO_MANY_OPEN_FILES),
+            };
+            size_t detail_size = sizeof(error);
+            if (!VD_AGENT_HAS_CAPABILITY(capabilities, capabilities_size,
+                                         VD_AGENT_CAP_FILE_XFER_DETAILED_ERRORS)) {
+                detail_size = 0;
+            }
+            send_file_xfer_status(vport,
+               "Too many transfers ongoing. "
+               "Cancelling client file-xfer request %u",
+               s->id, VD_AGENT_FILE_XFER_STATUS_ERROR, (void*) &error, detail_size);
             return;
         }
         msg_type = VDAGENTD_FILE_XFER_START;
