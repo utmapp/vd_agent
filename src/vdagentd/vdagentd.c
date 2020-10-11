@@ -404,6 +404,13 @@ static void do_client_file_xfer(VirtioPort *vport,
                "Cancelling client file-xfer request %u",
                s->id, VD_AGENT_FILE_XFER_STATUS_ERROR, (void*) &error, detail_size);
             return;
+        } else if (g_hash_table_lookup(active_xfers, GUINT_TO_POINTER(s->id)) != NULL) {
+            // id is already used -- client is confused
+            send_file_xfer_status(vport,
+               "File transfer ID is already used. "
+               "Cancelling client file-xfer request %u",
+               s->id, VD_AGENT_FILE_XFER_STATUS_ERROR, NULL, 0);
+            return;
         }
         msg_type = VDAGENTD_FILE_XFER_START;
         id = s->id;
