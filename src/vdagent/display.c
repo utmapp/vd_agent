@@ -41,6 +41,7 @@
 #include "device-info.h"
 #include "vdagentd-proto.h"
 
+#include "mutter.h"
 #include "display.h"
 
 /**
@@ -59,6 +60,7 @@ struct VDAgentDisplay {
     UdscsConnection *vdagentd;
     int debug;
     GIOChannel *x11_channel;
+    VDAgentMutterDBus *mutter;
 };
 
 static gint vdagent_guest_xorg_resolution_compare(gconstpointer a, gconstpointer b)
@@ -161,17 +163,22 @@ void vdagent_display_send_daemon_guest_res(VDAgentDisplay *display, gboolean upd
     GArray *res_array;
     int width = 0, height = 0, screen_count = 0;
 
-    res_array = vdagent_gtk_get_resolutions(display, &width, &height, &screen_count);
-    if (res_array == NULL) {
-        if (display->x11->dont_send_guest_xorg_res) {
-            return;
-        }
+    // Try various backends one after the other.
+    // We try Mutter first, because it has a bigger probability of being available.
+    // Second GTK, because if/when we build with GTK4, this is the one that will work best.
+    // Finally we try X11. This is the default, and should work OK in most circumstances.
+    res_array = vdagent_mutter_get_resolutions(display->mutter, &width, &height, &screen_count);
 
-        res_array = vdagent_x11_get_resolutions(display->x11, update,
-                                                &width, &height, &screen_count);
-        if (res_array == NULL) {
-            return;
-        }
+    if (res_array == NULL) {
+        res_array = vdagent_gtk_get_resolutions(display, &width, &height, &screen_count);
+    }
+
+    if (res_array == NULL) {
+        res_array = vdagent_x11_get_resolutions(display->x11, update, &width, &height, &screen_count);
+    }
+
+    if (res_array == NULL) {
+        return;
     }
 
     if (res_array->len < g_hash_table_size(display->connector_mapping)) {
@@ -280,6 +287,8 @@ VDAgentDisplay* vdagent_display_create(UdscsConnection *vdagentd, int debug, int
     display->x11->vdagent_display = display;
     display->connector_mapping = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 
+    display->mutter = vdagent_mutter_create(display->connector_mapping);
+
     display->x11_channel = g_io_channel_unix_new(vdagent_x11_get_fd(display->x11));
     if (display->x11_channel == NULL) {
         vdagent_x11_destroy(display->x11, TRUE);
@@ -314,10 +323,13 @@ void vdagent_display_destroy(VDAgentDisplay *display, int vdagentd_disconnected)
         return;
     }
 
-    g_hash_table_destroy(display->connector_mapping);
 
     g_clear_pointer(&display->x11_channel, g_io_channel_unref);
     vdagent_x11_destroy(display->x11, vdagentd_disconnected);
+
+    vdagent_mutter_destroy(display->mutter);
+
+    g_hash_table_destroy(display->connector_mapping);
     g_free(display);
 }
 
