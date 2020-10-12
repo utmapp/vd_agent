@@ -49,6 +49,8 @@ src_spice_vdagent_SOURCES =			\
 	src/vdagent/display.h			\
 	src/vdagent/file-xfers.c		\
 	src/vdagent/file-xfers.h		\
+	src/vdagent/mutter.c			\
+	src/vdagent/mutter.h			\
 	src/vdagent/x11-priv.h			\
 	src/vdagent/x11-randr.c			\
 	src/vdagent/x11.c			\
