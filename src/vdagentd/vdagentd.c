@@ -606,12 +606,8 @@ static void virtio_port_read_complete(
         break;
     }
     case VD_AGENT_GRAPHICS_DEVICE_INFO: {
-        if (device_info) {
-            g_free(device_info);
-            device_info = NULL;
-            device_info_size = 0;
-        }
         // store device info for re-sending when a session agent reconnects
+        g_free(device_info);
         device_info = g_memdup(data, message_header->size);
         device_info_size = message_header->size;
         forward_data_to_session_agent(VDAGENTD_GRAPHICS_DEVICE_INFO, data, message_header->size);
