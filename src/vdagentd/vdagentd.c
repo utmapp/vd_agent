@@ -420,7 +420,7 @@ static void forward_data_to_session_agent(uint32_t type, uint8_t *data, size_t s
     udscs_write(active_session_conn, type, 0, 0, data, size);
 }
 
-static gsize vdagent_message_min_size[] =
+static const gsize vdagent_message_min_size[] =
 {
     -1, /* Does not exist */
     sizeof(VDAgentMouseState), /* VD_AGENT_MOUSE_STATE */
