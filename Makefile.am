@@ -109,13 +109,43 @@ src_spice_vdagentd_SOURCES =			\
 	src/vdagentd/virtio-port.h		\
 	$(NULL)
 
+tests_test_session_info_CFLAGS =		\
+	$(DBUS_CFLAGS)				\
+	$(LIBSYSTEMD_DAEMON_CFLAGS)		\
+	$(LIBSYSTEMD_LOGIN_CFLAGS)		\
+	$(SPICE_CFLAGS)				\
+	$(GIO2_CFLAGS)				\
+	-I$(srcdir)/src				\
+	-I$(srcdir)/src/vdagentd		\
+	-DUDSCS_NO_SERVER			\
+	$(NULL)
+
+tests_test_session_info_LDADD =			\
+	$(DBUS_LIBS)				\
+	$(LIBSYSTEMD_DAEMON_LIBS)		\
+	$(LIBSYSTEMD_LOGIN_LIBS)		\
+	$(SPICE_LIBS)				\
+	$(GIO2_LIBS)				\
+	$(NULL)
+
+tests_test_session_info_SOURCES =		\
+	$(common_sources)			\
+	src/vdagentd/session-info.h		\
+	tests/test-session-info.c		\
+	$(NULL)
+
+check_PROGRAMS += tests/test-session-info
+
 if HAVE_CONSOLE_KIT
 src_spice_vdagentd_SOURCES += src/vdagentd/console-kit.c
+tests_test_session_info_SOURCES += src/vdagentd/console-kit.c
 else
 if HAVE_LIBSYSTEMD_LOGIN
 src_spice_vdagentd_SOURCES += src/vdagentd/systemd-login.c
+tests_test_session_info_SOURCES += src/vdagentd/systemd-login.c
 else
 src_spice_vdagentd_SOURCES += src/vdagentd/dummy-session-info.c
+tests_test_session_info_SOURCES += src/vdagentd/dummy-session-info.c
 endif
 endif
 
