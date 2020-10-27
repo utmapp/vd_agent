@@ -6,6 +6,7 @@ variables:
       gettext gettext-devel libpciaccess-devel alsa-lib-devel
       libXfixes-devel libX11-devel libXrandr-devel libXinerama-devel
       gtk3-devel dbus-devel systemd-devel procps-ng libdrm-devel gtk4-devel
+      vulkan-headers
 
 before_script:
   - dnf install -y $DEPS_COMMON
