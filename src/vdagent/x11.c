@@ -333,7 +333,7 @@ void vdagent_x11_destroy(struct vdagent_x11 *x11, int vdagentd_disconnected)
 
     g_hash_table_destroy(x11->guest_output_map);
     XCloseDisplay(x11->display);
-    g_free(x11->randr.failed_conf);
+    vdagent_x11_randr_destroy(x11);
     g_free(x11);
 }
 

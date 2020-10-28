@@ -171,6 +171,12 @@ void vdagent_x11_randr_init(struct vdagent_x11 *x11)
     }
 }
 
+void vdagent_x11_randr_destroy(struct vdagent_x11 *x11)
+{
+    free_randr_resources(x11);
+    g_free(x11->randr.failed_conf);
+}
+
 static XRRModeInfo *
 find_mode_by_name (struct vdagent_x11 *x11, char *name)
 {

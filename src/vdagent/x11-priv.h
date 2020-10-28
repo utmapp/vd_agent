@@ -164,6 +164,8 @@ extern int (*vdagent_x11_prev_error_handler)(Display *, XErrorEvent *);
 extern int vdagent_x11_caught_error;
 
 void vdagent_x11_randr_init(struct vdagent_x11 *x11);
+void vdagent_x11_randr_destroy(struct vdagent_x11 *x11);
+
 GArray *vdagent_x11_get_resolutions(struct vdagent_x11 *x11, gboolean update,
                                     int *width, int *height, int *system_screen_count);
 void vdagent_x11_randr_handle_root_size_change(struct vdagent_x11 *x11,
