@@ -27,7 +27,7 @@
 
 int main(int argc, char *argv[])
 {
-    int pid, uid, ck_uid;
+    int pid, uid, uid_si;
 
     pid = (int)getpid();
 
@@ -41,16 +41,17 @@ int main(int argc, char *argv[])
         session_info_destroy(session_info);
         return 2;
     }
-    ck_uid = session_info_uid_for_session(session_info, session);
+    uid_si = session_info_uid_for_session(session_info, session);
 
     free(session);
     session_info_destroy(session_info);
 
     uid = getuid();
-    printf("MAIN: uid is %d, ck_uid is %d\n", uid, ck_uid);
+    printf("MAIN: uid is %d, uid_si is %d\n", uid, uid_si);
 
-    if (uid != ck_uid) {
-        fprintf(stderr, "MAIN: uid (%d) does not match console-kit uid %d\n", uid, ck_uid);
+    if (uid != uid_si) {
+        fprintf(stderr, "MAIN: uid (%d) does not match the uid "
+                        "obtained from session info (%d)\n", uid, uid_si);
         return 3;
     }
 
