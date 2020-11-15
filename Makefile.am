@@ -126,20 +126,19 @@ tests_test_session_info_SOURCES =		\
 	tests/test-session-info.c		\
 	$(NULL)
 
-check_PROGRAMS += tests/test-session-info
-
 if HAVE_CONSOLE_KIT
 src_spice_vdagentd_SOURCES += src/vdagentd/console-kit.c
 tests_test_session_info_SOURCES += src/vdagentd/console-kit.c
+check_PROGRAMS += tests/test-session-info
 else
 if HAVE_LIBSYSTEMD_LOGIN
 src_spice_vdagentd_SOURCES += src/vdagentd/systemd-login.c
 tests_test_session_info_CFLAGS += $(LIBSYSTEMD_LOGIN_CFLAGS)
 tests_test_session_info_LDADD += $(LIBSYSTEMD_LOGIN_LIBS)
 tests_test_session_info_SOURCES += src/vdagentd/systemd-login.c
+check_PROGRAMS += tests/test-session-info
 else
 src_spice_vdagentd_SOURCES += src/vdagentd/dummy-session-info.c
-tests_test_session_info_SOURCES += src/vdagentd/dummy-session-info.c
 endif
 endif
 
