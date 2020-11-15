@@ -7,6 +7,8 @@ variables:
       libXfixes-devel libX11-devel libXrandr-devel libXinerama-devel
       gtk3-devel dbus-devel systemd-devel procps-ng libdrm-devel gtk4-devel
       vulkan-headers
+  DISTCHECK_CONFIGURE_FLAGS:
+      --with-session-info=none
 
 before_script:
   - dnf install -y $DEPS_COMMON
@@ -18,8 +20,10 @@ fedora-autotools:
   script:
   - ./autogen.sh
   - make
-  - make check
-  - make distcheck
+  - git clean -xfd
+
+  - ./autogen.sh --with-session-info=none
+  - make distcheck --environment-overrides
   - git clean -xfd
 
   - ./autogen.sh --with-session-info=systemd --with-init-script=systemd+redhat
