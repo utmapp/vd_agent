@@ -61,7 +61,6 @@ struct VDAgentDisplay {
     GIOChannel *x11_channel;
 };
 
-#ifdef USE_GTK_FOR_MONITORS
 static gint vdagent_guest_xorg_resolution_compare(gconstpointer a, gconstpointer b)
 {
     struct vdagentd_guest_xorg_resolution *ptr_a, *ptr_b;
@@ -71,7 +70,6 @@ static gint vdagent_guest_xorg_resolution_compare(gconstpointer a, gconstpointer
 
     return ptr_a->display_id - ptr_b->display_id;
 }
-#endif
 
 static GArray *vdagent_gtk_get_resolutions(VDAgentDisplay *display,
                                            int *width, int *height, int *screen_count)
@@ -152,43 +150,6 @@ static GArray *vdagent_gtk_get_resolutions(VDAgentDisplay *display,
         }
     }
 
-    if (res_array->len < g_hash_table_size(display->connector_mapping)) {
-        // Complete the array with disabled displays.
-        // We need to send 0x0 resolution to let the daemon know the display is not there anymore.
-
-        syslog(LOG_DEBUG, "%d/%d displays found - completing with disabled displays.",
-               res_array->len, g_hash_table_size(display->connector_mapping));
-
-        GHashTableIter iter;
-        gpointer key, value;
-        g_hash_table_iter_init(&iter, display->connector_mapping);
-        while (g_hash_table_iter_next(&iter, &key, &value)) {
-            bool found = false;
-            int display_id = GPOINTER_TO_INT(value);
-            for (i = 0; i < res_array->len; i++) {
-                struct vdagentd_guest_xorg_resolution *res =
-                    (struct vdagentd_guest_xorg_resolution*)res_array->data;
-                if (res[i].display_id == display_id) {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                struct vdagentd_guest_xorg_resolution res;
-
-                res.x = 0;
-                res.y = 0;
-                res.height = 0;
-                res.width = 0;
-                res.display_id = display_id;
-
-                g_array_append_val(res_array, res);
-            }
-        }
-    }
-
-    // sort the list to make sure we send them in the display_id order
-    g_array_sort(res_array, vdagent_guest_xorg_resolution_compare);
     return res_array;
 #else
     return NULL;
@@ -212,6 +173,44 @@ void vdagent_display_send_daemon_guest_res(VDAgentDisplay *display, gboolean upd
             return;
         }
     }
+
+    if (res_array->len < g_hash_table_size(display->connector_mapping)) {
+        // Complete the array with disabled displays.
+        // We need to send 0x0 resolution to let the daemon know the display is not there anymore.
+
+        syslog(LOG_DEBUG, "%d/%d displays found - completing with disabled displays.",
+               res_array->len, g_hash_table_size(display->connector_mapping));
+
+        GHashTableIter iter;
+        gpointer key, value;
+        g_hash_table_iter_init(&iter, display->connector_mapping);
+        while (g_hash_table_iter_next(&iter, &key, &value)) {
+            bool found = false;
+            int display_id = GPOINTER_TO_INT(value);
+            for (int i = 0; i < res_array->len; i++) {
+                struct vdagentd_guest_xorg_resolution *res =
+                    (struct vdagentd_guest_xorg_resolution*)res_array->data;
+                if (res[i].display_id == display_id) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                struct vdagentd_guest_xorg_resolution res;
+
+                res.x = 0;
+                res.y = 0;
+                res.height = 0;
+                res.width = 0;
+                res.display_id = display_id;
+
+                g_array_append_val(res_array, res);
+            }
+        }
+    }
+
+    // sort the list to make sure we send them in the display_id order
+    g_array_sort(res_array, vdagent_guest_xorg_resolution_compare);
 
     if (display->debug) {
         syslog(LOG_DEBUG, "Sending guest screen resolutions to vdagentd:");
