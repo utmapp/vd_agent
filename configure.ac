@@ -87,7 +87,7 @@ AC_ARG_WITH([gtk4],
                [Use GTK4 instead of Xlib @<:@default=no@:>@])],
             [],
             [with_gtk4="no"])
-if test "x$with_gtk4" == "xyes"; then
+if test "x$with_gtk4" = "xyes"; then
     PKG_CHECK_MODULES([GTK], [gtk4 >= 3.98], [
                      AC_DEFINE([WITH_GTK], [1], [If defined, load GTK+ libraries])
                      AC_DEFINE([USE_GTK_FOR_MONITORS], [1], [If defined, use GTK for monitor resolution instead of XRandr])
