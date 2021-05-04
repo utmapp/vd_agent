@@ -216,7 +216,7 @@ static void do_client_monitors(VirtioPort *vport, int port_nr,
     vdagentd_write_xorg_conf(new_monitors);
 
     g_free(mon_config);
-    mon_config = g_memdup(new_monitors, size);
+    mon_config = g_memdup2(new_monitors, size);
 
     /* Send monitor config to currently active agent */
     if (active_session_conn)
@@ -249,7 +249,7 @@ static void do_client_capabilities(VirtioPort *vport,
 {
     capabilities_size = VD_AGENT_CAPS_SIZE_FROM_MSG_SIZE(message_header->size);
     g_free(capabilities);
-    capabilities = g_memdup(caps->caps, capabilities_size * sizeof(uint32_t));
+    capabilities = g_memdup2(caps->caps, capabilities_size * sizeof(uint32_t));
 
     if (caps->request) {
         /* Report the previous client has disconnected. */
@@ -647,7 +647,7 @@ static void virtio_port_read_complete(
     case VD_AGENT_GRAPHICS_DEVICE_INFO: {
         // store device info for re-sending when a session agent reconnects
         g_free(device_info);
-        device_info = g_memdup(data, message_header->size);
+        device_info = g_memdup2(data, message_header->size);
         device_info_size = message_header->size;
         forward_data_to_session_agent(VDAGENTD_GRAPHICS_DEVICE_INFO, data, message_header->size);
         break;
@@ -1090,7 +1090,7 @@ static void do_agent_xorg_resolution(UdscsConnection             *conn,
     }
 
     g_free(agent_data->screen_info);
-    agent_data->screen_info = g_memdup(data, header->size);
+    agent_data->screen_info = g_memdup2(data, header->size);
     agent_data->width  = header->arg1;
     agent_data->height = header->arg2;
     agent_data->screen_count = n;

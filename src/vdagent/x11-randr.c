@@ -982,7 +982,7 @@ void vdagent_x11_set_monitor_config(struct vdagent_x11 *x11,
                    fullscreen it will keep sending the failing config. */
                 g_free(x11->randr.failed_conf);
                 x11->randr.failed_conf =
-                    g_memdup(mon_config, config_size(mon_config->num_of_monitors));
+                    g_memdup2(mon_config, config_size(mon_config->num_of_monitors));
                 return;
             }
         }

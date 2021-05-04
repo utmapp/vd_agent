@@ -124,6 +124,10 @@ PKG_CHECK_MODULES(ALSA, [alsa >= 1.0.22])
 PKG_CHECK_MODULES([DBUS], [dbus-1])
 PKG_CHECK_MODULES([DRM], [libdrm])
 
+PKG_CHECK_MODULES([GLIB], [glib-2.0 >= 2.68], [], [
+    AC_DEFINE(g_memdup2, g_memdup, [GLib2 < 2.68 compatibility])
+])
+
 if test "$with_session_info" = "auto" || test "$with_session_info" = "systemd"; then
     PKG_CHECK_MODULES([LIBSYSTEMD_LOGIN],
                       [libsystemd >= 209],

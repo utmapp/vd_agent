@@ -228,7 +228,7 @@ static void daemon_read_complete(UdscsConnection *conn,
         break;
     case VDAGENTD_AUDIO_VOLUME_SYNC: {
         VDAgentAudioVolumeSync *avs = (VDAgentAudioVolumeSync *)data;
-        uint16_t *volume = g_memdup(avs->volume, sizeof(uint16_t) * avs->nchannels);
+        uint16_t *volume = g_memdup2(avs->volume, sizeof(uint16_t) * avs->nchannels);
 
         if (avs->is_playback) {
             vdagent_audio_playback_sync(avs->mute, avs->nchannels, volume);
@@ -414,7 +414,7 @@ int main(int argc, char *argv[])
     GOptionContext *context;
     GError *error = NULL;
     VDAgent *agent;
-    char **orig_argv = g_memdup(argv, sizeof(char*) * (argc+1));
+    char **orig_argv = g_memdup2(argv, sizeof(char*) * (argc+1));
     orig_argv[argc] = NULL; /* To avoid clang analyzer false-positive */
 
     context = g_option_context_new(NULL);
