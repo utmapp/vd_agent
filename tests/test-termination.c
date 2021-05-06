@@ -59,7 +59,7 @@ static void check(int line, const char *cond_str, int cond_value)
 static pid_t get_daemon_pid(void)
 {
     pid_t res = 0;
-    FILE *f = popen("ps -ef", "r");
+    FILE *f = popen("ps -efww", "r");
     check(f != NULL);
     char line[1024];
     while (fgets(line, sizeof(line), f)) {
