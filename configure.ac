@@ -64,7 +64,9 @@ AC_MSG_RESULT($with_init_script)
 
 if test "x$init_systemd" = "xyes"; then
   SYSTEMDSYSTEMUNITDIR=`${PKG_CONFIG} systemd --variable=systemdsystemunitdir`
+  SYSTEMDUSERUNITDIR=`${PKG_CONFIG} systemd --variable=systemduserunitdir`
   AC_SUBST(SYSTEMDSYSTEMUNITDIR)
+  AC_SUBST(SYSTEMDUSERUNITDIR)
   # earlier versions of systemd require a separate libsystemd-daemon library
   PKG_CHECK_MODULES([LIBSYSTEMD_DAEMON],
                     [libsystemd >= 209],

@@ -1,0 +1,5 @@
+[Unit]
+Description=Spice guest session agent
+
+[Service]
+ExecStart=/usr/bin/spice-vdagent -x

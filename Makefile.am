@@ -167,6 +167,10 @@ systemdunit_DATA = \
 	$(top_srcdir)/data/spice-vdagentd.service \
 	$(top_srcdir)/data/spice-vdagentd.socket
 
+userunitdir = $(SYSTEMDUSERUNITDIR)
+userunit_DATA = \
+	$(top_srcdir)/data/spice-vdagent.service
+
 udevrulesdir = $(udevdir)/rules.d
 udevrules_DATA = $(top_srcdir)/data/70-spice-vdagentd.rules
 
@@ -185,6 +189,7 @@ EXTRA_DIST =					\
 	CHANGELOG.md				\
 	data/70-spice-vdagentd.rules		\
 	data/spice-vdagent.desktop		\
+	data/spice-vdagent.service	   	\
 	data/spice-vdagentd			\
 	data/spice-vdagentd.service		\
 	data/spice-vdagentd.socket		\
