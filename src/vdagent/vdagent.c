@@ -42,11 +42,14 @@
 #include "clipboard.h"
 #include "display.h"
 
+#define MAX_RETRY_CONNECT_SYSTEM_AGENT 60
+
 typedef struct VDAgent {
     VDAgentClipboards *clipboards;
     VDAgentDisplay *display;
     struct vdagent_file_xfers *xfers;
     UdscsConnection *conn;
+    gint udscs_num_retry;
 
     GMainLoop *loop;
 } VDAgent;
@@ -378,9 +381,27 @@ static gboolean vdagent_init_async_cb(gpointer user_data)
                                 daemon_read_complete, daemon_error_cb,
                                 debug);
     if (agent->conn == NULL) {
+        if (agent->udscs_num_retry == MAX_RETRY_CONNECT_SYSTEM_AGENT) {
+            syslog(LOG_WARNING,
+                   "Failed to connect to spice-vdagentd at %s (tried %d times)",
+                   vdagentd_socket, agent->udscs_num_retry);
+            goto err_init;
+        }
+        if (agent->udscs_num_retry == 0) {
+            /* Log only when it fails and at the end */
+            syslog(LOG_DEBUG,
+                   "Failed to connect with spice-vdagentd. Trying again in 1s");
+        }
+        agent->udscs_num_retry++;
         g_timeout_add_seconds(1, vdagent_init_async_cb, agent);
         return G_SOURCE_REMOVE;
     }
+    if (agent->udscs_num_retry != 0) {
+        syslog(LOG_DEBUG,
+               "Connected with spice-vdagentd after %d attempts",
+               agent->udscs_num_retry);
+    }
+    agent->udscs_num_retry = 0;
     g_object_set_data(G_OBJECT(agent->conn), "agent", agent);
 
     agent->display = vdagent_display_create(agent->conn, debug, x11_sync);
