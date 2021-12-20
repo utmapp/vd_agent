@@ -107,16 +107,14 @@ static void udscs_connection_class_init(UdscsConnectionClass *klass)
 UdscsConnection *udscs_connect(const char *socketname,
     udscs_read_callback read_callback,
     VDAgentConnErrorCb error_cb,
-    int debug)
+    int debug,
+    GError **err)
 {
     GIOStream *io_stream;
     UdscsConnection *conn;
-    GError *err = NULL;
 
-    io_stream = vdagent_socket_connect(socketname, &err);
-    if (err) {
-        syslog(LOG_ERR, "%s: %s", __func__, err->message);
-        g_error_free(err);
+    io_stream = vdagent_socket_connect(socketname, err);
+    if (*err) {
         return NULL;
     }
 

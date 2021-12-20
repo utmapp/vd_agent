@@ -376,22 +376,28 @@ static void vdagent_destroy(VDAgent *agent)
 static gboolean vdagent_init_async_cb(gpointer user_data)
 {
     VDAgent *agent = user_data;
+    GError *err = NULL;
 
     agent->conn = udscs_connect(vdagentd_socket,
-                                daemon_read_complete, daemon_error_cb,
-                                debug);
+                                daemon_read_complete,
+                                daemon_error_cb,
+                                debug,
+                                &err);
     if (agent->conn == NULL) {
         if (agent->udscs_num_retry == MAX_RETRY_CONNECT_SYSTEM_AGENT) {
             syslog(LOG_WARNING,
                    "Failed to connect to spice-vdagentd at %s (tried %d times)",
                    vdagentd_socket, agent->udscs_num_retry);
+            g_error_free(err);
             goto err_init;
         }
         if (agent->udscs_num_retry == 0) {
             /* Log only when it fails and at the end */
             syslog(LOG_DEBUG,
-                   "Failed to connect with spice-vdagentd. Trying again in 1s");
+                   "Failed to connect with spice-vdagentd due '%s'. Trying again in 1s",
+                   err->message);
         }
+        g_error_free(err);
         agent->udscs_num_retry++;
         g_timeout_add_seconds(1, vdagent_init_async_cb, agent);
         return G_SOURCE_REMOVE;

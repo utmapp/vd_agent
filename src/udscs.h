@@ -53,11 +53,14 @@ typedef void (*udscs_read_callback)(UdscsConnection *conn,
  *
  * If debug is true then the events on this connection will be traced.
  * This includes the incoming and outgoing message names.
+ *
+ * In case of failure, returns NULL and set @err with reason.
  */
 UdscsConnection *udscs_connect(const char *socketname,
     udscs_read_callback read_callback,
     VDAgentConnErrorCb error_cb,
-    int debug);
+    int debug,
+    GError **err);
 
 /* Queue a message for delivery to the client connected through conn.
  */
