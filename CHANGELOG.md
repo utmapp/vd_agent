@@ -2,6 +2,13 @@ Gitlab markdown format support linking to Issues (#) and Merge requests (!) and 
 
 https://gitlab.freedesktop.org/spice/linux/vd_agent/-/blob/master/CHANGELOG.md
 
+News in spice-vdagent 0.22.0
+===========================
+* !40 - Handle side mouse buttons
+* !39 - Set retry limit to connect to vdagentd and improve logging error
+* !35 - Fix deprecation warning
+* !37 - Provide systemd spice-vdagent.service
+
 News in spice-vdagent 0.21.0
 ============================
 * Security fixes:
