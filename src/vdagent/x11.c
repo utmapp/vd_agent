@@ -302,9 +302,6 @@ struct vdagent_x11 *vdagent_x11_create(UdscsConnection *vdagentd,
         x11->height[i] = attrib.height;
     }
 
-    /* Flush output buffers and consume any pending events */
-    vdagent_x11_do_read(x11);
-
     return x11;
 }
 
