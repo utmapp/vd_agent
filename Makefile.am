@@ -153,9 +153,6 @@ gdmautostart_DATA = $(top_srcdir)/data/spice-vdagent.desktop
 gdmautostart2dir = $(datadir)/gdm/autostart/LoginWindow
 gdmautostart2_DATA = $(top_srcdir)/data/spice-vdagent.desktop
 
-install-data-local:
-	$(mkdir_p) $(DESTDIR)$(localstatedir)/run/spice-vdagentd
-
 if INIT_SCRIPT_RED_HAT
 initdir = $(sysconfdir)/rc.d/init.d
 init_SCRIPTS = $(top_srcdir)/data/spice-vdagentd
