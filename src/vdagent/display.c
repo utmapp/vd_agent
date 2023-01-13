@@ -60,6 +60,7 @@ struct VDAgentDisplay {
     UdscsConnection *vdagentd;
     int debug;
     GIOChannel *x11_channel;
+    guint io_watch_source_id;
     VDAgentMutterDBus *mutter;
 };
 
@@ -296,7 +297,8 @@ VDAgentDisplay* vdagent_display_create(UdscsConnection *vdagentd, int debug, int
         return NULL;
     }
 
-    g_io_add_watch(display->x11_channel, G_IO_IN, x11_io_channel_cb, display);
+    display->io_watch_source_id =
+        g_io_add_watch(display->x11_channel, G_IO_IN, x11_io_channel_cb, display);
 
 
     /* Since we are started at the same time as the wm,
@@ -323,7 +325,7 @@ void vdagent_display_destroy(VDAgentDisplay *display, int vdagentd_disconnected)
         return;
     }
 
-
+    g_source_remove(display->io_watch_source_id);
     g_clear_pointer(&display->x11_channel, g_io_channel_unref);
     vdagent_x11_destroy(display->x11, vdagentd_disconnected);
 
