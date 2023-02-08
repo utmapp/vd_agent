@@ -1,5 +1,10 @@
 [Unit]
 Description=Spice guest session agent
+# Make sure the display is reachable
+After=graphical-session.target
 
 [Service]
 ExecStart=/usr/bin/spice-vdagent -x
+
+[Install]
+WantedBy=graphical-session.target

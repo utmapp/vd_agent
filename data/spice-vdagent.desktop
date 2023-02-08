@@ -7,3 +7,4 @@ Type=Application
 Categories=
 X-GNOME-Autostart-Phase=WindowManager
 NoDisplay=true
+X-systemd-skip=true
