@@ -1,5 +1,6 @@
 [Unit]
 Description=Spice guest session agent
+Documentation=man:spice-vdagent(1)
 # Make sure the display is reachable
 After=graphical-session.target
 

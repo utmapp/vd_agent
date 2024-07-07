@@ -1,5 +1,6 @@
 [Unit]
 Description=Agent daemon for Spice guests
+Documentation=man:spice-vdagentd(1)
 After=dbus.target
 Requires=spice-vdagentd.socket
 
