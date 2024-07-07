@@ -281,7 +281,7 @@ static void clipboard_contents_received_cb(GtkClipboard     *clipboard,
                     gtk_selection_data_get_data(sel_data),
                     gtk_selection_data_get_length(sel_data));
     } else {
-        syslog(LOG_WARNING, "%s: sel_id=%u: expected type %u, recieved %u, "
+        syslog(LOG_WARNING, "%s: sel_id=%u: expected type %u, received %u, "
                             "skipping", __func__, sel_id, target, type);
         udscs_write(c->conn, VDAGENTD_CLIPBOARD_DATA, sel_id,
                     VD_AGENT_CLIPBOARD_NONE, NULL, 0);

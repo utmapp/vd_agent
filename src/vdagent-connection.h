@@ -28,7 +28,7 @@ G_BEGIN_DECLS
 #define VDAGENT_TYPE_CONNECTION vdagent_connection_get_type()
 G_DECLARE_DERIVABLE_TYPE(VDAgentConnection, vdagent_connection, VDAGENT, CONNECTION, GObject)
 
-/* Sublasses of VDAgentConnection must implement
+/* Subclasses of VDAgentConnection must implement
  * handle_header and handle_message. */
 struct _VDAgentConnectionClass {
     GObjectClass parent_class;

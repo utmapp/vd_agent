@@ -1,4 +1,4 @@
-Gitlab markdown format support linking to Issues (#) and Merge requests (!) and more, see bellow:
+Gitlab markdown format support linking to Issues (#) and Merge requests (!) and more, see below:
 
 https://gitlab.freedesktop.org/spice/linux/vd_agent/-/blob/master/CHANGELOG.md
 
@@ -93,7 +93,7 @@ News in spice-vdagent 0.17.0
 * Set exit code to 1 instead of 0 when virtio device cannot be opened
 * Fix double-free on uinput->screen_info (rhbz#1262635)
 * Code improvement over unix domain client server support (udcs)
-* Fix build compatiblity with different libsystemd versions (fdo#94209)
+* Fix build compatibility with different libsystemd versions (fdo#94209)
 
 News in spice-vdagent 0.16.0
 ============================
@@ -117,7 +117,7 @@ News in spice-vdagent 0.15.0
 News in spice-vdagent 0.14.0
 ============================
 
-* More multi-monitor and arbritary resolution support bugfixes
+* More multi-monitor and arbitrary resolution support bugfixes
 * Add support for file transfers from client to guest
 * Add support for setups with multiple Screens (multiple qxl devices each
   mapped to their own screen), limitations:
@@ -131,16 +131,16 @@ News in spice-vdagent 0.14.0
 News in spice-vdagent 0.12.1
 ============================
 
-* Various bugfixes for multi-monitor and arbritary resolution support
+* Various bugfixes for multi-monitor and arbitrary resolution support
 * Requires libXrandr >= 1.3, Note 0.12.0 also required this, but did not
   check for it. For older distributions use 0.10.1
 
 News in spice-vdagent 0.12.0
 ============================
 
-* Full multi-monitor and arbritary resolution support, this requires a new
+* Full multi-monitor and arbitrary resolution support, this requires a new
   enough xorg-x11-drv-qxl driver, as well as a new enough host
-* systemd service support, using systemd hardware acivation
+* systemd service support, using systemd hardware activation
 * Use syslog for logging, rather then logging to private log files
 
 News in spice-vdagent 0.10.1
@@ -165,7 +165,7 @@ News in spice-vdagent 0.8.1
 * In daemon mode the session vdagent now retries connecting to the system
   vdagentd every second, once a connection is made a version check is done,
   if the version differs (which only happens on an upgrade from one version
-  to the next) the sesion vdagent re-execs itself (Marc-André Lureau)
+  to the next) the session vdagent re-execs itself (Marc-André Lureau)
 
 News in spice-vdagent 0.8.0
 ===========================

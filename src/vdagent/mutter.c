@@ -57,7 +57,7 @@ struct VDAgentMutterDBus {
  *
  * Returns:
  * An initialise VDAgentMutterDBus structure if successful.
- * NULL if an error occured.
+ * NULL if an error occurred.
  */
 VDAgentMutterDBus *vdagent_mutter_create(GHashTable *connector_mapping)
 {

@@ -332,7 +332,7 @@ static char* find_device_at_pci_address(PciAddress *pci_addr, int *vendor_id, in
     g_return_val_if_fail(device_id != NULL, NULL);
     g_return_val_if_fail(vendor_id != NULL, NULL);
     // Look for a device that matches the PCI address parsed above. Loop
-    // through the list of cards reported by the DRM subsytem
+    // through the list of cards reported by the DRM subsystem
     for (int i = 0; i < 10; ++i) {
         char dev_path[64];
         struct stat buf;
