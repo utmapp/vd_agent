@@ -192,6 +192,9 @@ if test -z "$ac_test_CFLAGS"; then
   done
 fi
 
+# Always enabled for autoconf targets
+AC_DEFINE([WITH_SESSION_SECURITY], [1], [If undefined and there is no session info, only one session agent is allowed] )
+
 AC_ARG_ENABLE([pie],
   AS_HELP_STRING([--enable-pie=@<:@auto/yes/no@:>@],
                  [Enable position-independent-executable support (for spice-vdagentd)@<:@default=auto@:>@]),

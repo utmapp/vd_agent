@@ -146,8 +146,10 @@ static void send_capabilities(VirtioPort *vport,
     size = sizeof(*caps) + VD_AGENT_CAPS_BYTES;
     caps = g_malloc0(size);
     caps->request = request;
+#ifndef __APPLE__
     VD_AGENT_SET_CAPABILITY(caps->caps, VD_AGENT_CAP_MOUSE_STATE);
     VD_AGENT_SET_CAPABILITY(caps->caps, VD_AGENT_CAP_MONITORS_CONFIG);
+#endif
     VD_AGENT_SET_CAPABILITY(caps->caps, VD_AGENT_CAP_REPLY);
     VD_AGENT_SET_CAPABILITY(caps->caps, VD_AGENT_CAP_CLIPBOARD_BY_DEMAND);
     VD_AGENT_SET_CAPABILITY(caps->caps, VD_AGENT_CAP_CLIPBOARD_SELECTION);
@@ -176,6 +178,7 @@ static void do_client_disconnect(void)
     }
 }
 
+#ifndef __APPLE__
 void do_client_mouse(struct vdagentd_uinput **uinputp, VDAgentMouseState *mouse)
 {
     vdagentd_uinput_do_mouse(uinputp, mouse);
@@ -229,6 +232,7 @@ static void do_client_monitors(VirtioPort *vport, int port_nr,
     vdagent_virtio_port_write(vport, port_nr, VD_AGENT_REPLY, 0,
                               (uint8_t *)&reply, sizeof(reply));
 }
+#endif
 
 static void do_client_volume_sync(VirtioPort *vport, int port_nr,
     VDAgentMessage *message_header,
@@ -608,6 +612,7 @@ static void virtio_port_read_complete(
         return;
 
     switch (message_header->type) {
+#ifndef __APPLE__
     case VD_AGENT_MOUSE_STATE:
         virtio_msg_uint32_from_le(data, message_header->size, 0);
         do_client_mouse(&uinput, (VDAgentMouseState *)data);
@@ -617,6 +622,7 @@ static void virtio_port_read_complete(
         do_client_monitors(vport, port_nr, message_header,
                     (VDAgentMonitorsConfig *)data);
         break;
+#endif
     case VD_AGENT_ANNOUNCE_CAPABILITIES:
         virtio_msg_uint32_from_le(data, message_header->size, 0);
         do_client_capabilities(vport, message_header,
@@ -820,6 +826,7 @@ static void check_xorg_resolution(void)
     if (active_session_conn)
         agent_data = g_object_get_data(G_OBJECT(active_session_conn), "agent_data");
 
+#ifndef __APPLE__
     if (agent_data && agent_data->screen_info) {
         if (!uinput)
             uinput = vdagentd_uinput_create(uinput_device,
@@ -840,6 +847,9 @@ static void check_xorg_resolution(void)
             vdagentd_quit(1);
             return;
         }
+#else
+    if (agent_data) {
+#endif
 
         if (!virtio_port) {
             syslog(LOG_INFO, "opening vdagent virtio channel");
@@ -855,7 +865,9 @@ static void check_xorg_resolution(void)
         }
     } else {
 #ifndef WITH_STATIC_UINPUT
+#ifndef __APPLE__
         vdagentd_uinput_destroy(&uinput);
+#endif
 #endif
         if (virtio_port) {
             if (only_once) {
@@ -915,11 +927,13 @@ static void update_active_session_connection(UdscsConnection *new_conn)
             session_count--;
     }
 
+#ifdef WITH_SESSION_SECURITY
     if (new_conn && session_count != 1) {
         syslog(LOG_ERR, "multiple agents in one session, "
                "disabling agent to avoid potential information leak");
         new_conn = NULL;
     }
+#endif
 
     if (new_conn == active_session_conn)
         return;
@@ -1065,6 +1079,7 @@ static void agent_disconnect(VDAgentConnection *conn, GError *err)
     update_active_session_connection(NULL);
 }
 
+#ifndef __APPLE__
 static void do_agent_xorg_resolution(UdscsConnection             *conn,
                                      struct udscs_message_header *header,
                                      guint8                      *data)
@@ -1097,6 +1112,7 @@ static void do_agent_xorg_resolution(UdscsConnection             *conn,
 
     check_xorg_resolution();
 }
+#endif
 
 static void do_agent_file_xfer_status(UdscsConnection             *conn,
                                       struct udscs_message_header *header,
@@ -1138,9 +1154,11 @@ static void agent_read_complete(UdscsConnection *conn,
     struct udscs_message_header *header, uint8_t *data)
 {
     switch (header->type) {
+#ifndef __APPLE__
     case VDAGENTD_GUEST_XORG_RESOLUTION:
         do_agent_xorg_resolution(conn, header, data);
         break;
+#endif
     case VDAGENTD_CLIPBOARD_GRAB:
     case VDAGENTD_CLIPBOARD_REQUEST:
     case VDAGENTD_CLIPBOARD_DATA:
@@ -1346,7 +1364,9 @@ int main(int argc, char *argv[])
         si_watch_id = g_io_add_watch(si_io_channel, G_IO_IN, si_io_channel_cb, NULL);
         g_io_channel_unref(si_io_channel);
     } else {
+#ifdef WITH_SESSION_SECURITY
         syslog(LOG_WARNING, "no session info, max 1 session agent allowed");
+#endif
     }
 
     active_xfers = g_hash_table_new(g_direct_hash, g_direct_equal);
@@ -1357,7 +1377,9 @@ int main(int argc, char *argv[])
 
     release_clipboards();
 
+#ifndef __APPLE__
     vdagentd_uinput_destroy(&uinput);
+#endif
     if (si_watch_id > 0) {
         g_source_remove(si_watch_id);
     }
