@@ -15,6 +15,14 @@
 		CE03A0C82CE904D3006884EE /* libgio-2.0.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A0C52CE904C4006884EE /* libgio-2.0.a */; };
 		CE03A0C92CE904D4006884EE /* libglib-2.0.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A0C62CE904C4006884EE /* libglib-2.0.a */; };
 		CE03A0CC2CE90506006884EE /* libgobject-2.0.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A0CB2CE904EA006884EE /* libgobject-2.0.a */; };
+		CE03A0E72CE90CFC006884EE /* Vdagent.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE03A0E62CE90CFC006884EE /* Vdagent.swift */; };
+		CE03A0E82CE90CFC006884EE /* vdagent.c in Sources */ = {isa = PBXBuildFile; fileRef = CE03A0E52CE90CFC006884EE /* vdagent.c */; };
+		CE03A0EA2CE90D38006884EE /* udscs.c in Sources */ = {isa = PBXBuildFile; fileRef = CE03A0B62CE900A0006884EE /* udscs.c */; };
+		CE03A0ED2CE90D55006884EE /* ArgumentParser in Frameworks */ = {isa = PBXBuildFile; productRef = CE03A0EC2CE90D55006884EE /* ArgumentParser */; };
+		CE03A0EE2CE97927006884EE /* vdagent-connection.c in Sources */ = {isa = PBXBuildFile; fileRef = CE03A0B82CE900A0006884EE /* vdagent-connection.c */; };
+		CE03A0EF2CE97931006884EE /* libgio-2.0.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A0C52CE904C4006884EE /* libgio-2.0.a */; };
+		CE03A0F02CE97933006884EE /* libglib-2.0.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A0C62CE904C4006884EE /* libglib-2.0.a */; };
+		CE03A0F12CE97936006884EE /* libgobject-2.0.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A0CB2CE904EA006884EE /* libgobject-2.0.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -47,6 +55,10 @@
 		CE03A0C52CE904C4006884EE /* libgio-2.0.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libgio-2.0.a"; path = "/opt/homebrew/lib/libgio-2.0.a"; sourceTree = "<absolute>"; };
 		CE03A0C62CE904C4006884EE /* libglib-2.0.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libglib-2.0.a"; path = "/opt/homebrew/lib/libglib-2.0.a"; sourceTree = "<absolute>"; };
 		CE03A0CB2CE904EA006884EE /* libgobject-2.0.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libgobject-2.0.a"; path = "/opt/homebrew/lib/libgobject-2.0.a"; sourceTree = "<absolute>"; };
+		CE03A0DD2CE90CE8006884EE /* spice-vdagent */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "spice-vdagent"; sourceTree = BUILT_PRODUCTS_DIR; };
+		CE03A0E42CE90CFC006884EE /* vdagent.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = vdagent.h; sourceTree = "<group>"; };
+		CE03A0E52CE90CFC006884EE /* vdagent.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = vdagent.c; sourceTree = "<group>"; };
+		CE03A0E62CE90CFC006884EE /* Vdagent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vdagent.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -57,6 +69,17 @@
 				CE03A0C82CE904D3006884EE /* libgio-2.0.a in Frameworks */,
 				CE03A0C92CE904D4006884EE /* libglib-2.0.a in Frameworks */,
 				CE03A0CC2CE90506006884EE /* libgobject-2.0.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CE03A0DA2CE90CE8006884EE /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CE03A0ED2CE90D55006884EE /* ArgumentParser in Frameworks */,
+				CE03A0EF2CE97931006884EE /* libgio-2.0.a in Frameworks */,
+				CE03A0F02CE97933006884EE /* libglib-2.0.a in Frameworks */,
+				CE03A0F12CE97936006884EE /* libgobject-2.0.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -76,6 +99,7 @@
 			isa = PBXGroup;
 			children = (
 				CE03A08A2CE90065006884EE /* spice-vdagentd */,
+				CE03A0DD2CE90CE8006884EE /* spice-vdagent */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -111,6 +135,9 @@
 		CE03A0BF2CE9036C006884EE /* darwin */ = {
 			isa = PBXGroup;
 			children = (
+				CE03A0E42CE90CFC006884EE /* vdagent.h */,
+				CE03A0E52CE90CFC006884EE /* vdagent.c */,
+				CE03A0E62CE90CFC006884EE /* Vdagent.swift */,
 				CE03A0C12CE903F0006884EE /* include */,
 			);
 			path = darwin;
@@ -156,6 +183,26 @@
 			productReference = CE03A08A2CE90065006884EE /* spice-vdagentd */;
 			productType = "com.apple.product-type.tool";
 		};
+		CE03A0DC2CE90CE8006884EE /* spice-vdagent */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CE03A0E12CE90CE8006884EE /* Build configuration list for PBXNativeTarget "spice-vdagent" */;
+			buildPhases = (
+				CE03A0D92CE90CE8006884EE /* Sources */,
+				CE03A0DA2CE90CE8006884EE /* Frameworks */,
+				CE03A0DB2CE90CE8006884EE /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "spice-vdagent";
+			packageProductDependencies = (
+				CE03A0EC2CE90D55006884EE /* ArgumentParser */,
+			);
+			productName = "spice-vdagent";
+			productReference = CE03A0DD2CE90CE8006884EE /* spice-vdagent */;
+			productType = "com.apple.product-type.tool";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -163,10 +210,15 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					CE03A0892CE90065006884EE = {
 						CreatedOnToolsVersion = 16.0;
+					};
+					CE03A0DC2CE90CE8006884EE = {
+						CreatedOnToolsVersion = 16.0;
+						LastSwiftMigration = 1600;
 					};
 				};
 			};
@@ -179,12 +231,16 @@
 			);
 			mainGroup = CE03A0812CE90065006884EE;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				CE03A0EB2CE90D55006884EE /* XCRemoteSwiftPackageReference "swift-argument-parser" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = CE03A08B2CE90065006884EE /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				CE03A0892CE90065006884EE /* spice-vdagentd */,
+				CE03A0DC2CE90CE8006884EE /* spice-vdagent */,
 			);
 		};
 /* End PBXProject section */
@@ -199,6 +255,17 @@
 				CE03A0C32CE90428006884EE /* vdagentd.c in Sources */,
 				CE03A0BD2CE9012D006884EE /* vdagent-connection.c in Sources */,
 				CE03A0C02CE9039B006884EE /* dummy-session-info.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CE03A0D92CE90CE8006884EE /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CE03A0EA2CE90D38006884EE /* udscs.c in Sources */,
+				CE03A0E72CE90CFC006884EE /* Vdagent.swift in Sources */,
+				CE03A0E82CE90CFC006884EE /* vdagent.c in Sources */,
+				CE03A0EE2CE97927006884EE /* vdagent-connection.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -360,6 +427,31 @@
 			};
 			name = Release;
 		};
+		CE03A0E22CE90CE8006884EE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OBJC_BRIDGING_HEADER = src/darwin/vdagent.h;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		CE03A0E32CE90CE8006884EE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OBJC_BRIDGING_HEADER = src/darwin/vdagent.h;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -381,7 +473,35 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		CE03A0E12CE90CE8006884EE /* Build configuration list for PBXNativeTarget "spice-vdagent" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CE03A0E22CE90CE8006884EE /* Debug */,
+				CE03A0E32CE90CE8006884EE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		CE03A0EB2CE90D55006884EE /* XCRemoteSwiftPackageReference "swift-argument-parser" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-argument-parser.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.5.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		CE03A0EC2CE90D55006884EE /* ArgumentParser */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CE03A0EB2CE90D55006884EE /* XCRemoteSwiftPackageReference "swift-argument-parser" */;
+			productName = ArgumentParser;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = CE03A0822CE90065006884EE /* Project object */;
 }
