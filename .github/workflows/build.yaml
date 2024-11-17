@@ -1,0 +1,29 @@
+name: Build
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-macos:
+    name: Build macOS
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+      - name: Install GLib
+        run: brew install glib
+      - name: Install GLib (x86_64)
+        run: |
+          arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+          /usr/local/bin/brew install glib || true # this can error on linking
+      - name: Build
+        run: xcodebuild archive -scheme vd_agent -archivePath vd_agent.xcarchive
+      - name: Archive
+        run: tar -acf vd_agent.xcarchive.tgz vd_agent.xcarchive
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: vd_agent-macOS
+          path: vd_agent.xcarchive.tgz
