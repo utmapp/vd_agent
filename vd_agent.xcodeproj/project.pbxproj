@@ -6,6 +6,23 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXAggregateTarget section */
+		CE03A11A2CEA8429006884EE /* vd_agent */ = {
+			isa = PBXAggregateTarget;
+			buildConfigurationList = CE03A11B2CEA8429006884EE /* Build configuration list for PBXAggregateTarget "vd_agent" */;
+			buildPhases = (
+			);
+			dependencies = (
+				CE03A11F2CEA8442006884EE /* PBXTargetDependency */,
+				CE03A1212CEA8442006884EE /* PBXTargetDependency */,
+			);
+			name = vd_agent;
+			packageProductDependencies = (
+			);
+			productName = vd_agent;
+		};
+/* End PBXAggregateTarget section */
+
 /* Begin PBXBuildFile section */
 		CE03A0BC2CE9012D006884EE /* udscs.c in Sources */ = {isa = PBXBuildFile; fileRef = CE03A0B62CE900A0006884EE /* udscs.c */; };
 		CE03A0BD2CE9012D006884EE /* vdagent-connection.c in Sources */ = {isa = PBXBuildFile; fileRef = CE03A0B82CE900A0006884EE /* vdagent-connection.c */; };
@@ -23,10 +40,44 @@
 		CE03A0EF2CE97931006884EE /* libgio-2.0.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A0C52CE904C4006884EE /* libgio-2.0.a */; };
 		CE03A0F02CE97933006884EE /* libglib-2.0.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A0C62CE904C4006884EE /* libglib-2.0.a */; };
 		CE03A0F12CE97936006884EE /* libgobject-2.0.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A0CB2CE904EA006884EE /* libgobject-2.0.a */; };
+		CE03A1172CEA83AF006884EE /* com.redhat.spice.vdagentd.plist in CopyFiles */ = {isa = PBXBuildFile; fileRef = CE03A10D2CEA838C006884EE /* com.redhat.spice.vdagentd.plist */; };
+		CE03A1192CEA83C6006884EE /* com.redhat.spice.vdagent.plist in CopyFiles */ = {isa = PBXBuildFile; fileRef = CE03A10C2CEA838C006884EE /* com.redhat.spice.vdagent.plist */; };
+		CE03A1262CEA8EF1006884EE /* libiconv.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A1232CEA8EF1006884EE /* libiconv.tbd */; };
+		CE03A1272CEA8EF1006884EE /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A1242CEA8EF1006884EE /* libz.tbd */; };
+		CE03A1282CEA8EF1006884EE /* libpcre2-8.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A1252CEA8EF1006884EE /* libpcre2-8.tbd */; };
+		CE03A12A2CEA8F18006884EE /* libffi.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A1292CEA8F18006884EE /* libffi.tbd */; };
+		CE03A12C2CEA8F6A006884EE /* libgmodule-2.0.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A12B2CEA8F60006884EE /* libgmodule-2.0.a */; };
+		CE03A12E2CEA8F75006884EE /* libintl.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A12D2CEA8F75006884EE /* libintl.a */; };
+		CE03A1302CEA8FBA006884EE /* libresolv.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A12F2CEA8FBA006884EE /* libresolv.tbd */; };
+		CE03A1322CEA8FCE006884EE /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A1312CEA8FCE006884EE /* Foundation.framework */; };
+		CE03A1342CEA8FE4006884EE /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A1332CEA8FE4006884EE /* AppKit.framework */; };
+		CE54BD8E2CEA90F200FE3930 /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A1332CEA8FE4006884EE /* AppKit.framework */; };
+		CE54BD8F2CEA90F400FE3930 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A1312CEA8FCE006884EE /* Foundation.framework */; };
+		CE54BD902CEA90F600FE3930 /* libgmodule-2.0.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A12B2CEA8F60006884EE /* libgmodule-2.0.a */; };
+		CE54BD912CEA90FD00FE3930 /* libintl.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A12D2CEA8F75006884EE /* libintl.a */; };
+		CE54BD922CEA910000FE3930 /* libresolv.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A12F2CEA8FBA006884EE /* libresolv.tbd */; };
+		CE54BD932CEA910200FE3930 /* libffi.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A1292CEA8F18006884EE /* libffi.tbd */; };
+		CE54BD942CEA910600FE3930 /* libiconv.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A1232CEA8EF1006884EE /* libiconv.tbd */; };
+		CE54BD952CEA910700FE3930 /* libpcre2-8.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A1252CEA8EF1006884EE /* libpcre2-8.tbd */; };
+		CE54BD962CEA910E00FE3930 /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A1242CEA8EF1006884EE /* libz.tbd */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
 		CE03A0F22CE9ED98006884EE /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CE03A0822CE90065006884EE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CE03A0892CE90065006884EE;
+			remoteInfo = "spice-vdagentd";
+		};
+		CE03A11E2CEA8442006884EE /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CE03A0822CE90065006884EE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CE03A0DC2CE90CE8006884EE;
+			remoteInfo = "spice-vdagent";
+		};
+		CE03A1202CEA8442006884EE /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = CE03A0822CE90065006884EE /* Project object */;
 			proxyType = 1;
@@ -39,9 +90,20 @@
 		CE03A0882CE90065006884EE /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
-			dstPath = /usr/share/man/man1/;
+			dstPath = /Library/LaunchDaemons;
 			dstSubfolderSpec = 0;
 			files = (
+				CE03A1172CEA83AF006884EE /* com.redhat.spice.vdagentd.plist in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+		CE03A1182CEA83C0006884EE /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 8;
+			dstPath = /Library/LaunchAgents;
+			dstSubfolderSpec = 0;
+			files = (
+				CE03A1192CEA83C6006884EE /* com.redhat.spice.vdagent.plist in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 		};
@@ -62,13 +124,24 @@
 		CE03A0B92CE900A0006884EE /* vdagentd-proto.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "vdagentd-proto.h"; sourceTree = "<group>"; };
 		CE03A0BA2CE900A0006884EE /* vdagentd-proto-strings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "vdagentd-proto-strings.h"; sourceTree = "<group>"; };
 		CE03A0BE2CE9036C006884EE /* config.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
-		CE03A0C52CE904C4006884EE /* libgio-2.0.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libgio-2.0.a"; path = "/opt/homebrew/lib/libgio-2.0.a"; sourceTree = "<absolute>"; };
-		CE03A0C62CE904C4006884EE /* libglib-2.0.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libglib-2.0.a"; path = "/opt/homebrew/lib/libglib-2.0.a"; sourceTree = "<absolute>"; };
-		CE03A0CB2CE904EA006884EE /* libgobject-2.0.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libgobject-2.0.a"; path = "/opt/homebrew/lib/libgobject-2.0.a"; sourceTree = "<absolute>"; };
+		CE03A0C52CE904C4006884EE /* libgio-2.0.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libgio-2.0.a"; path = "$(DERIVED_FILE_DIR)/lib/libgio-2.0.a"; sourceTree = "<absolute>"; };
+		CE03A0C62CE904C4006884EE /* libglib-2.0.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libglib-2.0.a"; path = "$(DERIVED_FILE_DIR)/lib/libglib-2.0.a"; sourceTree = "<absolute>"; };
+		CE03A0CB2CE904EA006884EE /* libgobject-2.0.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libgobject-2.0.a"; path = "$(DERIVED_FILE_DIR)/lib/libgobject-2.0.a"; sourceTree = "<absolute>"; };
 		CE03A0DD2CE90CE8006884EE /* spice-vdagent */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "spice-vdagent"; sourceTree = BUILT_PRODUCTS_DIR; };
 		CE03A0E42CE90CFC006884EE /* vdagent.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = vdagent.h; sourceTree = "<group>"; };
 		CE03A0E52CE90CFC006884EE /* vdagent.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = vdagent.c; sourceTree = "<group>"; };
 		CE03A0E62CE90CFC006884EE /* Vdagent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Vdagent.swift; sourceTree = "<group>"; };
+		CE03A10C2CEA838C006884EE /* com.redhat.spice.vdagent.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = com.redhat.spice.vdagent.plist; sourceTree = "<group>"; };
+		CE03A10D2CEA838C006884EE /* com.redhat.spice.vdagentd.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = com.redhat.spice.vdagentd.plist; sourceTree = "<group>"; };
+		CE03A1232CEA8EF1006884EE /* libiconv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libiconv.tbd; path = usr/lib/libiconv.tbd; sourceTree = SDKROOT; };
+		CE03A1242CEA8EF1006884EE /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
+		CE03A1252CEA8EF1006884EE /* libpcre2-8.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "libpcre2-8.tbd"; path = "usr/lib/libpcre2-8.tbd"; sourceTree = SDKROOT; };
+		CE03A1292CEA8F18006884EE /* libffi.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libffi.tbd; path = usr/lib/libffi.tbd; sourceTree = SDKROOT; };
+		CE03A12B2CEA8F60006884EE /* libgmodule-2.0.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libgmodule-2.0.a"; path = "$(DERIVED_FILE_DIR)/lib/libgmodule-2.0.a"; sourceTree = "<group>"; };
+		CE03A12D2CEA8F75006884EE /* libintl.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libintl.a; path = "$(DERIVED_FILE_DIR)/lib/libintl.a"; sourceTree = "<group>"; };
+		CE03A12F2CEA8FBA006884EE /* libresolv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libresolv.tbd; path = usr/lib/libresolv.tbd; sourceTree = SDKROOT; };
+		CE03A1312CEA8FCE006884EE /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		CE03A1332CEA8FE4006884EE /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -76,9 +149,18 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CE03A1342CEA8FE4006884EE /* AppKit.framework in Frameworks */,
+				CE03A1322CEA8FCE006884EE /* Foundation.framework in Frameworks */,
+				CE03A1302CEA8FBA006884EE /* libresolv.tbd in Frameworks */,
+				CE03A12E2CEA8F75006884EE /* libintl.a in Frameworks */,
+				CE03A12A2CEA8F18006884EE /* libffi.tbd in Frameworks */,
+				CE03A1262CEA8EF1006884EE /* libiconv.tbd in Frameworks */,
+				CE03A1272CEA8EF1006884EE /* libz.tbd in Frameworks */,
+				CE03A1282CEA8EF1006884EE /* libpcre2-8.tbd in Frameworks */,
 				CE03A0C82CE904D3006884EE /* libgio-2.0.a in Frameworks */,
 				CE03A0C92CE904D4006884EE /* libglib-2.0.a in Frameworks */,
 				CE03A0CC2CE90506006884EE /* libgobject-2.0.a in Frameworks */,
+				CE03A12C2CEA8F6A006884EE /* libgmodule-2.0.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -87,8 +169,17 @@
 			buildActionMask = 2147483647;
 			files = (
 				CE03A0ED2CE90D55006884EE /* ArgumentParser in Frameworks */,
+				CE54BD8E2CEA90F200FE3930 /* AppKit.framework in Frameworks */,
+				CE54BD8F2CEA90F400FE3930 /* Foundation.framework in Frameworks */,
+				CE54BD912CEA90FD00FE3930 /* libintl.a in Frameworks */,
+				CE54BD922CEA910000FE3930 /* libresolv.tbd in Frameworks */,
+				CE54BD932CEA910200FE3930 /* libffi.tbd in Frameworks */,
+				CE54BD942CEA910600FE3930 /* libiconv.tbd in Frameworks */,
+				CE54BD952CEA910700FE3930 /* libpcre2-8.tbd in Frameworks */,
+				CE54BD962CEA910E00FE3930 /* libz.tbd in Frameworks */,
 				CE03A0EF2CE97931006884EE /* libgio-2.0.a in Frameworks */,
 				CE03A0F02CE97933006884EE /* libglib-2.0.a in Frameworks */,
+				CE54BD902CEA90F600FE3930 /* libgmodule-2.0.a in Frameworks */,
 				CE03A0F12CE97936006884EE /* libgobject-2.0.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -99,6 +190,7 @@
 		CE03A0812CE90065006884EE = {
 			isa = PBXGroup;
 			children = (
+				CE03A1162CEA838C006884EE /* data */,
 				CE03A0BB2CE900A0006884EE /* src */,
 				CE03A0C42CE904C4006884EE /* Frameworks */,
 				CE03A08B2CE90065006884EE /* Products */,
@@ -164,11 +256,29 @@
 		CE03A0C42CE904C4006884EE /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				CE03A1332CEA8FE4006884EE /* AppKit.framework */,
+				CE03A1312CEA8FCE006884EE /* Foundation.framework */,
+				CE03A12B2CEA8F60006884EE /* libgmodule-2.0.a */,
+				CE03A12D2CEA8F75006884EE /* libintl.a */,
+				CE03A12F2CEA8FBA006884EE /* libresolv.tbd */,
+				CE03A1292CEA8F18006884EE /* libffi.tbd */,
+				CE03A1232CEA8EF1006884EE /* libiconv.tbd */,
+				CE03A1252CEA8EF1006884EE /* libpcre2-8.tbd */,
+				CE03A1242CEA8EF1006884EE /* libz.tbd */,
 				CE03A0C52CE904C4006884EE /* libgio-2.0.a */,
 				CE03A0C62CE904C4006884EE /* libglib-2.0.a */,
 				CE03A0CB2CE904EA006884EE /* libgobject-2.0.a */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		CE03A1162CEA838C006884EE /* data */ = {
+			isa = PBXGroup;
+			children = (
+				CE03A10C2CEA838C006884EE /* com.redhat.spice.vdagent.plist */,
+				CE03A10D2CEA838C006884EE /* com.redhat.spice.vdagentd.plist */,
+			);
+			path = data;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -178,7 +288,8 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = CE03A0912CE90065006884EE /* Build configuration list for PBXNativeTarget "spice-vdagentd" */;
 			buildPhases = (
-				CE03A0F42CE9EDB0006884EE /* ShellScript */,
+				CE03A0F42CE9EDB0006884EE /* Fetch SPICE headers */,
+				CE03A1222CEA86DC006884EE /* Build universal GLib */,
 				CE03A0862CE90065006884EE /* Sources */,
 				CE03A0872CE90065006884EE /* Frameworks */,
 				CE03A0882CE90065006884EE /* CopyFiles */,
@@ -198,8 +309,10 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = CE03A0E12CE90CE8006884EE /* Build configuration list for PBXNativeTarget "spice-vdagent" */;
 			buildPhases = (
+				CE54BD972CEA914E00FE3930 /* Build universal GLib */,
 				CE03A0D92CE90CE8006884EE /* Sources */,
 				CE03A0DA2CE90CE8006884EE /* Frameworks */,
+				CE03A1182CEA83C0006884EE /* CopyFiles */,
 			);
 			buildRules = (
 			);
@@ -231,6 +344,9 @@
 						CreatedOnToolsVersion = 16.0;
 						LastSwiftMigration = 1600;
 					};
+					CE03A11A2CEA8429006884EE = {
+						CreatedOnToolsVersion = 16.0;
+					};
 				};
 			};
 			buildConfigurationList = CE03A0852CE90065006884EE /* Build configuration list for PBXProject "vd_agent" */;
@@ -250,6 +366,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
+				CE03A11A2CEA8429006884EE /* vd_agent */,
 				CE03A0892CE90065006884EE /* spice-vdagentd */,
 				CE03A0DC2CE90CE8006884EE /* spice-vdagent */,
 			);
@@ -257,7 +374,7 @@
 /* End PBXProject section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		CE03A0F42CE9EDB0006884EE /* ShellScript */ = {
+		CE03A0F42CE9EDB0006884EE /* Fetch SPICE headers */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -266,6 +383,7 @@
 			);
 			inputPaths = (
 			);
+			name = "Fetch SPICE headers";
 			outputFileListPaths = (
 			);
 			outputPaths = (
@@ -274,6 +392,54 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "set -e\nif [ ! -d \"$SCRIPT_OUTPUT_FILE_0\" ]; then\n    URL=\"https://www.spice-space.org/download/releases/spice-protocol-0.14.4.tar.xz\"\n    FILE=\"$(basename $URL)\"\n    NAME=\"${FILE%.tar.*}\"\n    cd /tmp\n    curl -L -O \"$URL\"\n    tar -xf \"$FILE\"\n    mv \"$NAME/spice\" \"$SCRIPT_OUTPUT_FILE_0\"\n    rm -rf \"$DIR\" \"$FILE\"\nfi\n";
+			showEnvVarsInLog = 0;
+		};
+		CE03A1222CEA86DC006884EE /* Build universal GLib */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Build universal GLib";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/lib/libgio-2.0.a",
+				"$(DERIVED_FILE_DIR)/lib/libglib-2.0.a",
+				"$(DERIVED_FILE_DIR)/lib/libgobject-2.0.a",
+				"$(DERIVED_FILE_DIR)/lib/libgmodule-2.0.a",
+				"$(DERIVED_FILE_DIR)/lib/libintl.a",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -e\n\nfor ((i=0; i<$SCRIPT_OUTPUT_FILE_COUNT; i++)); do\n    output_var=\"SCRIPT_OUTPUT_FILE_$i\"\n    output_path=\"${!output_var}\"\n    output_dir=\"$(dirname \"$output_path\")\"\n    name=\"$(basename \"$output_path\")\"\n    intel_input=\"/usr/local/lib/$name\"\n    arm64_input=\"/opt/homebrew/lib/$name\"\n    tmp_output=\"/tmp/$name.$$\"\n    \n    echo \"Creating $output_path\"\n    lipo -output \"$tmp_output\" -create \"$intel_input\" \"$arm64_input\"\n    if [ ! -d \"$output_dir\" ]; then\n        mkdir -p \"$output_dir\"\n    fi\n    mv \"$tmp_output\" \"$output_path\"\ndone\n";
+			showEnvVarsInLog = 0;
+		};
+		CE54BD972CEA914E00FE3930 /* Build universal GLib */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Build universal GLib";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/lib/libgio-2.0.a",
+				"$(DERIVED_FILE_DIR)/lib/libglib-2.0.a",
+				"$(DERIVED_FILE_DIR)/lib/libgobject-2.0.a",
+				"$(DERIVED_FILE_DIR)/lib/libgmodule-2.0.a",
+				"$(DERIVED_FILE_DIR)/lib/libintl.a",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -e\n\nfor ((i=0; i<$SCRIPT_OUTPUT_FILE_COUNT; i++)); do\n    output_var=\"SCRIPT_OUTPUT_FILE_$i\"\n    output_path=\"${!output_var}\"\n    output_dir=\"$(dirname \"$output_path\")\"\n    name=\"$(basename \"$output_path\")\"\n    intel_input=\"/usr/local/lib/$name\"\n    arm64_input=\"/opt/homebrew/lib/$name\"\n    tmp_output=\"/tmp/$name.$$\"\n    \n    echo \"Creating $output_path\"\n    lipo -output \"$tmp_output\" -create \"$intel_input\" \"$arm64_input\"\n    if [ ! -d \"$output_dir\" ]; then\n        mkdir -p \"$output_dir\"\n    fi\n    mv \"$tmp_output\" \"$output_path\"\ndone\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
@@ -309,6 +475,16 @@
 			isa = PBXTargetDependency;
 			target = CE03A0892CE90065006884EE /* spice-vdagentd */;
 			targetProxy = CE03A0F22CE9ED98006884EE /* PBXContainerItemProxy */;
+		};
+		CE03A11F2CEA8442006884EE /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CE03A0DC2CE90CE8006884EE /* spice-vdagent */;
+			targetProxy = CE03A11E2CEA8442006884EE /* PBXContainerItemProxy */;
+		};
+		CE03A1212CEA8442006884EE /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CE03A0892CE90065006884EE /* spice-vdagentd */;
+			targetProxy = CE03A1202CEA8442006884EE /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -348,6 +524,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -373,10 +550,10 @@
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					/opt/homebrew/lib,
+					"$(DERIVED_FILE_DIR)/lib",
 				);
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -419,6 +596,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -438,10 +616,10 @@
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					/opt/homebrew/lib,
+					"$(DERIVED_FILE_DIR)/lib",
 				);
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
@@ -451,8 +629,6 @@
 		CE03A0922CE90065006884EE /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				LIBRARY_SEARCH_PATHS = "$(inherited)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -460,8 +636,6 @@
 		CE03A0932CE90065006884EE /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				LIBRARY_SEARCH_PATHS = "$(inherited)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
@@ -470,7 +644,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_STYLE = Automatic;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/$(DERIVED_FILE_DIR)/lib",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OBJC_BRIDGING_HEADER = src/darwin/vdagent.h;
@@ -483,11 +660,30 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_STYLE = Automatic;
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/$(DERIVED_FILE_DIR)/lib",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OBJC_BRIDGING_HEADER = src/darwin/vdagent.h;
 				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		CE03A11C2CEA8429006884EE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		CE03A11D2CEA8429006884EE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
 		};
@@ -517,6 +713,15 @@
 			buildConfigurations = (
 				CE03A0E22CE90CE8006884EE /* Debug */,
 				CE03A0E32CE90CE8006884EE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CE03A11B2CEA8429006884EE /* Build configuration list for PBXAggregateTarget "vd_agent" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CE03A11C2CEA8429006884EE /* Debug */,
+				CE03A11D2CEA8429006884EE /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
