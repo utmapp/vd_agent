@@ -25,6 +25,16 @@
 		CE03A0F12CE97936006884EE /* libgobject-2.0.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A0CB2CE904EA006884EE /* libgobject-2.0.a */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		CE03A0F22CE9ED98006884EE /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CE03A0822CE90065006884EE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CE03A0892CE90065006884EE;
+			remoteInfo = "spice-vdagentd";
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXCopyFilesBuildPhase section */
 		CE03A0882CE90065006884EE /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
@@ -168,6 +178,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = CE03A0912CE90065006884EE /* Build configuration list for PBXNativeTarget "spice-vdagentd" */;
 			buildPhases = (
+				CE03A0F42CE9EDB0006884EE /* ShellScript */,
 				CE03A0862CE90065006884EE /* Sources */,
 				CE03A0872CE90065006884EE /* Frameworks */,
 				CE03A0882CE90065006884EE /* CopyFiles */,
@@ -189,11 +200,11 @@
 			buildPhases = (
 				CE03A0D92CE90CE8006884EE /* Sources */,
 				CE03A0DA2CE90CE8006884EE /* Frameworks */,
-				CE03A0DB2CE90CE8006884EE /* CopyFiles */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				CE03A0F32CE9ED98006884EE /* PBXTargetDependency */,
 			);
 			name = "spice-vdagent";
 			packageProductDependencies = (
@@ -245,6 +256,28 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		CE03A0F42CE9EDB0006884EE /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(PROJECT_DIR)/src/darwin/include/spice",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -e\nif [ ! -d \"$SCRIPT_OUTPUT_FILE_0\" ]; then\n    URL=\"https://www.spice-space.org/download/releases/spice-protocol-0.14.4.tar.xz\"\n    FILE=\"$(basename $URL)\"\n    NAME=\"${FILE%.tar.*}\"\n    cd /tmp\n    curl -L -O \"$URL\"\n    tar -xf \"$FILE\"\n    mv \"$NAME/spice\" \"$SCRIPT_OUTPUT_FILE_0\"\n    rm -rf \"$DIR\" \"$FILE\"\nfi\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		CE03A0862CE90065006884EE /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -270,6 +303,14 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		CE03A0F32CE9ED98006884EE /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CE03A0892CE90065006884EE /* spice-vdagentd */;
+			targetProxy = CE03A0F22CE9ED98006884EE /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		CE03A08F2CE90065006884EE /* Debug */ = {
@@ -325,7 +366,6 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = (
-					"$(PROJECT_DIR)/External/include",
 					"$(PROJECT_DIR)/src/darwin/include",
 					"/opt/homebrew/include/glib-2.0",
 					"/opt/homebrew/include/gio-unix-2.0",
@@ -391,7 +431,6 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = (
-					"$(PROJECT_DIR)/External/include",
 					"$(PROJECT_DIR)/src/darwin/include",
 					"/opt/homebrew/include/glib-2.0",
 					"/opt/homebrew/include/gio-unix-2.0",
