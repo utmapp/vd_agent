@@ -28,14 +28,25 @@
 
 #define MAX_RETRY_CONNECT_SYSTEM_AGENT 60
 
-typedef struct VDAgent {
+G_BEGIN_DECLS
+
+#define VDAGENT_TYPE_VDAGENT (vdagent_get_type())
+G_DECLARE_FINAL_TYPE(VDAgent, vdagent, VDAGENT, VDAGENT, GObject)
+
+struct _VDAgent {
+    GObject parent_instance;
+
     UdscsConnection *conn;
     gint udscs_num_retry;
     const vdagent_cb_t *cb;
     void *ctx;
 
     GMainLoop *loop;
-} VDAgent;
+};
+
+G_END_DECLS
+
+G_DEFINE_TYPE(VDAgent, vdagent, G_TYPE_OBJECT)
 
 static int quit = 0;
 static int parent_socket = -1;
@@ -47,8 +58,12 @@ static gchar *vdagentd_socket = NULL;
 
 static void vdagent_quit_loop(VDAgent *agent)
 {
-    if (agent->loop)
+    if (agent->cb && agent->cb->agent_disconnected) {
+        agent->cb->agent_disconnected(agent, agent->ctx);
+    }
+    if (agent->loop) {
         g_main_loop_quit(agent->loop);
+    }
 }
 
 static gboolean vdagent_signal_handler(gpointer user_data)
@@ -59,11 +74,35 @@ static gboolean vdagent_signal_handler(gpointer user_data)
     return G_SOURCE_REMOVE;
 }
 
+static void vdagent_dispose(GObject *object)
+{
+    VDAgent *agent = VDAGENT_VDAGENT(object);
+
+    g_clear_pointer(&agent->conn, vdagent_connection_destroy);
+
+    while (g_source_remove_by_user_data(agent))
+        continue;
+
+    g_clear_pointer(&agent->loop, g_main_loop_unref);
+    G_OBJECT_CLASS(vdagent_parent_class)->dispose(object);
+}
+
+static void vdagent_class_init(VDAgentClass *klass)
+{
+    GObjectClass *object_class = G_OBJECT_CLASS(klass);
+
+    object_class->dispose = vdagent_dispose;
+}
+
+static void vdagent_init(VDAgent *self)
+{
+    self->loop = g_main_loop_new(NULL, FALSE);
+}
+
 static VDAgent *vdagent_new(const vdagent_cb_t *cb, void *ctx)
 {
-    VDAgent *agent = g_new0(VDAgent, 1);
+    VDAgent *agent = g_object_new(VDAGENT_TYPE_VDAGENT, NULL);
 
-    agent->loop = g_main_loop_new(NULL, FALSE);
     agent->cb = cb;
     agent->ctx = ctx;
 
@@ -72,17 +111,6 @@ static VDAgent *vdagent_new(const vdagent_cb_t *cb, void *ctx)
     g_unix_signal_add(SIGTERM, vdagent_signal_handler, agent);
 
     return agent;
-}
-
-static void vdagent_destroy(VDAgent *agent)
-{
-    g_clear_pointer(&agent->conn, vdagent_connection_destroy);
-
-    while (g_source_remove_by_user_data(agent))
-        continue;
-
-    g_clear_pointer(&agent->loop, g_main_loop_unref);
-    g_free(agent);
 }
 
 void vdagent_set_debug(int debugOption)
@@ -243,16 +271,6 @@ static void daemon_error_cb(VDAgentConnection *conn, GError *err)
     vdagent_quit_loop(agent);
 }
 
-static gboolean clipboard_guest_update_cb(gpointer user_data)
-{
-    VDAgent *agent = user_data;
-
-    if (agent->cb && agent->cb->clipboard_guest_update) {
-        agent->cb->clipboard_guest_update(agent, agent->ctx);
-    }
-    return TRUE;
-}
-
 static gboolean vdagent_init_async_cb(gpointer user_data)
 {
     VDAgent *agent = user_data;
@@ -290,7 +308,9 @@ static gboolean vdagent_init_async_cb(gpointer user_data)
     agent->udscs_num_retry = 0;
     g_object_set_data(G_OBJECT(agent->conn), "agent", agent);
 
-    g_timeout_add(100, clipboard_guest_update_cb, agent);
+    if (agent->cb && agent->cb->agent_connected) {
+        agent->cb->agent_connected(agent, agent->ctx);
+    }
 
     return G_SOURCE_REMOVE;
 
@@ -325,8 +345,7 @@ reconnect:
 
     g_main_loop_run(agent->loop);
 
-    vdagent_destroy(agent);
-    agent = NULL;
+    g_clear_object(&agent);
 
     /* allow the VDAgentConnection to finalize properly */
     g_main_context_iteration(NULL, FALSE);
@@ -339,53 +358,120 @@ reconnect:
     return 0;
 }
 
-bool vdagent_clipboard_request(VDAgent *agent, vdagent_clipboard_select_t sel, vdagent_clipboard_type_t type)
+VDAgent *vdagent_ref(VDAgent *agent)
 {
-    udscs_write(agent->conn,
-                VDAGENTD_CLIPBOARD_REQUEST,
-                convert_clipboard_select_to_raw(sel),
-                convert_clipboard_type_to_raw(type),
-                NULL, 0);
-    return true;
+    return VDAGENT_VDAGENT(g_object_ref(agent));
 }
 
-bool vdagent_clipboard_grab(VDAgent *agent, vdagent_clipboard_select_t sel,
+void vdagent_unref(VDAgent *agent)
+{
+    g_object_unref(agent);
+}
+
+typedef struct {
+    UdscsConnection *conn;
+    struct udscs_message_header hdr;
+    const uint8_t *data;
+    GMutex mutex;
+    GCond cond;
+    gboolean is_done;
+} vdagent_write_params_t;
+
+static gboolean _vdagent_write_cb(gpointer user_data)
+{
+    vdagent_write_params_t *params = (vdagent_write_params_t *)user_data;
+
+    udscs_write(params->conn,
+                params->hdr.type,
+                params->hdr.arg1,
+                params->hdr.arg2,
+                params->data,
+                params->hdr.size);
+
+    g_mutex_lock(&params->mutex);
+    params->is_done = TRUE;
+    g_cond_signal(&params->cond);
+    g_mutex_unlock(&params->mutex);
+
+    return G_SOURCE_REMOVE;
+}
+
+// write can happen from any thread so we need to synchronize it with the main context
+static void vdagent_write(VDAgent *agent, uint32_t type, uint32_t arg1,
+                          uint32_t arg2, const uint8_t *data, uint32_t size)
+{
+    vdagent_write_params_t params = {
+        .conn = agent->conn,
+        .hdr.type = type,
+        .hdr.arg1 = arg1,
+        .hdr.arg2 = arg2,
+        .hdr.size = size,
+        .data = data,
+    };
+
+    // if we have the main context
+    if (g_main_context_acquire(NULL)) {
+        // we can call udscs_write directly
+        udscs_write(agent->conn, type,
+                    arg1, arg2, data, size);
+        g_main_context_release(NULL);
+    } else {
+        // we have to synchronize with main context
+        g_mutex_init(&params.mutex);
+        g_cond_init(&params.cond);
+        g_mutex_lock(&params.mutex);
+        g_main_context_invoke(NULL, _vdagent_write_cb, &params);
+        while (!params.is_done) {
+            g_cond_wait(&params.cond, &params.mutex);
+        }
+        g_mutex_unlock(&params.mutex);
+    }
+}
+
+void vdagent_clipboard_request(VDAgent *agent, vdagent_clipboard_select_t sel, vdagent_clipboard_type_t type)
+{
+    vdagent_write(agent,
+                  VDAGENTD_CLIPBOARD_REQUEST,
+                  convert_clipboard_select_to_raw(sel),
+                  convert_clipboard_type_to_raw(type),
+                  NULL, 0);
+}
+
+void vdagent_clipboard_grab(VDAgent *agent, vdagent_clipboard_select_t sel,
                             const vdagent_clipboard_type_t *types, int n_types)
 {
     guint32 *_types = calloc(n_types, sizeof(*_types));
 
     if (!_types) {
-        return false;
+        syslog(LOG_ERR, "out of memory");
+        return;
     }
     for (int i = 0; i < n_types; i++) {
         _types[i] = convert_clipboard_type_to_raw(types[i]);
     }
-    udscs_write(agent->conn,
-                VDAGENTD_CLIPBOARD_GRAB,
-                convert_clipboard_select_to_raw(sel),
-                0,
-                (uint8_t *)_types, n_types * sizeof(guint32));
+    vdagent_write(agent,
+                  VDAGENTD_CLIPBOARD_GRAB,
+                  convert_clipboard_select_to_raw(sel),
+                  0,
+                  (uint8_t *)_types, n_types * sizeof(guint32));
     free(_types);
-    return true;
 }
 
-bool vdagent_clipboard_data(VDAgent *agent, vdagent_clipboard_select_t sel,
+void vdagent_clipboard_data(VDAgent *agent, vdagent_clipboard_select_t sel,
                             vdagent_clipboard_type_t type, const unsigned char *data, unsigned int size)
 {
-    udscs_write(agent->conn,
-                VDAGENTD_CLIPBOARD_DATA,
-                convert_clipboard_select_to_raw(sel),
-                convert_clipboard_type_to_raw(type),
-                data, size);
-    return true;
+    vdagent_write(agent,
+                  VDAGENTD_CLIPBOARD_DATA,
+                  convert_clipboard_select_to_raw(sel),
+                  convert_clipboard_type_to_raw(type),
+                  data, size);
 }
 
-bool vdagent_clipboard_release(VDAgent *agent, vdagent_clipboard_select_t sel)
+void vdagent_clipboard_release(VDAgent *agent, vdagent_clipboard_select_t sel)
 {
-    udscs_write(agent->conn,
-                VDAGENTD_CLIPBOARD_RELEASE,
-                convert_clipboard_select_to_raw(sel),
-                0,
-                NULL, 0);
-    return true;
+    vdagent_write(agent,
+                  VDAGENTD_CLIPBOARD_RELEASE,
+                  convert_clipboard_select_to_raw(sel),
+                  0,
+                  NULL, 0);
 }

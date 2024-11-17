@@ -20,7 +20,7 @@
 
 #include <stdbool.h>
 
-typedef struct VDAgent VDAgent;
+typedef struct _VDAgent VDAgent;
 
 typedef enum {
     VDAgentClipboardTypeNone,
@@ -43,26 +43,31 @@ typedef bool (*vdagent_clipboard_grab_cb)(VDAgent *agent, void *ctx, vdagent_cli
 typedef bool (*vdagent_clipboard_data_cb)(VDAgent *agent, void *ctx, vdagent_clipboard_select_t sel,
                                           vdagent_clipboard_type_t type, const unsigned char *data, unsigned int size);
 typedef bool (*vdagent_clipboard_release_cb)(VDAgent *agent, void *ctx, vdagent_clipboard_select_t sel);
-typedef void (*vdagent_clipboard_guest_update_cb)(VDAgent *agent, void *ctx);
 typedef void (*vdagent_client_disconnected_cb)(VDAgent *agent, void *ctx);
+typedef void (*vdagent_agent_connected_cb)(VDAgent *agent, void *ctx);
+typedef void (*vdagent_agent_disconnected_cb)(VDAgent *agent, void *ctx);
 
 typedef struct {
     vdagent_clipboard_request_cb clipboard_request;
     vdagent_clipboard_grab_cb clipboard_grab;
     vdagent_clipboard_data_cb clipboard_data;
     vdagent_clipboard_release_cb clipboard_release;
-    vdagent_clipboard_guest_update_cb clipboard_guest_update;
     vdagent_client_disconnected_cb client_disconnected;
+    vdagent_agent_connected_cb agent_connected;
+    vdagent_agent_disconnected_cb agent_disconnected;
 } vdagent_cb_t;
 
 void vdagent_set_debug(int debugOption);
 int vdagent_start(const char *socketPath, const vdagent_cb_t *cb, void *ctx);
 
-bool vdagent_clipboard_request(VDAgent *agent, vdagent_clipboard_select_t sel, vdagent_clipboard_type_t type);
-bool vdagent_clipboard_grab(VDAgent *agent, vdagent_clipboard_select_t sel,
+VDAgent *vdagent_ref(VDAgent *agent);
+void vdagent_unref(VDAgent *agent);
+
+void vdagent_clipboard_request(VDAgent *agent, vdagent_clipboard_select_t sel, vdagent_clipboard_type_t type);
+void vdagent_clipboard_grab(VDAgent *agent, vdagent_clipboard_select_t sel,
                             const vdagent_clipboard_type_t *types, int n_types);
-bool vdagent_clipboard_data(VDAgent *agent, vdagent_clipboard_select_t sel,
+void vdagent_clipboard_data(VDAgent *agent, vdagent_clipboard_select_t sel,
                             vdagent_clipboard_type_t type, const unsigned char *data, unsigned int size);
-bool vdagent_clipboard_release(VDAgent *agent, vdagent_clipboard_select_t sel);
+void vdagent_clipboard_release(VDAgent *agent, vdagent_clipboard_select_t sel);
 
 #endif /* vddagent_h */
