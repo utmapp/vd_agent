@@ -5,7 +5,7 @@
 		<key>KeepAlive</key>
 		<dict>
 			<key>Crashed</key>
-			<true/>
+			<false/>
 		</dict>
 		<key>Label</key>
 		<string>com.redhat.spice.vdagent</string>
@@ -18,9 +18,5 @@
 		</array>
 		<key>RunAtLoad</key>
 		<true/>
-		<key>StandardErrorPath</key>
-		<string>/var/log/spice-vdagent.stderr.log</string>
-		<key>StandardOutPath</key>
-		<string>/var/log/spice-vdagent.stdout.log</string>
 	</dict>
 </plist>

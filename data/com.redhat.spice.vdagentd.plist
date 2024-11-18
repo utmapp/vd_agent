@@ -5,7 +5,7 @@
 		<key>KeepAlive</key>
 		<dict>
 			<key>Crashed</key>
-			<true/>
+			<false/>
 		</dict>
 		<key>Label</key>
 		<string>com.redhat.spice.vdagentd</string>
