@@ -1,0 +1,12 @@
+#!/bin/sh
+
+set -e
+
+GUI_USER=$(stat -f%Su /dev/console)
+GUI_UID=$(id -u $GUI_USER)
+
+/bin/launchctl load /Library/LaunchDaemons/com.redhat.spice.vdagentd.plist
+
+if [ "$GUI_USER" != "root" ]; then
+    /bin/launchctl asuser $GUI_UID /bin/launchctl load /Library/LaunchAgents/com.redhat.spice.vdagent.plist
+fi
