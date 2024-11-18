@@ -259,8 +259,6 @@ extension NSPasteboardItem {
     }
 }
 
-extension VdagentConnection: @retroactive @unchecked Sendable {}
-
 private func withError(_ callback: () throws -> Void) -> Bool {
     do {
         try callback()
