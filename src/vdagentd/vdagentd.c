@@ -94,6 +94,8 @@ static uint32_t clipboard_serial[256];
 
 static GMainLoop *loop;
 
+static void update_active_session_connection(UdscsConnection *new_conn);
+
 static void agent_data_destroy(struct agent_data *agent_data)
 {
     g_free(agent_data->session);
@@ -747,10 +749,14 @@ static void do_agent_clipboard(UdscsConnection *conn,
 
     /* Check that this agent is from the currently active session */
     if (conn != active_session_conn) {
+#ifdef WITH_SESSION_SECURITY
         if (debug)
             syslog(LOG_DEBUG, "%p clipboard req from agent which is not in "
                               "the active session?", conn);
         goto error;
+#else
+        update_active_session_connection(conn);
+#endif
     }
 
     if (!virtio_port) {
@@ -921,10 +927,12 @@ static void update_active_session_connection(UdscsConnection *new_conn)
                                          connection_matches_active_session,
                                          (void*)&new_conn);
     } else {
+#ifdef WITH_SESSION_SECURITY
         if (new_conn)
             session_count++;
         else
             session_count--;
+#endif
     }
 
 #ifdef WITH_SESSION_SECURITY
