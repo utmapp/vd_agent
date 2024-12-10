@@ -16,12 +16,16 @@ BASEDIR="$(dirname "$(realpath $0)")"
 
 cp -a "$INPUT_ARCHIVE/Products" "$TMP_ROOT"
 
+xattr -c "$TMP_ROOT/usr/local/bin/spice-vdagentd"
+
 codesign --sign "Developer ID Application" \
          --force \
          --identifier com.redhat.spice.vdagentd \
          --preserve-metadata=entitlements,requirements,flags,runtime \
          --timestamp \
          "$TMP_ROOT/usr/local/bin/spice-vdagentd"
+
+xattr -c "$TMP_ROOT/usr/local/bin/spice-vdagent"
 
 codesign --sign "Developer ID Application" \
          --force \
