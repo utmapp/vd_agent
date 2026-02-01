@@ -104,3 +104,21 @@ the qemu cmdline:
     -chardev spicevmc,name=vdagent,id=vdagent \
     -device virtserialport,nr=1,bus=virtio-serial0.0,chardev=vdagent,name=com.redhat.spice.0
 >>>
+
+## UTM on Apple Silicon (Virtualize mode) note
+
+Users of Apple Silicon Macs with Linux guests in Virtualize mode and minimal X11 window managers (e.g. Openbox) may observe that the host → guest clipboard fails even though:
+
+* spice-vdagentd is running
+* /dev/virtio-ports/com.redhat.spice.0 exists in the guest
+
+This occurs when the VM configuration does not create the required SPICE virtserial channel used for clipboard communication.
+
+Power off the VM and add the below **QEMU Arguments** into UTM to resolve:
+
+>>>
+    -chardev spicevmc,id=vdagent,debug=0,name=vdagent
+    -device virtserialport,chardev=vdagent,name=com.redhat.spice.0
+>>>
+
+Upon boot, clipboard sharing functionality will work correctly in both directions.
