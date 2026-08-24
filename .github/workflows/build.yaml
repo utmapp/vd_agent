@@ -19,7 +19,24 @@ jobs:
           arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
           /usr/local/bin/brew install glib || true # this can error on linking
       - name: Build
-        run: xcodebuild archive -scheme vd_agent -archivePath vd_agent.xcarchive
+        run: |
+          xcodebuild archive \
+            -scheme vd_agent \
+            -destination 'generic/platform=macOS' \
+            -archivePath vd_agent.xcarchive \
+            ARCHS='arm64 x86_64' \
+            ONLY_ACTIVE_ARCH=NO \
+            ENABLE_USER_SCRIPT_SANDBOXING=NO
+      - name: Verify universal binaries
+        run: |
+          set -euo pipefail
+          for bin in spice-vdagent spice-vdagentd; do
+            path=$(find vd_agent.xcarchive/Products -type f -name "$bin" ! -path '*.dSYM*' | head -1)
+            info=$(lipo -info "$path")
+            echo "$info"
+            echo "$info" | grep -q x86_64
+            echo "$info" | grep -q arm64
+          done
       - name: Archive
         run: tar -acf vd_agent.xcarchive.tgz vd_agent.xcarchive
       - name: Upload

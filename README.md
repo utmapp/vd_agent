@@ -60,10 +60,15 @@ architectures at the default location.
     $ /usr/local/bin/brew install glib # x86_64
 >>>
 
-Then, you can build the project with Xcode or `xcodebuild`
+Then, you can build the project with Xcode or `xcodebuild`. Release archives
+are **universal** (`arm64` + `x86_64`) so the same `.pkg` runs on Apple Silicon
+and Intel guests (including QEMU/KVM).
 
 >>>
-    $ xcodebuild archive -scheme vd_agent -archivePath vd_agent.xcarchive
+    $ xcodebuild archive -scheme vd_agent -archivePath vd_agent.xcarchive \
+        -destination 'generic/platform=macOS' \
+        ARCHS='arm64 x86_64' ONLY_ACTIVE_ARCH=NO
+    $ lipo -info vd_agent.xcarchive/Products/usr/local/bin/spice-vdagent
 >>>
 
 Afterwards, you can sign the output and create an installer package with a paid

@@ -415,7 +415,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -e\n\nfor ((i=0; i<$SCRIPT_OUTPUT_FILE_COUNT; i++)); do\n    output_var=\"SCRIPT_OUTPUT_FILE_$i\"\n    output_path=\"${!output_var}\"\n    output_dir=\"$(dirname \"$output_path\")\"\n    name=\"$(basename \"$output_path\")\"\n    intel_input=\"/usr/local/lib/$name\"\n    arm64_input=\"/opt/homebrew/lib/$name\"\n    tmp_output=\"/tmp/$name.$$\"\n    \n    echo \"Creating $output_path\"\n    lipo -output \"$tmp_output\" -create \"$intel_input\" \"$arm64_input\"\n    if [ ! -d \"$output_dir\" ]; then\n        mkdir -p \"$output_dir\"\n    fi\n    mv \"$tmp_output\" \"$output_path\"\ndone\n";
+			shellScript = "set -e\n\nfor ((i=0; i<$SCRIPT_OUTPUT_FILE_COUNT; i++)); do\n    output_var=\"SCRIPT_OUTPUT_FILE_$i\"\n    output_path=\"${!output_var}\"\n    output_dir=\"$(dirname \"$output_path\")\"\n    name=\"$(basename \"$output_path\")\"\n    intel_input=\"/usr/local/lib/$name\"\n    arm64_input=\"/opt/homebrew/lib/$name\"\n    tmp_output=\"/tmp/$name.$$\"\n    \n    echo \"Creating $output_path\"\n    if [ -f \"$intel_input\" ] && [ -f \"$arm64_input\" ]; then\n        lipo -output \"$tmp_output\" -create \"$intel_input\" \"$arm64_input\"\n    elif [ -f \"$intel_input\" ]; then\n        cp \"$intel_input\" \"$tmp_output\"\n    elif [ -f \"$arm64_input\" ]; then\n        cp \"$arm64_input\" \"$tmp_output\"\n    else\n        echo \"missing $name in /usr/local/lib and /opt/homebrew/lib\" >&2\n        exit 1\n    fi\n    if [ ! -d \"$output_dir\" ]; then\n        mkdir -p \"$output_dir\"\n    fi\n    mv \"$tmp_output\" \"$output_path\"\ndone\n";
 			showEnvVarsInLog = 0;
 		};
 		CE54BD972CEA914E00FE3930 /* Build universal GLib */ = {
@@ -439,7 +439,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -e\n\nfor ((i=0; i<$SCRIPT_OUTPUT_FILE_COUNT; i++)); do\n    output_var=\"SCRIPT_OUTPUT_FILE_$i\"\n    output_path=\"${!output_var}\"\n    output_dir=\"$(dirname \"$output_path\")\"\n    name=\"$(basename \"$output_path\")\"\n    intel_input=\"/usr/local/lib/$name\"\n    arm64_input=\"/opt/homebrew/lib/$name\"\n    tmp_output=\"/tmp/$name.$$\"\n    \n    echo \"Creating $output_path\"\n    lipo -output \"$tmp_output\" -create \"$intel_input\" \"$arm64_input\"\n    if [ ! -d \"$output_dir\" ]; then\n        mkdir -p \"$output_dir\"\n    fi\n    mv \"$tmp_output\" \"$output_path\"\ndone\n";
+			shellScript = "set -e\n\nfor ((i=0; i<$SCRIPT_OUTPUT_FILE_COUNT; i++)); do\n    output_var=\"SCRIPT_OUTPUT_FILE_$i\"\n    output_path=\"${!output_var}\"\n    output_dir=\"$(dirname \"$output_path\")\"\n    name=\"$(basename \"$output_path\")\"\n    intel_input=\"/usr/local/lib/$name\"\n    arm64_input=\"/opt/homebrew/lib/$name\"\n    tmp_output=\"/tmp/$name.$$\"\n    \n    echo \"Creating $output_path\"\n    if [ -f \"$intel_input\" ] && [ -f \"$arm64_input\" ]; then\n        lipo -output \"$tmp_output\" -create \"$intel_input\" \"$arm64_input\"\n    elif [ -f \"$intel_input\" ]; then\n        cp \"$intel_input\" \"$tmp_output\"\n    elif [ -f \"$arm64_input\" ]; then\n        cp \"$arm64_input\" \"$tmp_output\"\n    else\n        echo \"missing $name in /usr/local/lib and /opt/homebrew/lib\" >&2\n        exit 1\n    fi\n    if [ ! -d \"$output_dir\" ]; then\n        mkdir -p \"$output_dir\"\n    fi\n    mv \"$tmp_output\" \"$output_path\"\ndone\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
@@ -599,7 +599,12 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				ARCHS = (
+					arm64,
+					x86_64,
+				);
+				ONLY_ACTIVE_ARCH = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
