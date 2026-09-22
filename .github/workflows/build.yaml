@@ -7,19 +7,133 @@ jobs:
   build-macos:
     name: Build macOS
     runs-on: macos-latest
+    env:
+      GLIB_VERSION: "2.90.0"
+      GLIB_SHA256: 17d15cac2af80a33271127408e0abc2748eb297c595c2a26409e81e14e7d1b8f
+      GETTEXT_VERSION: "1.0"
+      GETTEXT_SHA256: 71132a3fb71e68245b8f2ac4e9e97137d3e5c02f415636eb508ae607bc01add7
+      # must be <= the project's deployment target
+      MACOSX_DEPLOYMENT_TARGET: "10.13"
+      ARCHS: arm64 x86_64
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
           submodules: recursive
-      - name: Install GLib
-        run: brew install glib
-      - name: Install GLib (x86_64)
+      - name: Install build tools
         run: |
-          arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
-          /usr/local/bin/brew install glib || true # this can error on linking
+          brew install meson ninja pkgconf
+          echo "GLIB_PREFIX=$RUNNER_TEMP/glib" >> "$GITHUB_ENV"
+      - name: Cache GLib
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/glib
+          key: glib-${{ env.GLIB_VERSION }}-gettext-${{ env.GETTEXT_VERSION }}-${{ hashFiles('.github/workflows/build.yaml') }}
+      - name: Build gettext
+        if: steps.cache.outputs.cache-hit != 'true'
+        working-directory: ${{ runner.temp }}
+        run: |
+          curl -fsSLO "https://ftp.gnu.org/gnu/gettext/gettext-$GETTEXT_VERSION.tar.xz"
+          echo "$GETTEXT_SHA256  gettext-$GETTEXT_VERSION.tar.xz" | shasum -a 256 -c -
+          for arch in $ARCHS; do
+            rm -rf "gettext-$GETTEXT_VERSION"
+            tar xf "gettext-$GETTEXT_VERSION.tar.xz"
+            pushd "gettext-$GETTEXT_VERSION/gettext-runtime"
+            ./configure --host="${arch/arm64/aarch64}-apple-darwin" \
+                        --prefix="$GLIB_PREFIX/$arch" \
+                        --enable-static \
+                        --disable-shared \
+                        --with-included-gettext \
+                        --disable-java \
+                        --disable-csharp \
+                        --disable-libasprintf \
+                        --without-libintl-prefix \
+                        --without-libiconv-prefix \
+                        CC="clang -arch $arch"
+            make -C intl -j"$(sysctl -n hw.ncpu)"
+            make -C intl install
+            popd
+          done
+      - name: Build GLib
+        if: steps.cache.outputs.cache-hit != 'true'
+        working-directory: ${{ runner.temp }}
+        run: |
+          curl -fsSLO "https://download.gnome.org/sources/glib/${GLIB_VERSION%.*}/glib-$GLIB_VERSION.tar.xz"
+          echo "$GLIB_SHA256  glib-$GLIB_VERSION.tar.xz" | shasum -a 256 -c -
+          tar xf "glib-$GLIB_VERSION.tar.xz"
+          # girepository is unused and requires macOS 10.15
+          sed -i '' "/^subdir('girepository')$/d" "glib-$GLIB_VERSION/meson.build"
+          sdk="$(xcrun --sdk macosx --show-sdk-path)"
+          for arch in $ARCHS; do
+            prefix="$GLIB_PREFIX/$arch"
+
+            mkdir -p "$prefix/lib/pkgconfig"
+            cat > "$prefix/lib/pkgconfig/libffi.pc" <<EOF
+          Name: libffi
+          Description: Library supporting Foreign Function Interfaces
+          Version: 3.4
+          Cflags: -I$sdk/usr/include/ffi
+          Libs: -lffi
+          EOF
+
+            # don't depend on Rosetta
+            [ "$arch" = "$(uname -m)" ] && needs_exe_wrapper=false || needs_exe_wrapper=true
+            cat > "cross-$arch.ini" <<EOF
+          [binaries]
+          c = ['clang', '-arch', '$arch']
+          cpp = ['clang++', '-arch', '$arch']
+          objc = ['clang', '-arch', '$arch']
+          ar = 'ar'
+          strip = 'strip'
+          pkg-config = 'pkg-config'
+
+          [built-in options]
+          c_args = ['-I$prefix/include', '-Werror=unguarded-availability-new']
+          cpp_args = ['-I$prefix/include']
+          objc_args = ['-I$prefix/include', '-Werror=unguarded-availability-new']
+          c_link_args = ['-L$prefix/lib']
+          cpp_link_args = ['-L$prefix/lib']
+          objc_link_args = ['-L$prefix/lib']
+
+          [properties]
+          needs_exe_wrapper = $needs_exe_wrapper
+          pkg_config_libdir = ['$prefix/lib/pkgconfig']
+          # macOS 27+, meson's check ignores availability
+          has_function_pipe2 = false
+
+          [host_machine]
+          system = 'darwin'
+          subsystem = 'macos'
+          kernel = 'xnu'
+          cpu_family = '${arch/arm64/aarch64}'
+          cpu = '${arch/arm64/aarch64}'
+          endian = 'little'
+          EOF
+
+            # SDK has no pcre2 headers; other fallbacks would silently stub out deps (e.g. libintl)
+            meson setup "build-$arch" "glib-$GLIB_VERSION" \
+              --cross-file "cross-$arch.ini" \
+              --prefix="$prefix" \
+              --buildtype=release \
+              --default-library=static \
+              --wrap-mode=nofallback \
+              --force-fallback-for=libpcre2-8 \
+              -Dbsymbolic_functions=false \
+              -Ddtrace=disabled \
+              -Dintrospection=disabled \
+              -Dnls=disabled \
+              -Dman-pages=disabled \
+              -Ddocumentation=false \
+              -Dtests=false
+            meson compile -C "build-$arch"
+            meson install -C "build-$arch"
+          done
       - name: Build
-        run: xcodebuild archive -scheme vd_agent -archivePath vd_agent.xcarchive
+        run: |
+          xcodebuild archive -scheme vd_agent -archivePath vd_agent.xcarchive \
+            GLIB_ARM64_PREFIX="$GLIB_PREFIX/arm64" \
+            GLIB_X86_64_PREFIX="$GLIB_PREFIX/x86_64"
       - name: Archive
         run: tar -acf vd_agent.xcarchive.tgz vd_agent.xcarchive
       - name: Upload

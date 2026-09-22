@@ -402,6 +402,16 @@
 			inputFileListPaths = (
 			);
 			inputPaths = (
+				"$(GLIB_X86_64_PREFIX)/lib/libgio-2.0.a",
+				"$(GLIB_X86_64_PREFIX)/lib/libglib-2.0.a",
+				"$(GLIB_X86_64_PREFIX)/lib/libgobject-2.0.a",
+				"$(GLIB_X86_64_PREFIX)/lib/libgmodule-2.0.a",
+				"$(GLIB_X86_64_PREFIX)/lib/libintl.a",
+				"$(GLIB_ARM64_PREFIX)/lib/libgio-2.0.a",
+				"$(GLIB_ARM64_PREFIX)/lib/libglib-2.0.a",
+				"$(GLIB_ARM64_PREFIX)/lib/libgobject-2.0.a",
+				"$(GLIB_ARM64_PREFIX)/lib/libgmodule-2.0.a",
+				"$(GLIB_ARM64_PREFIX)/lib/libintl.a",
 			);
 			name = "Build universal GLib";
 			outputFileListPaths = (
@@ -415,7 +425,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -e\n\nfor ((i=0; i<$SCRIPT_OUTPUT_FILE_COUNT; i++)); do\n    output_var=\"SCRIPT_OUTPUT_FILE_$i\"\n    output_path=\"${!output_var}\"\n    output_dir=\"$(dirname \"$output_path\")\"\n    name=\"$(basename \"$output_path\")\"\n    intel_input=\"/usr/local/lib/$name\"\n    arm64_input=\"/opt/homebrew/lib/$name\"\n    tmp_output=\"/tmp/$name.$$\"\n    \n    echo \"Creating $output_path\"\n    lipo -output \"$tmp_output\" -create \"$intel_input\" \"$arm64_input\"\n    if [ ! -d \"$output_dir\" ]; then\n        mkdir -p \"$output_dir\"\n    fi\n    mv \"$tmp_output\" \"$output_path\"\ndone\n";
+			shellScript = "set -e\n\nfor ((i=0; i<$SCRIPT_OUTPUT_FILE_COUNT; i++)); do\n    output_var=\"SCRIPT_OUTPUT_FILE_$i\"\n    output_path=\"${!output_var}\"\n    output_dir=\"$(dirname \"$output_path\")\"\n    name=\"$(basename \"$output_path\")\"\n    intel_input=\"$GLIB_X86_64_PREFIX/lib/$name\"\n    arm64_input=\"$GLIB_ARM64_PREFIX/lib/$name\"\n    tmp_output=\"/tmp/$name.$$\"\n    \n    echo \"Creating $output_path\"\n    lipo -output \"$tmp_output\" -create \"$intel_input\" \"$arm64_input\"\n    if [ ! -d \"$output_dir\" ]; then\n        mkdir -p \"$output_dir\"\n    fi\n    mv \"$tmp_output\" \"$output_path\"\ndone\n";
 			showEnvVarsInLog = 0;
 		};
 		CE54BD972CEA914E00FE3930 /* Build universal GLib */ = {
@@ -426,6 +436,16 @@
 			inputFileListPaths = (
 			);
 			inputPaths = (
+				"$(GLIB_X86_64_PREFIX)/lib/libgio-2.0.a",
+				"$(GLIB_X86_64_PREFIX)/lib/libglib-2.0.a",
+				"$(GLIB_X86_64_PREFIX)/lib/libgobject-2.0.a",
+				"$(GLIB_X86_64_PREFIX)/lib/libgmodule-2.0.a",
+				"$(GLIB_X86_64_PREFIX)/lib/libintl.a",
+				"$(GLIB_ARM64_PREFIX)/lib/libgio-2.0.a",
+				"$(GLIB_ARM64_PREFIX)/lib/libglib-2.0.a",
+				"$(GLIB_ARM64_PREFIX)/lib/libgobject-2.0.a",
+				"$(GLIB_ARM64_PREFIX)/lib/libgmodule-2.0.a",
+				"$(GLIB_ARM64_PREFIX)/lib/libintl.a",
 			);
 			name = "Build universal GLib";
 			outputFileListPaths = (
@@ -439,7 +459,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -e\n\nfor ((i=0; i<$SCRIPT_OUTPUT_FILE_COUNT; i++)); do\n    output_var=\"SCRIPT_OUTPUT_FILE_$i\"\n    output_path=\"${!output_var}\"\n    output_dir=\"$(dirname \"$output_path\")\"\n    name=\"$(basename \"$output_path\")\"\n    intel_input=\"/usr/local/lib/$name\"\n    arm64_input=\"/opt/homebrew/lib/$name\"\n    tmp_output=\"/tmp/$name.$$\"\n    \n    echo \"Creating $output_path\"\n    lipo -output \"$tmp_output\" -create \"$intel_input\" \"$arm64_input\"\n    if [ ! -d \"$output_dir\" ]; then\n        mkdir -p \"$output_dir\"\n    fi\n    mv \"$tmp_output\" \"$output_path\"\ndone\n";
+			shellScript = "set -e\n\nfor ((i=0; i<$SCRIPT_OUTPUT_FILE_COUNT; i++)); do\n    output_var=\"SCRIPT_OUTPUT_FILE_$i\"\n    output_path=\"${!output_var}\"\n    output_dir=\"$(dirname \"$output_path\")\"\n    name=\"$(basename \"$output_path\")\"\n    intel_input=\"$GLIB_X86_64_PREFIX/lib/$name\"\n    arm64_input=\"$GLIB_ARM64_PREFIX/lib/$name\"\n    tmp_output=\"/tmp/$name.$$\"\n    \n    echo \"Creating $output_path\"\n    lipo -output \"$tmp_output\" -create \"$intel_input\" \"$arm64_input\"\n    if [ ! -d \"$output_dir\" ]; then\n        mkdir -p \"$output_dir\"\n    fi\n    mv \"$tmp_output\" \"$output_path\"\ndone\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
@@ -542,11 +562,13 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				GLIB_ARM64_PREFIX = /opt/homebrew;
+				GLIB_X86_64_PREFIX = /usr/local;
 				HEADER_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/src/darwin/include",
-					"/opt/homebrew/include/glib-2.0",
-					"/opt/homebrew/include/gio-unix-2.0",
-					"/opt/homebrew/lib/glib-2.0/include",
+					"$(GLIB_ARM64_PREFIX)/include/glib-2.0",
+					"$(GLIB_ARM64_PREFIX)/include/gio-unix-2.0",
+					"$(GLIB_ARM64_PREFIX)/lib/glib-2.0/include",
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
@@ -608,11 +630,13 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				GLIB_ARM64_PREFIX = /opt/homebrew;
+				GLIB_X86_64_PREFIX = /usr/local;
 				HEADER_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/src/darwin/include",
-					"/opt/homebrew/include/glib-2.0",
-					"/opt/homebrew/include/gio-unix-2.0",
-					"/opt/homebrew/lib/glib-2.0/include",
+					"$(GLIB_ARM64_PREFIX)/include/glib-2.0",
+					"$(GLIB_ARM64_PREFIX)/include/gio-unix-2.0",
+					"$(GLIB_ARM64_PREFIX)/lib/glib-2.0/include",
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",

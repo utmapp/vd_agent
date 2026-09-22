@@ -60,6 +60,10 @@ architectures at the default location.
     $ /usr/local/bin/brew install glib # x86_64
 >>>
 
+Alternatively, GLib can be built from source for each architecture (see
+`.github/workflows/build.yaml`) and the install prefixes passed to Xcode
+with `GLIB_ARM64_PREFIX=... GLIB_X86_64_PREFIX=...`.
+
 Then, you can build the project with Xcode or `xcodebuild`
 
 >>>
