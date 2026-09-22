@@ -6,7 +6,7 @@ on:
 jobs:
   build-macos:
     name: Build macOS
-    runs-on: macos-latest
+    runs-on: macos-15
     env:
       GLIB_VERSION: "2.90.0"
       GLIB_SHA256: 17d15cac2af80a33271127408e0abc2748eb297c595c2a26409e81e14e7d1b8f
