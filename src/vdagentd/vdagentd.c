@@ -33,6 +33,10 @@
 #include <sys/stat.h>
 #include <spice/vd_agent.h>
 #include <glib-unix.h>
+#ifdef __APPLE__
+#include <dispatch/dispatch.h>
+#include <IOKit/IOKitLib.h>
+#endif
 
 #ifdef WITH_SYSTEMD_SOCKET_ACTIVATION
 #include <systemd/sd-daemon.h>
@@ -888,6 +892,63 @@ static void check_xorg_resolution(void)
     }
 }
 
+#ifdef __APPLE__
+static gboolean reopen_virtio_port(gpointer user_data)
+{
+    check_xorg_resolution();
+    return G_SOURCE_REMOVE;
+}
+
+static gboolean restart_virtio_port(gpointer user_data)
+{
+    if (virtio_port) {
+        syslog(LOG_INFO, "VM restored, reopening vdagent virtio channel");
+        g_clear_pointer(&virtio_port, vdagent_connection_destroy);
+        do_client_disconnect();
+        /* the old port's cancelled read must release its file descriptor first */
+        g_idle_add(reopen_virtio_port, NULL);
+    }
+    return G_SOURCE_REMOVE;
+}
+
+/* Virtualization.framework forgets that the port is open when it restores a
+   saved VM, then drops whatever the guest writes to it and never completes
+   the write, which leaves the port unusable until the guest reboots. The
+   virtual RTC sends a message as soon as the VM is restored, so reopen the
+   port then, before anything is written, to tell the host it is open again. */
+static void rtc_interest_cb(void *refcon, io_service_t service,
+                            natural_t message_type, void *message_argument)
+{
+    g_idle_add(restart_virtio_port, NULL);
+}
+
+static IONotificationPortRef watch_vm_restore(io_object_t *notification)
+{
+    io_service_t rtc;
+    IONotificationPortRef port;
+    kern_return_t kr;
+
+    rtc = IOServiceGetMatchingService(MACH_PORT_NULL,
+                                      IOServiceMatching("AppleVirtualPlatformRTC"));
+    if (!rtc) {
+        /* not running in Virtualization.framework */
+        return NULL;
+    }
+    port = IONotificationPortCreate(MACH_PORT_NULL);
+    IONotificationPortSetDispatchQueue(port,
+        dispatch_get_global_queue(QOS_CLASS_DEFAULT, 0));
+    kr = IOServiceAddInterestNotification(port, rtc, kIOGeneralInterest,
+                                          rtc_interest_cb, NULL, notification);
+    IOObjectRelease(rtc);
+    if (kr != KERN_SUCCESS) {
+        syslog(LOG_WARNING, "could not watch for VM restore: 0x%x", kr);
+        IONotificationPortDestroy(port);
+        return NULL;
+    }
+    return port;
+}
+#endif
+
 static int connection_matches_active_session(UdscsConnection *conn,
     void *priv)
 {
@@ -1293,6 +1354,10 @@ int main(int argc, char *argv[])
     gboolean own_socket = TRUE;
     GIOChannel *si_io_channel = NULL;
     guint si_watch_id = 0;
+#ifdef __APPLE__
+    IONotificationPortRef restore_notify_port;
+    io_object_t restore_notification;
+#endif
 
     context = g_option_context_new(NULL);
     g_option_context_add_main_entries(context, cmd_entries, NULL);
@@ -1379,6 +1444,10 @@ int main(int argc, char *argv[])
 
     active_xfers = g_hash_table_new(g_direct_hash, g_direct_equal);
 
+#ifdef __APPLE__
+    restore_notify_port = watch_vm_restore(&restore_notification);
+#endif
+
     udscs_server_start(server);
     loop = g_main_loop_new(NULL, FALSE);
     g_main_loop_run(loop);
@@ -1391,6 +1460,12 @@ int main(int argc, char *argv[])
     if (si_watch_id > 0) {
         g_source_remove(si_watch_id);
     }
+#ifdef __APPLE__
+    if (restore_notify_port) {
+        IOObjectRelease(restore_notification);
+        IONotificationPortDestroy(restore_notify_port);
+    }
+#endif
     g_clear_pointer(&session_info, session_info_destroy);
     g_clear_pointer(&server, udscs_destroy_server);
     if (virtio_port) {

@@ -51,6 +51,7 @@
 		CE03A1302CEA8FBA006884EE /* libresolv.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A12F2CEA8FBA006884EE /* libresolv.tbd */; };
 		CE03A1322CEA8FCE006884EE /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A1312CEA8FCE006884EE /* Foundation.framework */; };
 		CE03A1342CEA8FE4006884EE /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A1332CEA8FE4006884EE /* AppKit.framework */; };
+		CE77170B2EC0000000A1B2C3 /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CE77170A2EC0000000A1B2C3 /* IOKit.framework */; };
 		CE54BD8E2CEA90F200FE3930 /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A1332CEA8FE4006884EE /* AppKit.framework */; };
 		CE54BD8F2CEA90F400FE3930 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A1312CEA8FCE006884EE /* Foundation.framework */; };
 		CE54BD902CEA90F600FE3930 /* libgmodule-2.0.a in Frameworks */ = {isa = PBXBuildFile; fileRef = CE03A12B2CEA8F60006884EE /* libgmodule-2.0.a */; };
@@ -142,6 +143,7 @@
 		CE03A12F2CEA8FBA006884EE /* libresolv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libresolv.tbd; path = usr/lib/libresolv.tbd; sourceTree = SDKROOT; };
 		CE03A1312CEA8FCE006884EE /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		CE03A1332CEA8FE4006884EE /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
+		CE77170A2EC0000000A1B2C3 /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = System/Library/Frameworks/IOKit.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -151,6 +153,7 @@
 			files = (
 				CE03A1342CEA8FE4006884EE /* AppKit.framework in Frameworks */,
 				CE03A1322CEA8FCE006884EE /* Foundation.framework in Frameworks */,
+				CE77170B2EC0000000A1B2C3 /* IOKit.framework in Frameworks */,
 				CE03A1302CEA8FBA006884EE /* libresolv.tbd in Frameworks */,
 				CE03A12E2CEA8F75006884EE /* libintl.a in Frameworks */,
 				CE03A12A2CEA8F18006884EE /* libffi.tbd in Frameworks */,
@@ -258,6 +261,7 @@
 			children = (
 				CE03A1332CEA8FE4006884EE /* AppKit.framework */,
 				CE03A1312CEA8FCE006884EE /* Foundation.framework */,
+				CE77170A2EC0000000A1B2C3 /* IOKit.framework */,
 				CE03A12B2CEA8F60006884EE /* libgmodule-2.0.a */,
 				CE03A12D2CEA8F75006884EE /* libintl.a */,
 				CE03A12F2CEA8FBA006884EE /* libresolv.tbd */,
