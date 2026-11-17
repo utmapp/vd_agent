@@ -249,6 +249,9 @@ static void delete_mode(struct vdagent_x11 *x11, int output_index,
     update_randr_res(x11, 0);
 }
 
+/* Below any real mode's pixel clock (Hz): 320x200 at 60 Hz needs ~5 MHz */
+#define MIN_MODE_DOT_CLOCK 1000000
+
 static void set_reduced_cvt_mode(XRRModeInfo *mode, int width, int height)
 {
     /* Code taken from hw/xfree86/modes/xf86cvt.c
@@ -321,6 +324,12 @@ static void set_reduced_cvt_mode(XRRModeInfo *mode, int width, int height)
     /* 15/13. Find pixel clock frequency (kHz for xf86) */
     mode->dotClock = mode->hTotal * 1000.0 / HPeriod;
     mode->dotClock -= mode->dotClock % CVT_CLOCK_STEP;
+    /* XRRModeInfo.dotClock is in Hz, not in kHz like xf86 modes. The
+     * protocol carries it in 32 bits: cap huge modes there, at a lower
+     * refresh rate. */
+    if (mode->dotClock > UINT_MAX / 1000)
+        mode->dotClock = UINT_MAX / 1000 / CVT_CLOCK_STEP * CVT_CLOCK_STEP;
+    mode->dotClock *= 1000;
 
 }
 
@@ -377,6 +386,12 @@ static int xrandr_add_and_set(struct vdagent_x11 *x11, int output_index, int x, 
     }
     xid = x11->randr.res->outputs[output_index];
     mode = find_mode_by_size(x11, output_index, width, height);
+    if (mode && mode->dotClock < MIN_MODE_DOT_CLOCK) {
+        /* left by an older agent that set the clock in kHz (0.06 Hz):
+         * replace it instead of using it again */
+        delete_mode(x11, output_index, width, height);
+        mode = NULL;
+    }
     if (!mode) {
         mode = create_new_mode(x11, output_index, width, height);
     }
